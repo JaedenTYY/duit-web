@@ -53,6 +53,7 @@ This document outlines the non-negotiable engineering rules and standards for Pr
 *   **Surface Tradeoffs**: State assumptions and highlight pros/cons regarding scalability and enterprise standards.
 *   **Best Practices**: If a request violates modern practices, explain why and propose a better alternative.
 *   **Clarification**: If a prompt is ambiguous, ask before proceeding.
+*   **Cross-Workspace Context**: Always check both the `duit-web` and `duit-api` workspaces for relevant context before making a decision.
 
 ### Simplicity & Industry Standards
 *   **Minimal Viable Code**: Avoid speculative "future-proofing".

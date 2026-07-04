@@ -25,7 +25,7 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="group relative flex items-center justify-between p-5 bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl hover:bg-white/5 transition-all duration-300 ease-out active:scale-[0.99]">
+  <div class="group relative flex items-center justify-between p-5 bg-white backdrop-blur-xl border border-slate-100 rounded-3xl hover:bg-slate-50 transition-all duration-300 ease-out active:scale-[0.99]">
     <div class="flex items-center gap-5 min-w-0">
       <!-- Icon with elegant glass container -->
       <div 
@@ -40,13 +40,13 @@ const formattedDate = computed(() => {
 
       <!-- Details -->
       <div class="min-w-0">
-        <h3 class="text-white font-bold text-base tracking-tight truncate pr-4">
+        <h3 class="text-slate-900 font-bold text-base tracking-tight truncate pr-4">
           {{ transaction.description || transaction.categoryName || 'Transaction' }}
         </h3>
         <div class="flex items-center gap-2 mt-1">
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">{{ transaction.categoryName || 'General' }}</span>
-          <div class="w-1 h-1 rounded-full bg-slate-700"></div>
-          <span class="text-xs font-semibold text-slate-500">{{ formattedDate }}</span>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{{ transaction.categoryName || 'General' }}</span>
+          <div class="w-1 h-1 rounded-full bg-slate-200" />
+          <span class="text-xs font-semibold text-slate-400">{{ formattedDate }}</span>
         </div>
       </div>
     </div>
@@ -56,7 +56,7 @@ const formattedDate = computed(() => {
       <div class="text-right">
         <p 
           class="font-extrabold text-lg tracking-tight tabular-nums"
-          :class="isIncome ? 'text-blue-400' : 'text-white'"
+          :class="isIncome ? 'text-blue-400' : 'text-slate-900'"
         >
           {{ isIncome ? '+' : '' }}{{ formatCurrency(transaction.amount, transaction.currency) }}
         </p>
@@ -64,10 +64,20 @@ const formattedDate = computed(() => {
 
       <!-- Contextual Delete -->
       <button 
-        class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-red-500 hover:text-white active:scale-90"
+        class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-red-500 hover:text-slate-900 active:scale-90"
         @click.stop="emit('delete', transaction.id)"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        ><path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2.5"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+        /></svg>
       </button>
     </div>
   </div>

@@ -67,8 +67,7 @@ export interface InsightFinding {
 export interface AnomalyAlert {
   id: string
   transactionId: string
-  anomalyScore: number
-  threshold: number
+  reason: string
   status: 'pending' | 'confirmed' | 'dismissed'
   createdAt: string
 }
@@ -90,28 +89,58 @@ export interface CategorySummary {
   percentage: number
 }
 
-export interface LineItem {
-  name: string
+export interface ReceiptLineItem {
   qty: number
+  code: string | null
+  description: string
   unitPrice: number
+  lineTotal: number
+  category: string | null
 }
 
-export interface ExtractedReceiptData {
-  merchantName: string | null
-  merchantCategoryHint: string | null
+export interface ParsedReceipt {
+  merchant: string
+  branch: string | null
+  brn: string | null
+  sstNo: string | null
   date: string | null
-  currency: string
-  lineItems: LineItem[]
+  receiptRef: string | null
+  lineItems: ReceiptLineItem[]
+  discount: number | null
   subtotal: number | null
-  tax: number | null
+  serviceCharge: number | null
+  sst: number | null
+  rounding: number | null
   total: number
-  paymentMethod: string
-  confidence: 'high' | 'medium' | 'low'
+  paymentMethod: string | null
+  currency: string
 }
 
 export interface ReceiptExtractionResponse {
   extractionId: string
-  extractedData: ExtractedReceiptData
+  extractedData: ParsedReceipt
   rawOcrText: string
   confidence: 'high' | 'medium' | 'low'
+}
+
+export interface BillItem {
+  id: string
+  billId: string
+  name: string
+  quantity: string
+  unitPrice: string
+  lineTotal: string
+  createdAt: string
+}
+
+export interface Bill {
+  id: string
+  ownerUserId: string
+  merchantName: string | null
+  totalAmount: string
+  currency: string
+  status: 'draft'
+  createdAt: string
+  updatedAt: string
+  items: BillItem[]
 }

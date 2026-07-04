@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { gsap } from 'gsap'
-import type { ReceiptExtractionResponse, Category, ConfirmExtractionPayload } from '@/types'
+import type { ReceiptExtractionResponse, Category } from '@/types'
+import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
 
 const props = defineProps<{
@@ -19,8 +20,8 @@ const formContainer = ref<HTMLElement | null>(null)
 // Form state
 const amount = ref(props.extraction.extractedData.total.toString())
 const currency = ref(props.extraction.extractedData.currency)
-const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
-const description = ref(props.extraction.extractedData.merchantName ?? '')
+const merchantName = ref(props.extraction.extractedData.merchant)
+const description = ref(props.extraction.extractedData.merchant)
 const categoryId = ref('')
 const fxRate = ref(1)
 const occurredAt = ref(
@@ -57,10 +58,15 @@ function handleConfirm() {
 </script>
 
 <template>
-  <div ref="formContainer" class="space-y-6">
+  <div
+    ref="formContainer"
+    class="space-y-6"
+  >
     <!-- Header & Confidence -->
     <div class="flex items-center justify-between">
-      <h3 class="text-xl font-bold text-duit-dark">Review Extraction</h3>
+      <h3 class="text-xl font-bold text-duit-dark">
+        Review Extraction
+      </h3>
       <div 
         class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
         :class="{
@@ -74,24 +80,38 @@ function handleConfirm() {
     </div>
 
     <!-- Line Items -->
-    <div v-if="extraction.extractedData.lineItems.length > 0" class="bg-gray-50 rounded-2xl p-4 space-y-3">
+    <div
+      v-if="extraction.extractedData.lineItems.length > 0"
+      class="bg-gray-50 rounded-2xl p-4 space-y-3"
+    >
       <div class="flex justify-between text-[10px] font-bold text-duit-mid uppercase tracking-widest px-2">
         <span>Item</span>
         <span>Total</span>
       </div>
       <div class="space-y-2">
-        <div v-for="(item, index) in extraction.extractedData.lineItems" :key="index" class="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+        <div
+          v-for="(item, index) in extraction.extractedData.lineItems"
+          :key="index"
+          class="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm"
+        >
           <div class="min-w-0 pr-4">
-            <p class="text-sm font-semibold text-duit-dark truncate">{{ item.name }}</p>
-            <p class="text-xs text-duit-mid">{{ item.qty }} × {{ formatCurrency(item.unitPrice.toString(), currency) }}</p>
+            <p class="text-sm font-semibold text-duit-dark truncate">
+              {{ item.description }}
+            </p>
+            <p class="text-xs text-duit-mid">
+              {{ item.qty }} × {{ formatCurrency(item.unitPrice.toString(), currency) }}
+            </p>
           </div>
-          <span class="text-sm font-bold text-duit-dark">{{ formatCurrency((item.qty * item.unitPrice).toString(), currency) }}</span>
+          <span class="text-sm font-bold text-duit-dark">{{ formatCurrency(item.lineTotal.toString(), currency) }}</span>
         </div>
       </div>
     </div>
 
     <!-- Editable Form -->
-    <form @submit.prevent="handleConfirm" class="space-y-4">
+    <form
+      class="space-y-4"
+      @submit.prevent="handleConfirm"
+    >
       <div class="flex gap-3">
         <div class="flex-grow">
           <label class="block text-sm font-medium text-duit-dark mb-1">Amount</label>
@@ -146,8 +166,14 @@ function handleConfirm() {
           required
           class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition bg-white"
         >
-          <option value="">Select category</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+          <option value="">
+            Select category
+          </option>
+          <option
+            v-for="cat in categories"
+            :key="cat.id"
+            :value="cat.id"
+          >
             {{ cat.icon }} {{ cat.name }}
           </option>
         </select>
@@ -182,7 +208,7 @@ function handleConfirm() {
         </button>
         <button 
           type="submit" 
-          class="flex-[2] py-3 bg-duit-primary text-white font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-duit-primary/20"
+          class="flex-[2] py-3 bg-duit-primary text-slate-900 font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-duit-primary/20"
         >
           Confirm & Save
         </button>

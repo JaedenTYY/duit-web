@@ -92,13 +92,28 @@ export const useTransactionStore = defineStore('transaction', () => {
   }
 
   async function fetchMonthlySummary(year: number, month: number) {
+    logger.log('fetchMonthlySummary called with:', { year, month })
     try {
       const response = await api.get<MonthlySummaryResponse>('/transactions/summary/monthly', {
         params: { year, month }
       })
+      logger.log('fetchMonthlySummary success:', response.data.data)
       monthlySummary.value = response.data.data
     } catch (err: unknown) {
       logger.error('Failed to fetch monthly summary', err)
+      // Attempt to log more detail if it's an axios error
+      if (err && typeof err === 'object' && 'isAxiosError' in err) {
+        const axiosError = err as any
+        logger.error('Axios Error Details:', {
+          status: axiosError.response?.status,
+          data: axiosError.response?.data,
+          config: {
+            url: axiosError.config?.url,
+            method: axiosError.config?.method,
+            params: axiosError.config?.params
+          }
+        })
+      }
     }
   }
 

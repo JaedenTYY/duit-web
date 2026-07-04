@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ReceiptExtractionResponse, Transaction } from '@/types'
 import api from '@/lib/api'
-import { logger } from '@/utils/logger'
 
 export interface ConfirmExtractionPayload {
   extractionId: string

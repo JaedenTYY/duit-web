@@ -49,13 +49,13 @@ function handleBack() {
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-duit-dark/60 backdrop-blur-sm"
     @click.self="emit('close')"
   >
-    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl shadow-slate-200/50 overflow-hidden">
       <!-- Loading Overlay -->
       <div 
         v-if="receiptStore.uploading || receiptStore.confirming"
         class="absolute inset-0 z-20 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center"
       >
-        <div class="w-12 h-12 border-4 border-duit-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div class="w-12 h-12 border-4 border-duit-primary border-t-transparent rounded-full animate-spin mb-4" />
         <p class="font-bold text-duit-dark">
           {{ receiptStore.uploading ? 'Scanning receipt...' : 'Saving transaction...' }}
         </p>
@@ -65,15 +65,34 @@ function handleBack() {
       <div class="p-8">
         <div v-if="step === 'upload'">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-duit-dark">Scan Receipt</h2>
-            <button @click="emit('close')" class="text-duit-mid hover:text-duit-dark">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <h2 class="text-2xl font-bold text-duit-dark">
+              Scan Receipt
+            </h2>
+            <button
+              class="text-duit-mid hover:text-duit-dark"
+              @click="emit('close')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           
-          <div v-if="receiptStore.error" class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-duit-danger text-sm">
+          <div
+            v-if="receiptStore.error"
+            class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-duit-danger text-sm"
+          >
             {{ receiptStore.error }}
           </div>
 
@@ -89,12 +108,19 @@ function handleBack() {
           />
         </div>
 
-        <div v-else-if="step === 'done'" class="text-center py-12">
+        <div
+          v-else-if="step === 'done'"
+          class="text-center py-12"
+        >
           <div class="w-20 h-20 bg-duit-success/10 text-duit-success rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
             ✓
           </div>
-          <h2 class="text-2xl font-bold text-duit-dark mb-2">Receipt Saved!</h2>
-          <p class="text-duit-mid">Transaction has been added to your list.</p>
+          <h2 class="text-2xl font-bold text-duit-dark mb-2">
+            Receipt Saved!
+          </h2>
+          <p class="text-duit-mid">
+            Transaction has been added to your list.
+          </p>
         </div>
       </div>
     </div>

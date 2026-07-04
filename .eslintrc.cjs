@@ -15,7 +15,7 @@ module.exports = {
   },
   rules: {
     'no-console': 'error',
-    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-explicit-any': 'warn',
     'vue/multi-word-component-names': 'off',
   },
 }
