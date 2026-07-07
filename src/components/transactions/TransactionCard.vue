@@ -8,6 +8,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  (e: 'edit', transaction: Transaction): void
   (e: 'delete', id: string): void
 }>()
 
@@ -44,6 +45,14 @@ const formattedDate = computed(() => {
           {{ transaction.description || transaction.categoryName || 'Transaction' }}
         </h3>
         <div class="flex items-center gap-2 mt-1">
+          <span
+            v-if="transaction.merchantName"
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+          >{{ transaction.merchantName }}</span>
+          <div
+            v-if="transaction.merchantName"
+            class="w-1 h-1 rounded-full bg-slate-200"
+          />
           <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{{ transaction.categoryName || 'General' }}</span>
           <div class="w-1 h-1 rounded-full bg-slate-200" />
           <span class="text-xs font-semibold text-slate-400">{{ formattedDate }}</span>
@@ -62,7 +71,23 @@ const formattedDate = computed(() => {
         </p>
       </div>
 
-      <!-- Contextual Delete -->
+      <!-- Contextual Actions -->
+      <button 
+        class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-slate-200 hover:text-slate-900 active:scale-90"
+        @click.stop="emit('edit', transaction)"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        ><path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2.5"
+          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+        /></svg>
+      </button>
       <button 
         class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-red-500 hover:text-slate-900 active:scale-90"
         @click.stop="emit('delete', transaction.id)"

@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useTransactionStore } from '@/stores/transaction'
+import type { Transaction } from '@/types'
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+const props = defineProps<{
+  transaction?: Transaction | null
+}>()
+
 const store = useTransactionStore()
 
-const amount = ref<number | null>(null)
-const currency = ref('MYR')
-const fxRate = ref<number>(1)
-const categoryId = ref('')
-const description = ref('')
-const occurredAt = ref(new Date().toISOString().slice(0, 16))
+const isEditing = computed(() => Boolean(props.transaction))
+const amount = ref<number | null>(props.transaction ? Number(props.transaction.amount) : null)
+const currency = ref(props.transaction?.currency ?? 'MYR')
+const fxRate = ref<number>(props.transaction ? Number(props.transaction.fxRate) : 1)
+const categoryId = ref(props.transaction?.categoryId ?? '')
+const description = ref(props.transaction?.description ?? '')
+const occurredAt = ref(
+  props.transaction
+    ? new Date(props.transaction.occurredAt).toISOString().slice(0, 16)
+    : new Date().toISOString().slice(0, 16)
+)
 
 const showFxRate = computed(() => currency.value !== 'MYR')
 
@@ -25,14 +35,20 @@ async function handleSubmit() {
   if (amount.value === null) return
 
   try {
-    await store.createTransaction({
+    const payload = {
       amount: amount.value,
       currency: currency.value,
       categoryId: categoryId.value || undefined,
       description: description.value || undefined,
       occurredAt: new Date(occurredAt.value).toISOString(),
       fxRate: showFxRate.value ? fxRate.value : undefined,
-    })
+    }
+
+    if (props.transaction) {
+      await store.updateTransaction(props.transaction.id, payload)
+    } else {
+      await store.createTransaction(payload)
+    }
     emit('close')
   } catch {
     // Error handled by store.error
@@ -53,10 +69,10 @@ async function handleSubmit() {
       <div class="flex justify-between items-center mb-10">
         <div>
           <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
-            Track Spending
+            {{ isEditing ? 'Edit Spending' : 'Track Spending' }}
           </h2>
           <p class="text-slate-400 font-medium">
-            Record a new outflow stream
+            {{ isEditing ? 'Update an existing record' : 'Record a new outflow stream' }}
           </p>
         </div>
         <button
@@ -208,7 +224,7 @@ async function handleSubmit() {
           :disabled="store.submitting"
           class="w-full py-5 bg-white text-slate-950 font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-100 active:scale-[0.98] transition-all disabled:opacity-30 shadow-2xl shadow-slate-200/50 shadow-white/5 mt-4"
         >
-          {{ store.submitting ? 'Transmitting...' : 'Confirm Transaction' }}
+          {{ store.submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Confirm Transaction' }}
         </button>
       </form>
     </div>

@@ -13,6 +13,8 @@ export interface CreateTransactionPayload {
   fxRate?: number
 }
 
+export type UpdateTransactionPayload = Partial<CreateTransactionPayload>
+
 interface TransactionResponse {
   data: Transaction
 }
@@ -44,6 +46,7 @@ export const useTransactionStore = defineStore('transaction', () => {
   const nextCursor = ref<string | null>(null)
   const nextCursorId = ref<string | null>(null)
   const hasMore = ref(false)
+  const selectedCategoryId = ref<string>('')
 
   const totalSpend = computed(() => parseFloat(monthlySummary.value?.totalSpend ?? '0'))
 
@@ -55,6 +58,9 @@ export const useTransactionStore = defineStore('transaction', () => {
     
     try {
       const params: Record<string, string | number> = { limit: 20 }
+      if (selectedCategoryId.value) {
+        params.categoryId = selectedCategoryId.value
+      }
       if (!reset && nextCursor.value && nextCursorId.value) {
         params.cursor = nextCursor.value
         params.cursorId = nextCursorId.value
@@ -133,6 +139,25 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
+  async function updateTransaction(id: string, payload: UpdateTransactionPayload): Promise<Transaction> {
+    submitting.value = true
+    error.value = null
+    try {
+      const response = await api.patch<TransactionResponse>(`/transactions/${id}`, payload)
+      const updatedTransaction = response.data.data
+      const index = transactions.value.findIndex(t => t.id === id)
+      if (index !== -1) {
+        transactions.value[index] = updatedTransaction
+      }
+      return updatedTransaction
+    } catch (err: unknown) {
+      error.value = _extractError(err)
+      throw err
+    } finally {
+      submitting.value = false
+    }
+  }
+
   async function deleteTransaction(id: string): Promise<void> {
     submitting.value = true
     error.value = null
@@ -147,6 +172,13 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
+  function setCategoryFilter(categoryId: string) {
+    selectedCategoryId.value = categoryId
+    nextCursor.value = null
+    nextCursorId.value = null
+    hasMore.value = false
+  }
+
   function reset() {
     transactions.value = []
     categories.value = []
@@ -157,6 +189,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     nextCursor.value = null
     nextCursorId.value = null
     hasMore.value = false
+    selectedCategoryId.value = ''
   }
 
   function _extractError(err: unknown): string {
@@ -177,12 +210,15 @@ export const useTransactionStore = defineStore('transaction', () => {
     nextCursor,
     nextCursorId,
     hasMore,
+    selectedCategoryId,
     totalSpend,
     fetchTransactions,
     fetchCategories,
     fetchMonthlySummary,
     createTransaction,
+    updateTransaction,
     deleteTransaction,
+    setCategoryFilter,
     reset,
   }
 })

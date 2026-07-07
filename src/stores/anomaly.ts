@@ -35,9 +35,8 @@ export const useAnomalyStore = defineStore('anomaly', () => {
 
   async function resolveAnomaly(alertId: string, action: 'confirm' | 'dismiss') {
     try {
-      const response = await api.post<{ data: AnomalyAlert }>(`/anomalies/${alertId}/resolve`, null, {
-        params: { action }
-      })
+      const status = action === 'confirm' ? 'confirmed' : 'dismissed'
+      const response = await api.post<{ data: AnomalyAlert }>(`/anomalies/${alertId}/resolve`, { status })
       const index = anomalies.value.findIndex(a => a.id === alertId)
       if (index !== -1) {
         anomalies.value[index] = response.data.data

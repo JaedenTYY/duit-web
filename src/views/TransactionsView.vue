@@ -5,13 +5,16 @@ import { useTransactionStore } from '@/stores/transaction'
 import TransactionCard from '@/components/transactions/TransactionCard.vue'
 import AddTransactionModal from '@/components/transactions/AddTransactionModal.vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
+import type { Transaction } from '@/types'
 
 const store = useTransactionStore()
 const isModalOpen = ref(false)
 const showReceiptModal = ref(false)
+const editingTransaction = ref<Transaction | null>(null)
 const listContainer = ref<HTMLElement | null>(null)
 
 onMounted(async () => {
+  await store.fetchCategories()
   await store.fetchTransactions(true)
   animateList()
 })
@@ -48,6 +51,22 @@ async function handleDelete(id: string) {
   }
 }
 
+function handleEdit(transaction: Transaction) {
+  editingTransaction.value = transaction
+  isModalOpen.value = true
+}
+
+async function handleCategoryFilterChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  store.setCategoryFilter(target.value)
+  await store.fetchTransactions(true)
+}
+
+function closeTransactionModal() {
+  isModalOpen.value = false
+  editingTransaction.value = null
+}
+
 async function handleReceiptClose() {
   showReceiptModal.value = false
   await store.fetchTransactions(true)
@@ -65,6 +84,28 @@ async function handleReceiptClose() {
         Keep track of your spending flow
       </p>
     </header>
+
+    <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+        Category
+        <select
+          :value="store.selectedCategoryId"
+          class="mt-2 w-full sm:w-64 bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10"
+          @change="handleCategoryFilterChange"
+        >
+          <option value="">
+            All categories
+          </option>
+          <option
+            v-for="cat in store.categories"
+            :key="cat.id"
+            :value="cat.id"
+          >
+            {{ cat.icon }} {{ cat.name }}
+          </option>
+        </select>
+      </label>
+    </div>
 
     <!-- Error State -->
     <div
@@ -96,14 +137,15 @@ async function handleReceiptClose() {
         📝
       </div>
       <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-2">
-        No Transactions Yet
+        {{ store.selectedCategoryId ? 'No Transactions In This Category' : 'No Transactions Yet' }}
       </h3>
       <p class="text-slate-400 text-base font-medium mb-10 max-w-xs mx-auto">
-        Your spending activity will appear here once you start tracking.
+        {{ store.selectedCategoryId ? 'Try another category or clear the filter.' : 'Your spending activity will appear here once you start tracking.' }}
       </p>
       <button 
+        v-if="!store.selectedCategoryId"
         class="bg-white text-slate-950 px-8 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all shadow-xl shadow-slate-200/50 shadow-white/5"
-        @click="isModalOpen = true"
+        @click="editingTransaction = null; isModalOpen = true"
       >
         Track Transaction
       </button>
@@ -119,6 +161,7 @@ async function handleReceiptClose() {
         v-for="tx in store.transactions" 
         :key="tx.id" 
         :transaction="tx"
+        @edit="handleEdit"
         @delete="handleDelete"
       />
 
@@ -163,7 +206,7 @@ async function handleReceiptClose() {
       
       <button 
         class="w-16 h-16 rounded-full bg-blue-600 text-slate-900 shadow-[0_15px_35px_rgba(37,99,235,0.4)] flex items-center justify-center active:scale-90 transition-transform"
-        @click="isModalOpen = true"
+        @click="editingTransaction = null; isModalOpen = true"
       >
         <svg
           class="w-8 h-8"
@@ -182,7 +225,8 @@ async function handleReceiptClose() {
     <!-- Modals -->
     <AddTransactionModal
       v-if="isModalOpen"
-      @close="isModalOpen = false"
+      :transaction="editingTransaction"
+      @close="closeTransactionModal"
     />
     <ReceiptUploadModal
       v-if="showReceiptModal"
