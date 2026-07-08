@@ -125,22 +125,85 @@ export interface ReceiptExtractionResponse {
 
 export interface BillItem {
   id: string
-  billId: string
   name: string
   quantity: string
   unitPrice: string
   lineTotal: string
-  createdAt: string
 }
 
 export interface Bill {
   id: string
-  ownerUserId: string
   merchantName: string | null
+  shareToken: string
+  subtotal: string
+  taxAmount: string
+  serviceCharge: string
   totalAmount: string
   currency: string
-  status: 'draft'
-  createdAt: string
-  updatedAt: string
+  status: 'draft' | 'active' | 'expired' | 'closed'
+  expiresAt: string
+  paymentQrProfile: PaymentQrProfile | null
   items: BillItem[]
+  participants: BillParticipant[]
+}
+
+export interface BillParticipantItem {
+  itemId: string
+  itemName: string
+  allocatedAmount: string
+}
+
+export interface BillParticipant {
+  id: string
+  displayName: string
+  subtotalShare: string
+  taxShare: string
+  serviceChargeShare: string
+  totalOwed: string
+  isPaid: boolean
+  joinedAt: string
+  updatedAt: string
+  selectedItems: BillParticipantItem[]
+}
+
+export interface PaymentQrProfile {
+  id: string
+  provider: string
+  displayName: string
+  qrImageUrl: string | null
+  qrPayload: string | null
+  isDefault: boolean
+  createdAt: string
+}
+
+export interface GuestPaymentQrProfile {
+  provider: string
+  displayName: string
+  qrImageUrl: string | null
+  qrPayload: string | null
+}
+
+export interface GuestBill {
+  merchantName: string | null
+  status: 'draft' | 'active' | 'expired' | 'closed'
+  currency: string
+  subtotal: string
+  taxAmount: string
+  serviceCharge: string
+  totalAmount: string
+  expiresAt: string
+  paymentQrProfile: GuestPaymentQrProfile | null
+  items: BillItem[]
+}
+
+export interface GuestBillSummary {
+  displayName: string
+  currency: string
+  subtotalShare: string
+  taxShare: string
+  serviceChargeShare: string
+  totalOwed: string
+  isPaid: boolean
+  paymentQrProfile: GuestPaymentQrProfile | null
+  selectedItems: BillParticipantItem[]
 }

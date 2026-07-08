@@ -50,6 +50,17 @@ const router = createRouter({
       path: '/split-bill',
       name: 'split-bill',
       component: () => import('../views/SplitBillView.vue')
+    },
+    {
+      path: '/split-bill/:id',
+      name: 'owner-bill-split',
+      component: () => import('../views/OwnerBillSplitView.vue')
+    },
+    {
+      path: '/guest/bills/:shareToken',
+      name: 'guest-bill-split',
+      component: () => import('../views/GuestBillSplitView.vue'),
+      meta: { hideNav: true }
     }
   ],
 })
