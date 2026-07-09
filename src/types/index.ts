@@ -123,9 +123,42 @@ export interface InsightBillSplitSettlement {
 export interface AnomalyAlert {
   id: string
   transactionId: string
+  title: string
+  amount: string
+  currency: string
+  merchantName: string
+  categoryName: string
   reason: string
+  explanation: string
+  anomalyScore: number
+  threshold: number
+  features: AnomalyFeatures
   status: 'pending' | 'confirmed' | 'dismissed'
   createdAt: string
+}
+
+export interface AnomalyFeatures {
+  amount: string
+  currency: string
+  merchantId: string | null
+  merchantName: string
+  categoryId: string | null
+  categoryName: string
+  hourOfDay: number
+  dayOfWeek: number
+  hourSin: number
+  hourCos: number
+  daySin: number
+  dayCos: number
+  amountDeviation: number
+  merchantRarity: number
+  categoryRarity: number
+  timeRarity: number
+  spendingVelocity: number
+  gradualDrift: number
+  recentSpendTotal: string
+  reasonCodes: string[]
+  feedbackSignature: string
 }
 
 export interface MonthlySummary {

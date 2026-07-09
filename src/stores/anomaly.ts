@@ -7,6 +7,7 @@ import { logger } from '@/utils/logger'
 export const useAnomalyStore = defineStore('anomaly', () => {
   const anomalies = ref<AnomalyAlert[]>([])
   const loading = ref(false)
+  const resolvingIds = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
 
   async function fetchAnomalies() {
@@ -34,6 +35,10 @@ export const useAnomalyStore = defineStore('anomaly', () => {
   }
 
   async function resolveAnomaly(alertId: string, action: 'confirm' | 'dismiss') {
+    if (resolvingIds.value.has(alertId)) return
+    resolvingIds.value.add(alertId)
+    error.value = null
+
     try {
       const status = action === 'confirm' ? 'confirmed' : 'dismissed'
       const response = await api.post<{ data: AnomalyAlert }>(`/anomalies/${alertId}/resolve`, { status })
@@ -45,12 +50,15 @@ export const useAnomalyStore = defineStore('anomaly', () => {
       error.value = _extractError(err)
       logger.error(`Failed to ${action} anomaly`, err)
       throw err
+    } finally {
+      resolvingIds.value.delete(alertId)
     }
   }
 
   return {
     anomalies,
     loading,
+    resolvingIds,
     error,
     fetchAnomalies,
     resolveAnomaly

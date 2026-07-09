@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import gsap from 'gsap'
 
 const anomalyStore = useAnomalyStore()
-const { anomalies, loading, error } = storeToRefs(anomalyStore)
+const { anomalies, loading, resolvingIds, error } = storeToRefs(anomalyStore)
 
 onMounted(() => {
   anomalyStore.fetchAnomalies()
@@ -25,17 +25,19 @@ onMounted(() => {
 })
 
 const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
-  // Exit animation for specific card before API call
-  gsap.to(`#alert-${id}`, {
-    x: action === 'dismiss' ? -50 : 50,
-    opacity: 0,
-    scale: 0.95,
-    duration: 0.4,
-    ease: 'power2.in',
-    onComplete: () => {
-      anomalyStore.resolveAnomaly(id, action)
-    }
-  })
+  await anomalyStore.resolveAnomaly(id, action)
+}
+
+function formatMoney(amount: string, currency: string) {
+  return new Intl.NumberFormat('en-MY', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(Number(amount))
+}
+
+function formatScore(score: number) {
+  return `${Math.round(score * 100)}%`
 }
 </script>
 
@@ -48,7 +50,7 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
           Anomaly Engine
         </h2>
         <p class="text-slate-400 mt-1">
-          We scan your transactions to spot duplicates or unusually high charges.
+          Each new transaction is compared with your personal spending baseline.
         </p>
       </div>
     </div>
@@ -91,7 +93,7 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
         {{ error }}
       </p>
       <button
-        class="bg-red-500 text-slate-900 px-6 py-2 rounded-xl font-bold hover:bg-red-600 transition-colors"
+        class="bg-red-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-600 transition-colors"
         @click="anomalyStore.fetchAnomalies"
       >
         Try Again
@@ -134,7 +136,7 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
         :id="`alert-${alert.id}`"
         :key="alert.id"
         class="alert-card bg-white backdrop-blur-xl border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl shadow-slate-200/50 transition-all"
-        :class="alert.status !== 'pending' ? 'opacity-50 grayscale' : 'border-l-4 border-l-red-500 hover:bg-slate-800/80'"
+        :class="alert.status !== 'pending' ? 'opacity-50 grayscale' : 'border-l-4 border-l-red-500 hover:bg-slate-50'"
       >
         <div class="flex items-start md:items-center gap-4">
           <div
@@ -167,9 +169,23 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
             /></svg>
           </div>
           <div>
-            <h3 class="text-slate-900 font-bold">
-              {{ alert.reason }}
-            </h3>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-slate-900 font-bold">
+                {{ alert.title }}
+              </h3>
+              <span class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">
+                Score {{ formatScore(alert.anomalyScore) }}
+              </span>
+            </div>
+            <p class="mt-1 font-semibold text-slate-700">
+              {{ formatMoney(alert.amount, alert.currency) }} · {{ alert.merchantName }}
+            </p>
+            <p class="text-sm text-slate-500">
+              {{ alert.categoryName }}
+            </p>
+            <p class="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+              {{ alert.explanation }}
+            </p>
             <p class="text-slate-400 text-sm mt-1">
               Detected on {{ new Date(alert.createdAt).toLocaleDateString() }}
             </p>
@@ -181,23 +197,25 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
           class="flex items-center gap-3 w-full md:w-auto"
         >
           <button
-            class="flex-1 md:flex-none px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors"
+            class="flex-1 md:flex-none px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="resolvingIds.has(alert.id)"
             @click="handleResolve(alert.id, 'dismiss')"
           >
-            Ignore
+            Dismiss
           </button>
           <button
-            class="flex-1 md:flex-none px-6 py-2.5 bg-red-600 hover:bg-red-500 text-slate-900 font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20"
+            class="flex-1 md:flex-none px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="resolvingIds.has(alert.id)"
             @click="handleResolve(alert.id, 'confirm')"
           >
-            Review
+            Confirm anomaly
           </button>
         </div>
         <div
           v-else
           class="px-4 py-1.5 bg-slate-100 text-slate-400 rounded-lg text-sm font-bold uppercase tracking-wider"
         >
-          {{ alert.status === 'confirmed' ? 'Reviewed' : 'Ignored' }}
+          {{ alert.status === 'confirmed' ? 'Confirmed anomaly' : 'Dismissed' }}
         </div>
       </div>
     </div>
