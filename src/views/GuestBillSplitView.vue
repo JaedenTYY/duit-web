@@ -89,10 +89,10 @@ async function saveSelection() {
       <template v-else-if="guestBill">
         <form
           v-if="!participantToken"
-          class="rounded-3xl border border-slate-200 bg-white p-5"
+          class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm"
           @submit.prevent="joinBill"
         >
-          <h2 class="text-lg font-bold text-slate-900">
+          <h2 class="text-xl font-black text-slate-900">
             Join this split
           </h2>
           <p class="mt-1 text-sm leading-6 text-slate-500">
@@ -102,13 +102,13 @@ async function saveSelection() {
             v-model="displayName"
             required
             maxlength="120"
-            class="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-4 text-base font-semibold outline-none focus:border-blue-500"
+            class="mt-6 w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-base font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
             placeholder="Your name"
           >
           <button
             type="submit"
             :disabled="saving || !displayName.trim()"
-            class="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 disabled:opacity-40"
+            class="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
           >
             {{ saving ? 'Joining...' : 'Join bill' }}
           </button>
@@ -116,7 +116,7 @@ async function saveSelection() {
 
         <section
           v-else
-          class="space-y-4"
+          class="space-y-6"
         >
           <div>
             <h2 class="text-xl font-black text-slate-900">

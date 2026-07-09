@@ -93,21 +93,21 @@ async function applyPaymentProfile() {
 
     <template v-else-if="bill">
       <section class="grid gap-4 sm:grid-cols-4">
-        <div class="rounded-3xl border border-slate-200 bg-white p-5">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Subtotal</p>
-          <p class="mt-2 text-xl font-black text-slate-900">{{ formatCurrency(bill.subtotal, bill.currency) }}</p>
+        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Subtotal</p>
+          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.subtotal, bill.currency) }}</p>
         </div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-5">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Tax</p>
-          <p class="mt-2 text-xl font-black text-slate-900">{{ formatCurrency(bill.taxAmount, bill.currency) }}</p>
+        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tax</p>
+          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.taxAmount, bill.currency) }}</p>
         </div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-5">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Service</p>
-          <p class="mt-2 text-xl font-black text-slate-900">{{ formatCurrency(bill.serviceCharge, bill.currency) }}</p>
+        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Service</p>
+          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.serviceCharge, bill.currency) }}</p>
         </div>
-        <div class="rounded-3xl border border-slate-200 bg-slate-900 p-5">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total</p>
-          <p class="mt-2 text-xl font-black text-white">{{ formatCurrency(bill.totalAmount, bill.currency) }}</p>
+        <div class="rounded-3xl border border-transparent bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-lg shadow-slate-900/20">
+          <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total</p>
+          <p class="mt-2 text-2xl font-black text-white">{{ formatCurrency(bill.totalAmount, bill.currency) }}</p>
         </div>
       </section>
 
@@ -131,14 +131,14 @@ async function applyPaymentProfile() {
         <div class="space-y-4">
           <PaymentQrCard :profile="selectedProfile" />
 
-          <section class="rounded-3xl border border-slate-200 bg-white p-5">
-            <h2 class="text-lg font-bold text-slate-900">
+          <section class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h2 class="text-xl font-black text-slate-900">
               Select payment QR
             </h2>
-            <div class="mt-4 flex gap-2">
+            <div class="mt-5 flex gap-3">
               <select
                 v-model="selectedProfileId"
-                class="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                class="min-w-0 flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
               >
                 <option value="">No QR selected</option>
                 <option
@@ -152,7 +152,7 @@ async function applyPaymentProfile() {
               <button
                 type="button"
                 :disabled="saving"
-                class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white disabled:opacity-40"
+                class="rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-40"
                 @click="applyPaymentProfile"
               >
                 Apply
@@ -161,47 +161,47 @@ async function applyPaymentProfile() {
           </section>
 
           <form
-            class="rounded-3xl border border-slate-200 bg-white p-5"
+            class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm"
             @submit.prevent="savePaymentProfile"
           >
-            <h2 class="text-lg font-bold text-slate-900">
+            <h2 class="text-xl font-black text-slate-900">
               Add payment QR
             </h2>
-            <div class="mt-4 space-y-3">
+            <div class="mt-5 space-y-4">
               <input
                 v-model="displayName"
                 required
-                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500"
+                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
                 placeholder="Display name"
               >
               <input
                 v-model="provider"
                 required
-                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500"
-                placeholder="Provider"
+                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
+                placeholder="Provider (e.g. DuitNow)"
               >
               <input
                 v-model="qrImageUrl"
-                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500"
+                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
                 placeholder="QR image URL"
               >
               <input
                 v-model="qrPayload"
-                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500"
+                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
                 placeholder="QR payload or payment note"
               >
               <label class="flex items-center gap-3 text-sm font-bold text-slate-600">
                 <input
                   v-model="isDefault"
                   type="checkbox"
-                  class="h-4 w-4"
+                  class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
                 >
                 Make default
               </label>
               <button
                 type="submit"
                 :disabled="saving || (!qrImageUrl && !qrPayload)"
-                class="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 disabled:opacity-40"
+                class="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
               >
                 Save QR profile
               </button>
