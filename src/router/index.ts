@@ -49,12 +49,12 @@ const router = createRouter({
     {
       path: '/tax',
       name: 'tax',
-      component: () => import('../views/TaxExportView.vue')
+      redirect: '/dashboard'
     },
     {
       path: '/goals',
       name: 'goals',
-      component: () => import('../views/GoalsView.vue')
+      redirect: '/dashboard'
     },
     {
       path: '/split-bill',

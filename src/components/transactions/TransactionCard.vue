@@ -44,18 +44,18 @@ const formattedDate = computed(() => {
         <h3 class="text-slate-900 font-bold text-base tracking-tight truncate pr-4">
           {{ transaction.description || transaction.categoryName || 'Transaction' }}
         </h3>
-        <div class="flex items-center gap-2 mt-1">
+        <div class="flex items-center gap-2 mt-1 truncate">
           <span
             v-if="transaction.merchantName"
-            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate"
           >{{ transaction.merchantName }}</span>
           <div
             v-if="transaction.merchantName"
-            class="w-1 h-1 rounded-full bg-slate-200"
+            class="w-1 h-1 shrink-0 rounded-full bg-slate-200"
           />
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{{ transaction.categoryName || 'General' }}</span>
-          <div class="w-1 h-1 rounded-full bg-slate-200" />
-          <span class="text-xs font-semibold text-slate-400">{{ formattedDate }}</span>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">{{ transaction.categoryName || 'General' }}</span>
+          <div class="w-1 h-1 shrink-0 rounded-full bg-slate-200" />
+          <span class="text-xs font-semibold text-slate-400 shrink-0">{{ formattedDate }}</span>
         </div>
       </div>
     </div>

@@ -79,7 +79,7 @@ async function handleReceiptClose() {
     <header class="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-          Activity
+          Transactions
         </h1>
         <p class="text-slate-400 font-medium mt-1">
           Keep track of your spending flow
@@ -155,7 +155,7 @@ async function handleReceiptClose() {
         class="bg-white text-slate-950 px-8 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all shadow-xl shadow-slate-200/50 shadow-white/5"
         @click="editingTransaction = null; isModalOpen = true"
       >
-        Track Transaction
+        Add Transaction
       </button>
     </div>
 

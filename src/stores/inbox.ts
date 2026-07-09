@@ -19,19 +19,9 @@ export const useInboxStore = defineStore('inbox', () => {
   const error = ref<string | null>(null)
 
   async function fetchPendingReceipts() {
-    if (loading.value) return
-    loading.value = true
-    error.value = null
-
-    try {
-      const response = await api.get<ReceiptExtractionResponse[]>('/receipt/pending')
-      pendingReceipts.value = response.data
-    } catch (err: unknown) {
-      error.value = _extractError(err)
-      logger.error('Failed to fetch pending receipts', err)
-    } finally {
-      loading.value = false
-    }
+    // Deprecated: backend does not support /receipt/pending
+    // Replaced by Magic Inbox hub view
+    pendingReceipts.value = []
   }
 
   async function confirmReceipt(

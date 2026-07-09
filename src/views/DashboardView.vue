@@ -127,6 +127,29 @@ const addToStats = (el: any) => {
       </p>
     </header>
 
+    <!-- Error State -->
+    <div
+      v-if="store.error"
+      class="p-5 bg-red-500/10 border border-red-500/20 rounded-[1.5rem] text-red-400 text-sm font-semibold flex items-center gap-3"
+    >
+      <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+      {{ store.error }}
+    </div>
+
+    <!-- Loading Skeleton -->
+    <div
+      v-if="store.loading && (!store.monthlySummary || store.transactions.length === 0)"
+      class="space-y-6"
+    >
+      <div class="h-48 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="h-32 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
+        <div class="h-32 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
+      </div>
+      <div class="h-64 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
+    </div>
+
+    <template v-else>
     <!-- Main Stats Card -->
     <div
       :ref="addToStats"
@@ -148,7 +171,7 @@ const addToStats = (el: any) => {
             to="/transactions"
             class="bg-white text-slate-950 px-8 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl shadow-slate-200/50 shadow-white/5"
           >
-            View History
+            Transactions
           </router-link>
         </div>
       </div>
@@ -235,7 +258,7 @@ const addToStats = (el: any) => {
           class="flex flex-col md:flex-row items-center gap-10 flex-1"
         >
           <!-- Chart Container -->
-          <div class="relative w-64 h-64 shrink-0">
+          <div class="relative w-48 h-48 sm:w-64 sm:h-64 shrink-0 mx-auto md:mx-0">
             <Doughnut
               :data="chartData"
               :options="chartOptions"
@@ -312,35 +335,9 @@ const addToStats = (el: any) => {
           </div>
         </div>
 
-        <div class="premium-card p-10 flex flex-col items-center text-center">
-          <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-blue-400 mb-4">
-            <svg
-              class="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            ><path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            /></svg>
-          </div>
-          <h4 class="text-slate-900 font-bold mb-2">
-            New Goal?
-          </h4>
-          <p class="text-slate-400 text-sm mb-6">
-            Set a budget for next month and track your progress here.
-          </p>
-          <router-link
-            to="/goals"
-            class="w-full py-4 bg-blue-600 rounded-2xl font-bold text-slate-900 hover:bg-blue-500 transition-all text-center shadow-lg shadow-blue-500/20 block"
-          >
-            Set a Goal
-          </router-link>
-        </div>
       </section>
     </div>
+    </template>
   </div>
 </template>
 

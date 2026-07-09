@@ -191,46 +191,7 @@ onMounted(() => {
           </div>
           Insights
         </router-link>
-        <router-link
-          to="/tax"
-          class="nav-link-desktop"
-          :class="{ 'active': route.path === '/tax' }"
-        >
-          <div class="icon-box">
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            ><path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            /></svg>
-          </div>
-          Tax Export
-        </router-link>
-        <router-link
-          to="/goals"
-          class="nav-link-desktop"
-          :class="{ 'active': route.path === '/goals' }"
-        >
-          <div class="icon-box">
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            ><path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            /></svg>
-          </div>
-          Goals
-        </router-link>
+
         <router-link
           to="/split-bill"
           class="nav-link-desktop"
@@ -371,9 +332,9 @@ onMounted(() => {
         </router-link>
 
         <router-link
-          to="/tax"
+          to="/insights"
           class="nav-link-mobile"
-          :class="{ 'active': route.path === '/tax' }"
+          :class="{ 'active': route.path === '/insights' }"
         >
           <svg
             class="w-5 h-5"
@@ -384,14 +345,14 @@ onMounted(() => {
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2a2 2 0 00-2 2v6z"
           /></svg>
         </router-link>
 
         <router-link
-          to="/goals"
+          to="/split-bill"
           class="nav-link-mobile"
-          :class="{ 'active': route.path === '/goals' }"
+          :class="{ 'active': route.path === '/split-bill' }"
         >
           <svg
             class="w-5 h-5"
@@ -402,7 +363,7 @@ onMounted(() => {
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
+            d="M9 14l6-6m-5.5-.5h.01m4.99 7h.01M5 5h14v14H5z"
           /></svg>
         </router-link>
       </div>
