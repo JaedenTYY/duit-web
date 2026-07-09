@@ -76,13 +76,21 @@ async function handleReceiptClose() {
 <template>
   <div class="relative min-h-[85vh] pb-32">
     <!-- Header -->
-    <header class="mb-12">
-      <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-        Activity
-      </h1>
-      <p class="text-slate-400 font-medium mt-1">
-        Keep track of your spending flow
-      </p>
+    <header class="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
+          Activity
+        </h1>
+        <p class="text-slate-400 font-medium mt-1">
+          Keep track of your spending flow
+        </p>
+      </div>
+      <RouterLink
+        to="/statements"
+        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700"
+      >
+        Import bank PDF
+      </RouterLink>
     </header>
 
     <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

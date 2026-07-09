@@ -161,6 +161,40 @@ export interface AnomalyFeatures {
   feedbackSignature: string
 }
 
+export type StatementDirection = 'debit' | 'credit'
+export type StatementRowStatus = 'pending' | 'imported' | 'skipped'
+
+export interface StatementRow {
+  id: string
+  occurredAt: string
+  description: string
+  merchantName: string
+  amount: string
+  currency: string
+  direction: StatementDirection
+  suggestedCategoryId: string | null
+  suggestedCategoryName: string | null
+  categorisationConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | null
+  status: StatementRowStatus
+  transactionId: string | null
+}
+
+export interface StatementUpload {
+  id: string
+  fileName: string
+  status: 'pending' | 'confirmed'
+  createdAt: string
+  confirmedAt: string | null
+  rows: StatementRow[]
+}
+
+export interface StatementImportResult {
+  uploadId: string
+  importedCount: number
+  skippedCount: number
+  transactionIds: string[]
+}
+
 export interface MonthlySummary {
   totalSpend: string
   currency: string

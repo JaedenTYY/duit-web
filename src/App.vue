@@ -63,7 +63,7 @@ onMounted(() => {
     <!-- Premium Sidebar (Desktop) -->
     <nav
       v-if="!hideNav"
-      class="hidden md:flex fixed top-0 left-0 h-full w-72 flex-col bg-white backdrop-blur-3xl border-r border-slate-200 z-40 p-10"
+      class="hidden md:flex fixed top-0 left-0 h-full w-72 flex-col overflow-y-auto bg-white backdrop-blur-3xl border-r border-slate-200 z-40 p-10"
     >
       <div class="mb-14">
         <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
@@ -130,6 +130,26 @@ onMounted(() => {
             /></svg>
           </div>
           Transactions
+        </router-link>
+        <router-link
+          to="/statements"
+          class="nav-link-desktop"
+          :class="{ 'active': route.path === '/statements' }"
+        >
+          <div class="icon-box">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6"
+            /></svg>
+          </div>
+          Bank Import
         </router-link>
         <router-link
           to="/insights"
