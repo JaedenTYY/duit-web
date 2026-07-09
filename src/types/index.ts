@@ -23,6 +23,11 @@ export interface Transaction {
   source: 'receipt' | 'manual' | 'import'
   occurredAt: string
   createdAt: string
+  suggestedCategoryId?: string
+  suggestedCategoryName?: string
+  similarityScore?: number
+  categorisationConfidence?: string
+  categorisationMessage?: string
 }
 
 export interface Merchant {
@@ -121,6 +126,11 @@ export interface ReceiptExtractionResponse {
   extractedData: ParsedReceipt
   rawOcrText: string
   confidence: 'high' | 'medium' | 'low'
+  suggestedCategoryId?: string
+  suggestedCategoryName?: string
+  similarityScore?: number
+  categorisationConfidence?: string
+  categorisationMessage?: string
 }
 
 export interface BillItem {
@@ -206,4 +216,14 @@ export interface GuestBillSummary {
   isPaid: boolean
   paymentQrProfile: GuestPaymentQrProfile | null
   selectedItems: BillParticipantItem[]
+}
+
+export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
+
+export interface CategorisationResult {
+  merchantId: string | null
+  merchantName: string
+  categoryId: string | null
+  similarityScore: number
+  confidence: ConfidenceLevel
 }

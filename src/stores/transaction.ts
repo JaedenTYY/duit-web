@@ -7,6 +7,7 @@ import { logger } from '@/utils/logger'
 export interface CreateTransactionPayload {
   amount: number
   currency: string
+  merchantName?: string
   categoryId?: string
   description?: string
   occurredAt: string

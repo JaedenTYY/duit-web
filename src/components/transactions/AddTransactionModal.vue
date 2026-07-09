@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useTransactionStore } from '@/stores/transaction'
-import type { Transaction } from '@/types'
+import type { Transaction, CategorisationResult } from '@/types'
+import api from '@/lib/api'
+import CategorySuggestion from './CategorySuggestion.vue'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -17,6 +19,7 @@ const isEditing = computed(() => Boolean(props.transaction))
 const amount = ref<number | null>(props.transaction ? Number(props.transaction.amount) : null)
 const currency = ref(props.transaction?.currency ?? 'MYR')
 const fxRate = ref<number>(props.transaction ? Number(props.transaction.fxRate) : 1)
+const merchantName = ref(props.transaction?.merchantName ?? '')
 const categoryId = ref(props.transaction?.categoryId ?? '')
 const description = ref(props.transaction?.description ?? '')
 const occurredAt = ref(
@@ -27,8 +30,36 @@ const occurredAt = ref(
 
 const showFxRate = computed(() => currency.value !== 'MYR')
 
+const categorisation = ref<CategorisationResult | null>(null)
+let debounceTimer: ReturnType<typeof setTimeout>
+
+async function fetchCategorisation(name: string) {
+  if (!name.trim()) {
+    categorisation.value = null
+    return
+  }
+  try {
+    const res = await api.get<{ data: CategorisationResult }>('/merchants/categorise', {
+      params: { name }
+    })
+    categorisation.value = res.data.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+watch(merchantName, (newVal) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    fetchCategorisation(newVal)
+  }, 500)
+})
+
 onMounted(() => {
   store.fetchCategories()
+  if (merchantName.value) {
+    fetchCategorisation(merchantName.value)
+  }
 })
 
 async function handleSubmit() {
@@ -38,6 +69,7 @@ async function handleSubmit() {
     const payload = {
       amount: amount.value,
       currency: currency.value,
+      merchantName: merchantName.value || undefined,
       categoryId: categoryId.value || undefined,
       description: description.value || undefined,
       occurredAt: new Date(occurredAt.value).toISOString(),
@@ -152,38 +184,58 @@ async function handleSubmit() {
         </div>
 
         <!-- Classification -->
-        <div class="space-y-2">
-          <label class="premium-label">Category</label>
-          <div class="relative">
-            <select
-              v-model="categoryId"
-              required
-              class="premium-input appearance-none pr-10"
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <label class="premium-label">Merchant Name</label>
+            <input
+              v-model="merchantName"
+              type="text"
+              maxlength="255"
+              placeholder="e.g. Starbucks..."
+              class="premium-input"
             >
-              <option value="">
-                Select Classification
-              </option>
-              <option
-                v-for="cat in store.categories"
-                :key="cat.id"
-                :value="cat.id"
+          </div>
+
+          <div class="space-y-2">
+            <label class="premium-label">Category</label>
+            <div class="relative">
+              <select
+                v-model="categoryId"
+                required
+                class="premium-input appearance-none pr-10"
               >
-                {{ cat.icon }} {{ cat.name }}
-              </option>
-            </select>
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="3"
-                d="M19 9l-7 7-7-7"
-              /></svg>
+                <option value="">
+                  Select Classification
+                </option>
+                <option
+                  v-for="cat in store.categories"
+                  :key="cat.id"
+                  :value="cat.id"
+                >
+                  {{ cat.icon }} {{ cat.name }}
+                </option>
+              </select>
+              <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M19 9l-7 7-7-7"
+                /></svg>
+              </div>
             </div>
+
+            <CategorySuggestion
+              v-if="categorisation"
+              :categorisation="categorisation"
+              :categories="store.categories"
+              @apply="categoryId = $event"
+            />
           </div>
         </div>
 

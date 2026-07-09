@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { gsap } from 'gsap'
-import type { ReceiptExtractionResponse, Category } from '@/types'
+import api from '@/lib/api'
+import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
+import CategorySuggestion from '../transactions/CategorySuggestion.vue'
 
 const props = defineProps<{
   extraction: ReceiptExtractionResponse
@@ -32,6 +34,35 @@ const occurredAt = ref(
 
 const showFxRate = computed(() => currency.value !== 'MYR')
 
+const categorisation = ref<CategorisationResult | null>(null)
+let debounceTimer: ReturnType<typeof setTimeout>
+
+async function fetchCategorisation(name: string) {
+  if (!name.trim()) {
+    categorisation.value = null
+    return
+  }
+  try {
+    const res = await api.get<{ data: CategorisationResult }>('/merchants/categorise', {
+      params: { name }
+    })
+    categorisation.value = res.data.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+watch(merchantName, (newVal) => {
+  clearTimeout(debounceTimer)
+  if (newVal) {
+    debounceTimer = setTimeout(() => {
+      fetchCategorisation(newVal)
+    }, 500)
+  } else {
+    categorisation.value = null
+  }
+})
+
 onMounted(() => {
   if (formContainer.value) {
     gsap.from(formContainer.value, {
@@ -40,6 +71,10 @@ onMounted(() => {
       duration: 0.5,
       ease: 'power3.out'
     })
+  }
+  
+  if (merchantName.value) {
+    fetchCategorisation(merchantName.value)
   }
 })
 
@@ -177,6 +212,13 @@ function handleConfirm() {
             {{ cat.icon }} {{ cat.name }}
           </option>
         </select>
+        
+        <CategorySuggestion
+          v-if="categorisation"
+          :categorisation="categorisation"
+          :categories="categories"
+          @apply="categoryId = $event"
+        />
       </div>
 
       <div>
