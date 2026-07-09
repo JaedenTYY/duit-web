@@ -49,10 +49,17 @@ const handleUploadSuccess = () => {
           Dump your receipts here. We'll sort out the tax tags.
         </p>
       </div>
-      <button 
-        class="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-slate-900 px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-blue-500/30"
-        @click="showUpload = true"
-      >
+      <div class="hidden items-center gap-3 md:flex">
+        <RouterLink
+          to="/gmail"
+          class="rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 hover:border-red-200 hover:text-red-600"
+        >
+          Gmail eReceipts
+        </RouterLink>
+        <button
+          class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-blue-500/30"
+          @click="showUpload = true"
+        >
         <svg
           class="w-5 h-5"
           fill="none"
@@ -69,9 +76,17 @@ const handleUploadSuccess = () => {
           stroke-width="2"
           d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
         /></svg>
-        New Scan
-      </button>
+          New Scan
+        </button>
+      </div>
     </header>
+
+    <RouterLink
+      to="/gmail"
+      class="flex items-center justify-center rounded-2xl border border-red-100 bg-red-50 px-5 py-3 font-bold text-red-700 md:hidden"
+    >
+      Review Gmail eReceipts
+    </RouterLink>
 
     <div
       v-if="loading"

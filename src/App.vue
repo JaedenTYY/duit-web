@@ -112,6 +112,26 @@ onMounted(() => {
           Magic Inbox
         </router-link>
         <router-link
+          to="/gmail"
+          class="nav-link-desktop"
+          :class="{ 'active': route.path === '/gmail' }"
+        >
+          <div class="icon-box">
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 6h18v12H3V6zm0 1l9 6 9-6"
+            /></svg>
+          </div>
+          Gmail Receipts
+        </router-link>
+        <router-link
           to="/transactions"
           class="nav-link-desktop"
           :class="{ 'active': route.path === '/transactions' }"

@@ -195,6 +195,38 @@ export interface StatementImportResult {
   transactionIds: string[]
 }
 
+export interface GmailStatus {
+  connected: boolean
+  provider: 'mock' | 'google'
+  providerEmail: string | null
+  scopes: string[]
+  connectedAt: string | null
+}
+
+export interface GmailSyncResult {
+  discoveredCount: number
+  createdCount: number
+  duplicateCount: number
+  ignoredCount: number
+}
+
+export interface EmailExtraction {
+  id: string
+  sender: string
+  subject: string
+  receivedAt: string
+  merchantName: string
+  amount: string
+  currency: string
+  occurredAt: string
+  suggestedCategoryId: string | null
+  suggestedCategoryName: string | null
+  categorisationConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | null
+  status: 'pending' | 'confirmed' | 'skipped'
+  transactionId: string | null
+  createdAt: string
+}
+
 export interface MonthlySummary {
   totalSpend: string
   currency: string

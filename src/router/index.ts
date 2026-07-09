@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('@/views/InboxView.vue'),
     },
     {
+      path: '/gmail',
+      name: 'gmail-receipts',
+      component: () => import('@/views/GmailReceiptsView.vue'),
+    },
+    {
       path: '/insights',
       name: 'insights',
       component: () => import('../views/InsightsView.vue')
