@@ -23,6 +23,26 @@ function getDirectionIcon(direction: InsightFinding['direction']) {
     default: return '•'
   }
 }
+
+function formatMoney(amount: string, currency: string) {
+  return new Intl.NumberFormat('en-MY', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(Number(amount))
+}
+
+function comparisonLabel(percentage: number, direction: Insight['content']['spendingTrend']['direction']) {
+  if (direction === 'NEW') return 'New baseline'
+  if (percentage === 0) return 'No change'
+  return `${Math.abs(percentage).toFixed(1)}% ${percentage > 0 ? 'higher' : 'lower'}`
+}
+
+function recommendations(insight: Insight) {
+  return insight.content.recommendations.length
+    ? insight.content.recommendations
+    : [insight.content.recommendation]
+}
 </script>
 
 <template>
@@ -36,11 +56,68 @@ function getDirectionIcon(direction: InsightFinding['direction']) {
           {{ insight.content.headline }}
         </h2>
       </div>
+      <span
+        class="rounded-full px-3 py-1 text-xs font-bold"
+        :class="{
+          'bg-emerald-50 text-emerald-700': insight.content.riskLevel === 'LOW',
+          'bg-amber-50 text-amber-700': insight.content.riskLevel === 'MEDIUM',
+          'bg-red-50 text-red-700': insight.content.riskLevel === 'HIGH',
+        }"
+      >
+        {{ insight.content.riskLevel }} RISK
+      </span>
     </div>
 
     <p class="text-slate-600 text-lg leading-relaxed mb-8">
       {{ insight.content.summary }}
     </p>
+
+    <div class="grid grid-cols-2 gap-3 mb-8">
+      <div class="rounded-2xl bg-slate-900 p-4 text-white">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Last 7 days
+        </p>
+        <p class="mt-2 text-2xl font-bold">
+          {{ formatMoney(insight.content.totalSpent, insight.content.currency) }}
+        </p>
+      </div>
+      <div class="rounded-2xl bg-slate-50 p-4">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">
+          vs previous week
+        </p>
+        <p class="mt-2 text-lg font-bold text-slate-900">
+          {{ comparisonLabel(insight.content.comparisonPercentage, insight.content.spendingTrend.direction) }}
+        </p>
+      </div>
+    </div>
+
+    <div
+      v-if="insight.content.topCategories.length"
+      class="mb-8"
+    >
+      <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-500">
+        Category breakdown
+      </h3>
+      <div class="space-y-4">
+        <div
+          v-for="category in insight.content.topCategories"
+          :key="category.categoryName"
+        >
+          <div class="mb-1.5 flex items-center justify-between text-sm">
+            <span class="font-semibold text-slate-700">{{ category.categoryName }}</span>
+            <span class="text-slate-500">
+              {{ formatMoney(category.amount, insight.content.currency) }} · {{ category.percentage.toFixed(1) }}%
+            </span>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div
+              class="h-full rounded-full bg-blue-500"
+              :style="{ width: `${Math.min(category.percentage, 100)}%` }"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="space-y-4 mb-8">
       <div 
@@ -79,15 +156,25 @@ function getDirectionIcon(direction: InsightFinding['direction']) {
           stroke-width="2"
           d="M13 10V3L4 14h7v7l9-11h-7z"
         /></svg>
-        Recommendation
+        Recommendations
       </h4>
-      <p class="text-slate-600">
-        {{ insight.content.recommendation }}
-      </p>
+      <ul class="space-y-2 text-slate-600">
+        <li
+          v-for="recommendation in recommendations(insight)"
+          :key="recommendation"
+          class="flex gap-2"
+        >
+          <span aria-hidden="true">•</span>
+          <span>{{ recommendation }}</span>
+        </li>
+      </ul>
     </div>
 
     <p class="text-emerald-600 text-sm font-medium italic text-center">
       "{{ insight.content.positiveNote }}"
+    </p>
+    <p class="mt-4 text-center text-xs text-slate-400">
+      Generated {{ new Date(insight.generatedAt).toLocaleString() }}
     </p>
   </div>
 </template>

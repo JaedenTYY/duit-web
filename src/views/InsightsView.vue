@@ -39,13 +39,23 @@ watch(() => store.insights.length, (newLen, oldLen) => {
 <template>
   <div class="relative min-h-[85vh] pb-32">
     <!-- Header -->
-    <header class="mb-12">
-      <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-        AI Insights
-      </h1>
-      <p class="text-slate-400 font-medium mt-1">
-        Deep analysis of your spending behavior
-      </p>
+    <header class="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
+          AI Insights
+        </h1>
+        <p class="text-slate-400 font-medium mt-1">
+          Seven-day spending analysis compared with the previous week
+        </p>
+      </div>
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        :disabled="store.generating"
+        @click="store.generateWeeklyInsight"
+      >
+        {{ store.generating ? 'Generating…' : 'Generate Weekly Insight' }}
+      </button>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -84,10 +94,10 @@ watch(() => store.insights.length, (newLen, oldLen) => {
             🤖
           </div>
           <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-2">
-            Generating Insights...
+            No weekly insight yet
           </h3>
           <p class="text-slate-400 text-base font-medium max-w-sm mx-auto leading-relaxed">
-            We need a bit more transaction history to generate meaningful patterns. Keep tracking your spending!
+            Generate an insight to compare your latest seven days with the previous week.
           </p>
         </div>
 

@@ -7,6 +7,7 @@ import { logger } from '@/utils/logger'
 export const useInsightStore = defineStore('insight', () => {
   const insights = ref<Insight[]>([])
   const loading = ref(false)
+  const generating = ref(false)
   const error = ref<string | null>(null)
 
   async function fetchInsights() {
@@ -25,6 +26,26 @@ export const useInsightStore = defineStore('insight', () => {
     }
   }
 
+  async function generateWeeklyInsight() {
+    if (generating.value) return
+    generating.value = true
+    error.value = null
+
+    try {
+      const response = await api.post<{ data: Insight }>('/insights/generate')
+      const generated = response.data.data
+      insights.value = [
+        generated,
+        ...insights.value.filter((insight) => insight.id !== generated.id),
+      ]
+    } catch (err: unknown) {
+      error.value = _extractError(err)
+      logger.error('Failed to generate weekly insight', err)
+    } finally {
+      generating.value = false
+    }
+  }
+
   function _extractError(err: unknown): string {
     if (err && typeof err === 'object' && 'response' in err) {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
@@ -36,7 +57,9 @@ export const useInsightStore = defineStore('insight', () => {
   return {
     insights,
     loading,
+    generating,
     error,
-    fetchInsights
+    fetchInsights,
+    generateWeeklyInsight,
   }
 })

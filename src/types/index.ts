@@ -56,9 +56,20 @@ export interface Insight {
 export interface InsightContent {
   headline: string
   summary: string
+  totalSpent: string
+  currency: string
+  comparisonPercentage: number
+  topCategories: InsightCategory[]
+  topMerchants: InsightMerchant[]
+  largestTransactions: InsightTransactionSummary[]
+  unusualIncreases: InsightCategoryIncrease[]
+  spendingTrend: InsightSpendingTrend
+  billSplitSettlements: InsightBillSplitSettlement | null
   findings: InsightFinding[]
   recommendation: string
+  recommendations: string[]
   positiveNote: string
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
 }
 
 export interface InsightFinding {
@@ -67,6 +78,46 @@ export interface InsightFinding {
   direction: 'up' | 'down' | 'stable'
   commentary: string
   severity: 'positive' | 'neutral' | 'warning' | 'critical'
+}
+
+export interface InsightCategory {
+  categoryName: string
+  amount: string
+  percentage: number
+}
+
+export interface InsightMerchant {
+  merchantName: string
+  amount: string
+}
+
+export interface InsightTransactionSummary {
+  merchantName: string
+  categoryName: string
+  amount: string
+  occurredAt: string
+}
+
+export interface InsightCategoryIncrease {
+  categoryName: string
+  currentAmount: string
+  previousAmount: string
+  changePercentage: number
+}
+
+export interface InsightSpendingTrend {
+  direction: 'UP' | 'DOWN' | 'STABLE' | 'NEW'
+  currentTotal: string
+  previousTotal: string
+  changePercentage: number
+}
+
+export interface InsightBillSplitSettlement {
+  billsCreated: number
+  participants: number
+  paidParticipants: number
+  settledAmount: string
+  outstandingAmount: string
 }
 
 export interface AnomalyAlert {
