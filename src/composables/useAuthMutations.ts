@@ -1,14 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
-import { login, logout, register, type LoginCredentials, type RegisterCredentials } from '@/api/auth'
+import { login, logout, register } from '@/api/generated/auth-controller/auth-controller'
+import type { LoginRequest, RegisterRequest } from '@/api/generated/model'
 import { useAuthStore } from '@/stores/auth'
 
 export function useLoginMutation() {
   const authStore = useAuthStore()
 
   return useMutation({
-    mutationFn: (credentials: LoginCredentials) => login(credentials),
-    onSuccess: ({ token, user }) => {
-      authStore.setSession(token, user)
+    mutationFn: (credentials: LoginRequest) => login(credentials),
+    onSuccess: (response) => {
+      if (response.data) {
+        authStore.setSession(response.data.token, response.data.user)
+      }
     },
   })
 }
@@ -17,9 +20,11 @@ export function useRegisterMutation() {
   const authStore = useAuthStore()
 
   return useMutation({
-    mutationFn: (credentials: RegisterCredentials) => register(credentials),
-    onSuccess: ({ token, user }) => {
-      authStore.setSession(token, user)
+    mutationFn: (credentials: RegisterRequest) => register(credentials),
+    onSuccess: (response) => {
+      if (response.data) {
+        authStore.setSession(response.data.token, response.data.user)
+      }
     },
   })
 }

@@ -1,289 +1,233 @@
 # Duit Web
 
-Vue 3 frontend for Duit, an AI-assisted personal finance application focused on
-Southeast Asian users. The frontend presents transactions, receipt capture,
-insights, goals, tax views, anomaly review, and draft bill creation.
+`duit-web` is the Vue 3 frontend for Duit, an AI-assisted personal finance
+application for Southeast Asian users. It handles authentication, transaction
+review, receipt capture, insights, anomaly review, statement import, and
+collaborative bill-splitting screens.
 
-## Technology
+The frontend is intentionally thin around financial truth: it renders and
+validates user interactions, but `duit-api` remains the authoritative system of
+record.
 
-- Vue 3 Composition API and TypeScript
-- Pinia for server-state caching
-- Vue Router
-- Axios
-- Vite
-- Tailwind CSS
+## Tech Stack
 
-PostgreSQL remains the source of truth through `duit-api`. Pinia stores cache API
-responses; they do not independently own persisted financial state.
+- Vue 3 Composition API with TypeScript
+- Vite for development and production builds
+- Vue Router for route-level navigation
+- TanStack Vue Query for server state, caching, retries, and mutations
+- Pinia for client/session state such as the JWT and authenticated user
+- Orval-generated API clients from the backend OpenAPI contract
+- Axios with a shared bearer-token interceptor
+- vee-validate and zod for form validation
+- PrimeVue and Tailwind CSS for UI implementation
+- Playwright for browser smoke tests
+- Capacitor for Android and iOS native shells
 
-## Current capabilities
-
-- JWT-based registration, login, logout, and protected navigation
-- Transaction creation, editing, deletion, cursor-based browsing, and monthly
-  summaries
-- Receipt upload, OCR review, transaction confirmation, and pending receipt
-  inbox
-- Financial insights and anomaly review
-- Budget and savings goals
-- Business-expense tax summaries
-- Draft bill creation from a receipt, including merchant, currency, total, and
-  itemized values
-
-## Design principles
-
-- **Server-owned financial data:** stores reflect API responses and are
-  refreshed from the backend rather than acting as an independent database.
-- **Strict API contracts:** shared resources are modeled in
-  `src/types/index.ts`. Kotlin and TypeScript contracts must be reviewed
-  together because the project has no code-generation step.
-- **Exact monetary transport:** API money values that require preservation are
-  represented as decimal strings and formatted only for display.
-- **Authenticated ownership:** the browser sends a bearer token; it never sends
-  a trusted owner ID for server-owned resources.
-- **Phase isolation:** the current split-bill UI creates draft bills only. It
-  does not imply sharing, payment, or guest access behavior.
-
-## Frontend architecture
+## Architecture
 
 ```mermaid
 flowchart LR
-    User["Authenticated user"]
+    User["User"]
 
-    subgraph Browser["duit-web"]
-        App["App.vue shell"]
+    subgraph Web["duit-web"]
+        App["Vue app shell"]
         Router["Vue Router"]
-        Views["Feature views"]
-        Components["Feature components"]
-        Stores["Pinia stores"]
-        Api["Shared Axios client"]
-        Auth["Auth token interceptor"]
+        Views["Route views"]
+        Forms["vee-validate + zod"]
+        Query["Vue Query"]
+        Store["Pinia client state"]
+        Generated["Orval generated API"]
+        Axios["Shared Axios mutator"]
+        UI["PrimeVue + Tailwind components"]
     end
 
-    Proxy["Vite /api proxy"]
-    Backend["duit-api WebFlux API"]
-    Database[("PostgreSQL")]
+    Proxy["Vite /api proxy or production gateway"]
+    Api["duit-api WebFlux API"]
+    Db[("PostgreSQL / TimescaleDB")]
 
     User --> App
     App --> Router
     Router --> Views
-    Views --> Components
-    Views --> Stores
-    Components --> Stores
-    Stores --> Api
-    Auth --> Api
-    Api --> Proxy
-    Proxy -->|"strips /api in development"| Backend
-    Backend --> Database
+    Views --> UI
+    Views --> Forms
+    Views --> Query
+    Views --> Store
+    Forms --> Query
+    Query --> Generated
+    Generated --> Axios
+    Store --> Axios
+    Axios --> Proxy
+    Proxy --> Api
+    Api --> Db
 ```
 
-## Split-bill request flow
+### State Ownership
+
+| Layer | Owns | Does not own |
+| --- | --- | --- |
+| Vue views/components | Rendering, interaction flow, local UI state | Persisted financial truth |
+| vee-validate/zod | Client-side input constraints before API calls | Authorization or final business validation |
+| Vue Query | Server state reads, mutations, cache invalidation | Long-lived session identity |
+| Pinia | Token, authenticated user, client-only flags | Transactions, bills, receipts as independent truth |
+| Orval generated client | Typed endpoint functions from OpenAPI | Hand-written business rules |
+| `duit-api` | Authoritative validation, persistence, authorization | Browser-only presentation state |
+
+This split matters because server state is concurrent and shared. Vue Query
+keeps network state explicit, while Pinia avoids becoming a second database in
+the browser.
+
+## Request Flow
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant View as SplitBillView
-    participant Store as Bill Pinia Store
-    participant Axios as Axios Client
-    participant Proxy as Vite Proxy
+    participant View as Login/Register View
+    participant Form as vee-validate + zod
+    participant Query as Vue Query Mutation
+    participant Client as Orval API Function
+    participant Axios as Axios Mutator
     participant API as duit-api
+    participant Store as Pinia Auth Store
 
-    User->>View: Select receipt image
-    View->>Store: createFromReceipt(file)
-    Store->>Axios: POST /bills/from-receipt as FormData
-    Axios->>Axios: Attach bearer token
-    Axios->>Proxy: POST /api/bills/from-receipt
-    Proxy->>API: POST /bills/from-receipt
-    API-->>Proxy: Bill with nested items
-    Proxy-->>Store: ApiResponse<Bill>
-    Store-->>View: Cache server response
-    View-->>User: Render merchant, currency, and item table
+    User->>View: Submit credentials
+    View->>Form: Validate fields
+    alt Invalid form
+        Form-->>View: Render field errors
+    else Valid form
+        Form->>Query: mutate(credentials)
+        Query->>Client: login/register request
+        Client->>Axios: POST /auth/*
+        Axios->>API: Attach bearer token when present
+        API-->>Axios: ApiResponse with AuthSession
+        Axios-->>Query: Typed response
+        Query->>Store: setSession(token, user)
+        Store-->>View: Authenticated client state
+    end
 ```
 
-The bill response uses decimal strings for monetary values so JavaScript does
-not become the source of precision loss. `SplitBillView` formats those strings
-with the bill's server-provided currency.
+## API Code Generation
 
-## State and API flow
+The generated API client lives under `src/api/generated/`. It is produced by
+Orval from `openapi.json`:
 
-| Layer | Responsibility | Must not do |
-| --- | --- | --- |
-| Views | Coordinate user interaction and render store state | Persist financial state independently |
-| Components | Encapsulate reusable presentation and form behavior | Call unrelated domain APIs |
-| Pinia stores | Call APIs, expose loading/error state, cache responses | Generate server IDs or silently rewrite totals |
-| Axios client | Apply `/api` base URL, bearer token, and global 401 handling | Contain feature-specific business logic |
-| TypeScript contracts | Describe backend request/response shapes | Diverge from Kotlin DTOs |
+```bash
+npm run generate:api
+```
 
-The shared Axios client redirects to login when the API returns `401`. Other
-feature errors remain in the relevant store so the view can render a useful
-message.
+`orval.config.ts` uses `src/lib/orvalMutator.ts`, which delegates requests
+through the shared Axios instance in `src/lib/api.ts`. That keeps generated
+endpoint functions type-safe while preserving JWT attachment and global `401`
+handling.
 
-## Project structure
+When backend DTOs or endpoints change, regenerate the client and review the
+resulting TypeScript diff together with the Kotlin diff. Do not hand-edit files
+inside `src/api/generated/`; fix the backend contract or Orval configuration
+instead.
+
+## Project Structure
 
 ```text
 src/
-├── components/     Reusable and feature-level Vue components
-├── lib/api.ts      Axios configuration and authentication interceptor
-├── router/         Protected application routes
-├── stores/         Pinia API-state stores
-├── types/          Shared TypeScript API contracts
-├── utils/          Currency formatting and logging
-└── views/          Route-level views, including SplitBillView.vue
+├── api/generated/      Orval generated endpoint functions and models
+├── components/         Shared and feature-level Vue components
+├── composables/        Vue Query mutations and reusable UI/domain hooks
+├── config.ts           Centralized browser constants
+├── lib/api.ts          Axios instance and auth interceptor
+├── lib/orvalMutator.ts Orval mutator using the shared Axios instance
+├── router/             Public and protected route definitions
+├── stores/             Pinia client/session state
+├── types/              Frontend-only shared types
+├── utils/              Formatting and logging helpers
+└── views/              Route-level screens
 ```
 
-## Routes
+Native shells generated by Capacitor live in `android/` and `ios/`. Commit the
+native project scaffolding, but do not commit generated web assets, native build
+outputs, pods, or machine-local SDK paths.
 
-| Route | View | Purpose |
-| --- | --- | --- |
-| `/` | `LandingView` | Public landing page |
-| `/login` | `LoginView` | Authentication |
-| `/dashboard` | `DashboardView` | Financial overview |
-| `/transactions` | `TransactionsView` | Transaction management |
-| `/inbox` | `InboxView` | Pending receipt review |
-| `/insights` | `InsightsView` | Generated financial insights |
-| `/tax` | `TaxExportView` | Business-expense tax summary |
-| `/goals` | `GoalsView` | Budget and saving goals |
-| `/split-bill` | `SplitBillView` | Create a draft bill from a receipt |
-
-Except for `/` and `/login`, navigation requires an authenticated Pinia session.
-Backend authorization remains authoritative; the route guard is a user
-experience control, not a security boundary.
-
-## Pinia stores
-
-| Store | Server resource |
-| --- | --- |
-| `auth` | Session token and authenticated user |
-| `transaction` | Transactions, categories, and summaries |
-| `receipt` | Active receipt upload and confirmation |
-| `inbox` | Pending receipt extractions |
-| `bill` | Most recently created draft bill |
-| `insight` | Generated insights |
-| `anomaly` | Anomaly alerts |
-| `goal` | Budget and saving goals |
-| `tax` | Annual business-expense summary |
-
-## Backend connection
-
-The Axios base URL is `/api`. During development, Vite forwards that prefix to
-`http://127.0.0.1:8080` and removes `/api`:
-
-```text
-Browser request:  POST /api/bills/from-receipt
-Backend receives: POST /bills/from-receipt
-```
-
-Production hosting must provide an equivalent `/api` reverse-proxy rule or serve
-the frontend and backend behind a gateway with the same contract.
-
-## Local development
+## Installation
 
 Prerequisites:
 
 - Node.js 20 or later
 - npm
-- `duit-api` running on `http://127.0.0.1:8080`
+- A running `duit-api` backend on `http://127.0.0.1:8080`
 
-From `duit-web`, install dependencies:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Start the development server:
+Generate the API client after the backend OpenAPI contract changes:
+
+```bash
+npm run generate:api
+```
+
+Start the frontend:
 
 ```bash
 npm run dev
 ```
 
-Vite serves the application on its printed local URL and proxies `/api` to the
-backend.
+Vite prints the local browser URL and proxies `/api` requests to
+`http://127.0.0.1:8080`.
 
-## Available commands
+## Useful Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start Vite with API proxying and hot reload |
-| `npm run build` | Run `vue-tsc`, then build production assets |
-| `npm run preview` | Preview the production bundle locally |
-| `npm run lint` | Run ESLint with automatic fixes |
-| `npm run format` | Format `src/` with Prettier |
+| `npm run dev` | Start the Vite development server |
+| `npm run generate:api` | Regenerate Orval clients from `openapi.json` |
+| `npm run type-check` | Run `vue-tsc` without emitting files |
+| `npm run build` | Type-check and build production assets |
+| `npm run test:e2e` | Run Playwright browser smoke tests |
+| `npm run lint` | Run ESLint with `--fix` |
+| `npm run preview` | Preview the production bundle |
 
-`npm run lint` modifies files because the script includes `--fix`. Review its
-diff before committing.
+`npm run lint` modifies files because it includes `--fix`; review the diff
+before committing.
 
-## Verification workflow
+## Capacitor
 
-Production type/build gate:
+The app can be wrapped in native Android and iOS shells:
 
 ```bash
 npm run build
+npx cap sync
+npx cap open android
+npx cap open ios
 ```
 
-This runs `vue-tsc` before producing the Vite production bundle.
+Capacitor copies the web build into native project folders. Those copied assets
+are ignored because they are generated from `dist/`.
 
-For the split-bill manual acceptance check:
+## Verification
 
-1. Start PostgreSQL, Redis, and `duit-api`.
-2. Configure valid Google Vision and Gemini credentials in the backend.
-3. Start `duit-web` with `npm run dev`.
-4. Register or log in.
-5. Open `/split-bill`.
-6. Upload a real receipt and compare merchant, currency, total, quantity, unit
-   price, and line total with the image.
+Run these before pushing frontend changes:
 
-## Adding or changing an API-backed feature
+```bash
+npm run generate:api
+npm run type-check
+npm run build
+npm run test:e2e
+```
 
-1. Confirm the backend DTO and endpoint contract.
-2. Add or update the matching interface in `src/types/index.ts`.
-3. Put request/loading/error behavior in the relevant Pinia store.
-4. Keep presentation and event coordination in the view/component.
-5. Reconcile store state from the API after writes.
-6. Run `npm run build`.
-7. Review the corresponding Kotlin and TypeScript changes together.
+For auth and form changes, also verify manually:
 
-## Troubleshooting
+1. Start `duit-api`.
+2. Start `duit-web` with `npm run dev`.
+3. Register or log in through the UI.
+4. Confirm validation errors render before invalid requests are sent.
+5. Trigger invalid credentials and confirm the API response contains the
+   standardized backend error code.
 
-### API requests return 404 during development
+## Security Notes
 
-Confirm Vite is running through `npm run dev`, not by opening generated files
-directly. Also confirm the backend listens on `127.0.0.1:8080`; the development
-proxy removes `/api` before forwarding.
-
-### The app redirects to login
-
-The Axios response interceptor clears the local session on `401`. Log in again,
-then inspect backend authentication logs if the new token is also rejected.
-
-### Receipt or bill upload fails
-
-- Confirm the selected file has an image MIME type and is below the backend
-  20 MB in-memory codec limit.
-- Check that Google application credentials and the Gemini key are available to
-  `duit-api`.
-- Read the rendered API error. OCR and invalid bill mappings return typed
-  `422` responses rather than generic success states.
-
-### Currency appears as a three-letter code
-
-`formatCurrency` has explicit symbols for MYR, SGD, IDR, and USD. Other
-backend-supported currencies fall back to their ISO code, such as `THB 12.40`.
-
-## Security and data handling
-
-- Tokens are attached by the shared Axios interceptor and should never be
-  written to logs.
-- Receipt images and raw OCR text may contain personal financial data; do not
-  add console logging for either.
-- The frontend does not generate, validate, or process DuitNow QR payloads.
-- Client-side route guards and validation do not replace backend authorization
-  and validation.
-
-## Current split-bill scope
-
-Phase 1 creates an authenticated draft bill from a receipt. Sharing,
-participants, item claiming, live updates, DuitNow display, and payment
-reconciliation are intentionally not implemented yet.
-
-The remaining Phase 1 acceptance item is a credential-backed browser upload
-using a real receipt. Phase 2 should not begin until that result has been checked
-against the source image.
+- JWTs are stored under keys from `src/config.ts`; avoid scattering storage key
+  strings through the codebase.
+- Do not log receipt images, OCR text, JWTs, API keys, or raw financial records.
+- Client validation improves UX but does not replace backend validation.
+- Duit does not generate or process payment QR payloads. It may display
+  user-provided payment assets only.
