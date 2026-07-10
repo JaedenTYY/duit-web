@@ -23,57 +23,65 @@ const formattedDate = computed(() => {
     month: 'short',
   })
 })
+
+const sourceLabel = computed(() => {
+  switch (props.transaction.source) {
+    case 'receipt': return 'Receipt'
+    case 'import': return 'Import'
+    default: return 'Manual'
+  }
+})
 </script>
 
 <template>
-  <div class="group relative flex items-center justify-between p-5 bg-white backdrop-blur-xl border border-slate-100 rounded-3xl hover:bg-slate-50 transition-all duration-300 ease-out active:scale-[0.99]">
-    <div class="flex items-center gap-5 min-w-0">
-      <!-- Icon with elegant glass container -->
+  <article class="group relative rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-out hover:border-blue-100 hover:shadow-lg hover:shadow-slate-200/70 active:scale-[0.99] sm:p-5">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex min-w-0 items-start gap-4">
       <div 
-        class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-inner"
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-inner sm:h-14 sm:w-14 sm:text-2xl"
         :style="{ 
-          backgroundColor: `${transaction.categoryColor}15` || '#1e293b',
+            backgroundColor: transaction.categoryColor ? `${transaction.categoryColor}18` : '#f1f5f9',
           color: transaction.categoryColor || '#94a3b8'
         }"
       >
         {{ transaction.categoryIcon || '📦' }}
       </div>
 
-      <!-- Details -->
-      <div class="min-w-0">
-        <h3 class="text-slate-900 font-bold text-base tracking-tight truncate pr-4">
-          {{ transaction.description || transaction.categoryName || 'Transaction' }}
+        <div class="min-w-0">
+          <h3 class="truncate pr-1 text-base font-black tracking-tight text-slate-950">
+            {{ transaction.merchantName || transaction.description || 'Transaction' }}
         </h3>
-        <div class="flex items-center gap-2 mt-1 truncate">
-          <span
-            v-if="transaction.merchantName"
-            class="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate"
-          >{{ transaction.merchantName }}</span>
-          <div
-            v-if="transaction.merchantName"
-            class="w-1 h-1 shrink-0 rounded-full bg-slate-200"
-          />
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">{{ transaction.categoryName || 'General' }}</span>
-          <div class="w-1 h-1 shrink-0 rounded-full bg-slate-200" />
-          <span class="text-xs font-semibold text-slate-400 shrink-0">{{ formattedDate }}</span>
+          <p class="mt-1 truncate text-sm font-medium text-slate-500">
+            {{ transaction.description || transaction.categoryName || 'Spending activity' }}
+          </p>
+          <div class="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+            <span class="max-w-[9rem] truncate rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+              {{ transaction.categoryName || 'General' }}
+            </span>
+            <span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+              {{ sourceLabel }}
+            </span>
+            <span class="shrink-0 text-xs font-bold text-slate-400">
+              {{ formattedDate }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Amount & Trash -->
-    <div class="flex items-center gap-5 shrink-0 pl-2">
-      <div class="text-right">
+      <div class="shrink-0 text-right">
         <p 
-          class="font-extrabold text-lg tracking-tight tabular-nums"
+          class="whitespace-nowrap text-base font-black tracking-tight tabular-nums sm:text-lg"
           :class="isIncome ? 'text-blue-400' : 'text-slate-900'"
         >
           {{ isIncome ? '+' : '' }}{{ formatCurrency(transaction.amount, transaction.currency) }}
         </p>
       </div>
+    </div>
 
-      <!-- Contextual Actions -->
+    <div class="mt-4 flex justify-end gap-2 sm:absolute sm:right-4 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2 sm:opacity-0 sm:transition-opacity sm:duration-300 sm:group-hover:opacity-100">
       <button 
-        class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-slate-200 hover:text-slate-900 active:scale-90"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 active:scale-90"
+        aria-label="Edit transaction"
         @click.stop="emit('edit', transaction)"
       >
         <svg
@@ -89,7 +97,8 @@ const formattedDate = computed(() => {
         /></svg>
       </button>
       <button 
-        class="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-red-500 hover:text-slate-900 active:scale-90"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-500 transition hover:bg-red-600 hover:text-white active:scale-90"
+        aria-label="Delete transaction"
         @click.stop="emit('delete', transaction.id)"
       >
         <svg
@@ -105,5 +114,5 @@ const formattedDate = computed(() => {
         /></svg>
       </button>
     </div>
-  </div>
+  </article>
 </template>

@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { gsap } from 'gsap'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import OnboardingWalkthrough from '@/components/shared/OnboardingWalkthrough.vue'
 
 const routerViewContainer = ref<HTMLElement | null>(null)
 const route = useRoute()
@@ -33,42 +34,44 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-700 font-sans selection:bg-blue-500/20 selection:text-blue-900">
+  <div class="min-h-screen bg-[#f6f9ff] text-slate-700 font-sans selection:bg-blue-500/20 selection:text-blue-900">
     <!-- Mobile Top Header -->
     <header
       v-if="!hideNav"
-      class="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-3xl border-b border-slate-200 z-40 flex items-center justify-between px-6"
+      class="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-3xl border-b border-slate-200 z-40 flex items-center justify-between px-4"
     >
       <h1 class="text-xl font-bold text-slate-900 tracking-tight">
         duit<span class="text-blue-500">.</span>
       </h1>
       <button
-        class="text-slate-400 hover:text-red-500 transition-colors"
+        class="mobile-logout-button"
+        aria-label="Log out"
         @click="handleLogout"
       >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-        /></svg>
+        <span class="sr-only">Log out</span>
+        <span
+          class="logout-door"
+          aria-hidden="true"
+        />
+        <span
+          class="logout-arrow"
+          aria-hidden="true"
+        />
       </button>
     </header>
 
     <!-- Premium Sidebar (Desktop) -->
     <nav
       v-if="!hideNav"
-      class="hidden md:flex fixed top-0 left-0 h-full w-72 flex-col overflow-y-auto bg-white backdrop-blur-3xl border-r border-slate-200 z-40 p-10"
+      class="hidden md:flex fixed top-0 left-0 h-full w-72 flex-col overflow-y-auto border-r border-white/70 bg-white/80 backdrop-blur-3xl z-40 p-8 shadow-2xl shadow-blue-100/40"
     >
-      <div class="mb-14">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-          duit<span class="text-blue-500">.</span>
+      <div class="mb-10 rounded-[2rem] bg-gradient-to-br from-blue-600 via-cyan-400 to-emerald-300 p-5 text-white shadow-xl shadow-blue-200/70">
+        <h1 class="text-2xl font-black tracking-tight">
+          duit<span class="text-white/80">.</span>
         </h1>
+        <p class="mt-2 text-xs font-bold leading-5 text-blue-50">
+          Your AI spending companion
+        </p>
       </div>
       <div class="space-y-2 flex-1">
         <router-link
@@ -174,7 +177,7 @@ onMounted(() => {
         <router-link
           to="/insights"
           class="nav-link-desktop"
-          :class="{ 'active': route.path === '/insights' }"
+          :class="{ 'active': route.path === '/insights' || route.path === '/anomalies' }"
         >
           <div class="icon-box">
             <svg
@@ -260,7 +263,7 @@ onMounted(() => {
     <main :class="hideNav ? '' : 'md:ml-72 pb-28 md:pb-12 min-h-screen'">
       <div
         ref="routerViewContainer"
-        :class="hideNav ? 'w-full min-h-screen' : 'max-w-4xl mx-auto px-6 pt-10 md:px-12 md:pt-14'"
+        :class="hideNav ? 'w-full min-h-screen' : 'mx-auto max-w-5xl px-4 pt-20 sm:px-6 md:px-10 md:pt-12 xl:px-12'"
       >
         <RouterView />
       </div>
@@ -269,16 +272,16 @@ onMounted(() => {
     <!-- Mobile Bottom Navigation (Floating Style) -->
     <nav
       v-if="!hideNav"
-      class="md:hidden fixed bottom-4 left-0 right-0 z-50 px-4"
+      class="md:hidden fixed bottom-3 left-0 right-0 z-50 px-3"
     >
-      <div class="bg-white/90 backdrop-blur-3xl border border-slate-200 rounded-full flex items-center justify-between h-16 px-6 shadow-xl shadow-slate-200/50">
+      <div class="bg-white/95 backdrop-blur-3xl border border-slate-200 rounded-[1.75rem] flex items-center justify-between h-[4.75rem] px-2 shadow-xl shadow-slate-200/70">
         <router-link
           to="/dashboard"
           class="nav-link-mobile"
           :class="{ 'active': route.path === '/dashboard' || route.path === '/' }"
         >
           <svg
-            class="w-5 h-5"
+            class="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -296,7 +299,7 @@ onMounted(() => {
           :class="{ 'active': route.path === '/transactions' }"
         >
           <svg
-            class="w-5 h-5"
+            class="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -311,10 +314,10 @@ onMounted(() => {
         <!-- Floating Camera Button -->
         <router-link
           to="/inbox"
-          class="relative -top-5 bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-slate-50 transition-transform active:scale-90"
+          class="relative -top-6 bg-blue-600 hover:bg-blue-500 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-slate-50 transition-transform active:scale-90 focus:outline-none focus:ring-4 focus:ring-blue-200"
         >
           <svg
-            class="w-6 h-6"
+            class="w-7 h-7"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -337,7 +340,7 @@ onMounted(() => {
           :class="{ 'active': route.path === '/insights' }"
         >
           <svg
-            class="w-5 h-5"
+            class="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -355,7 +358,7 @@ onMounted(() => {
           :class="{ 'active': route.path === '/split-bill' }"
         >
           <svg
-            class="w-5 h-5"
+            class="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -368,24 +371,43 @@ onMounted(() => {
         </router-link>
       </div>
     </nav>
+
+    <OnboardingWalkthrough v-if="!hideNav && authStore.isAuthenticated" />
   </div>
 </template>
 
 <style scoped>
 .nav-link-desktop {
-  @apply flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 font-semibold transition-all duration-300 hover:text-slate-900 hover:bg-slate-50;
+  @apply flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-500 font-bold transition-all duration-300 hover:text-slate-900 hover:bg-white/80;
 }
 .nav-link-desktop.active {
-  @apply bg-slate-100 text-slate-900 shadow-sm;
+  @apply bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-200/70;
 }
-.nav-link-desktop.active .icon-box { @apply text-blue-600; }
+.nav-link-desktop.active .icon-box { @apply text-white; }
 .icon-box { @apply transition-colors duration-300; }
 
 .nav-link-mobile {
-  @apply flex flex-col items-center justify-center flex-1 h-full text-slate-400 transition-all duration-300;
+  @apply flex flex-col items-center justify-center flex-1 h-full rounded-2xl text-slate-400 transition-all duration-300;
 }
 .nav-link-mobile.active {
-  @apply text-slate-900;
+  @apply bg-blue-50 text-blue-700;
+}
+
+.mobile-logout-button {
+  @apply relative flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-4 focus:ring-red-100;
+}
+
+.logout-door {
+  @apply absolute left-[11px] top-[11px] h-[18px] w-[13px] rounded-[4px] border-2 border-current;
+}
+
+.logout-arrow {
+  @apply absolute left-[17px] top-[18px] h-[2px] w-[13px] rounded-full bg-current;
+}
+
+.logout-arrow::after {
+  content: '';
+  @apply absolute right-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rotate-45 border-r-2 border-t-2 border-current;
 }
 
 .v-enter-active, .v-leave-active {

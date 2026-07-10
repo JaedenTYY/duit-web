@@ -6,6 +6,12 @@ import { formatCurrency } from '@/utils/currency'
 import { useDashboardAnimations } from '@/composables/animations/useDashboardAnimations'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import ActionTile from '@/components/shared/ActionTile.vue'
+import EmptyState from '@/components/shared/EmptyState.vue'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
+import StatCard from '@/components/shared/StatCard.vue'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -67,7 +73,7 @@ const chartData = computed(() => {
   if (!categories.length) {
     return {
       labels: ['No Data'],
-      datasets: [{ backgroundColor: ['#1e293b'], data: [1], borderWidth: 0 }]
+      datasets: [{ backgroundColor: ['#e2e8f0'], data: [1], borderWidth: 0 }]
     }
   }
   return {
@@ -87,7 +93,7 @@ const chartData = computed(() => {
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: '80%',
+  cutout: '78%',
   plugins: {
     legend: {
       display: false
@@ -103,7 +109,7 @@ const chartOptions = {
       usePointStyle: true,
       callbacks: {
         label: function(context: any) {
-          return ' RM ' + context.parsed.toFixed(2);
+          return ' RM ' + context.parsed.toFixed(2)
         }
       }
     }
@@ -113,236 +119,284 @@ const chartOptions = {
 const addToStats = (el: any) => {
   if (el && !statsCards.value.includes(el)) statsCards.value.push(el)
 }
+
+function replayOnboarding() {
+  window.dispatchEvent(new Event('duit:replayOnboarding'))
+}
 </script>
 
 <template>
-  <div class="space-y-12 pb-10">
-    <!-- Header -->
-    <header class="flex flex-col gap-2">
-      <h1 class="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
-        Good {{ greeting }}, <span class="text-blue-500">{{ firstName }}</span>
-      </h1>
-      <p class="text-slate-400 text-lg font-medium">
-        Here's your summary for {{ monthName }}
-      </p>
+  <div class="space-y-8 pb-10">
+    <header class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      <div class="flex items-start justify-between gap-5">
+        <div class="min-w-0">
+          <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+            {{ monthName }}
+          </p>
+          <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            Good {{ greeting }}, <span class="text-blue-600">{{ firstName }}</span>
+          </h1>
+          <p class="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:text-base">
+            Let’s get your spending organised. Duit is tracking your transactions, categories, and patterns in one place.
+          </p>
+        </div>
+        <FriendlyAvatar
+          class="hidden sm:block"
+          tone="blue"
+          size="lg"
+        />
+      </div>
+      <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+        <router-link
+          to="/inbox"
+          class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98]"
+        >
+          Import spending
+        </router-link>
+        <button
+          type="button"
+          class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
+          @click="replayOnboarding"
+        >
+          Show walkthrough
+        </button>
+      </div>
     </header>
 
-    <!-- Error State -->
-    <div
-      v-if="store.error"
-      class="p-5 bg-red-500/10 border border-red-500/20 rounded-[1.5rem] text-red-400 text-sm font-semibold flex items-center gap-3"
-    >
-      <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-      {{ store.error }}
-    </div>
+    <ErrorBanner :message="store.error" />
 
-    <!-- Loading Skeleton -->
-    <div
+    <LoadingSkeleton
       v-if="store.loading && (!store.monthlySummary || store.transactions.length === 0)"
-      class="space-y-6"
-    >
-      <div class="h-48 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="h-32 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
-        <div class="h-32 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
-      </div>
-      <div class="h-64 bg-white/50 rounded-[2.5rem] border border-slate-100 animate-pulse" />
-    </div>
+      :rows="4"
+    />
 
     <template v-else>
-    <!-- Main Stats Card -->
-    <div
-      :ref="addToStats"
-      class="relative group"
-    >
-      <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-      <div class="relative bg-white border border-slate-200 rounded-[2.5rem] p-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div>
-          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Total Monthly Spend</span>
-          <p
-            ref="spendCounterEl"
-            class="text-6xl font-extrabold text-slate-900 tracking-tighter mt-2"
-          >
-            RM 0.00
-          </p>
-        </div>
-        <div class="flex gap-4">
-          <router-link
-            to="/transactions"
-            class="bg-white text-slate-950 px-8 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-95 shadow-xl shadow-slate-200/50 shadow-white/5"
-          >
-            Transactions
-          </router-link>
-        </div>
-      </div>
-    </div>
-
-    <!-- Secondary Stats Matrix -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div
+      <section
         :ref="addToStats"
-        class="premium-card p-8 flex items-center gap-6"
+        class="overflow-hidden rounded-[2rem] border border-blue-100 bg-gradient-to-br from-blue-600 via-blue-600 to-slate-900 p-6 text-white shadow-xl shadow-blue-200 sm:p-8"
       >
-        <div class="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-3xl border border-blue-500/20 text-blue-400">
-          <template v-if="topCategory?.categoryIcon">
-            {{ topCategory.categoryIcon }}
-          </template>
-          <svg
-            v-else
-            class="w-8 h-8"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2a2 2 0 00-2 2v6z"
-          /></svg>
-        </div>
-        <div>
-          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Top Spending</span>
-          <p class="text-slate-900 text-2xl font-bold tracking-tight">
-            {{ topCategory?.categoryName || 'No Data' }}
-          </p>
-          <p class="text-slate-400 font-medium">
-            {{ topCategory ? formatCurrency(topCategory.total, 'MYR') : 'Awaiting signals' }}
-          </p>
-        </div>
-      </div>
-
-      <div
-        :ref="addToStats"
-        class="premium-card p-8 flex items-center gap-6"
-      >
-        <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-3xl border border-indigo-500/20 text-indigo-400">
-          <template v-if="recentTransaction?.categoryIcon">
-            {{ recentTransaction.categoryIcon }}
-          </template>
-          <svg
-            v-else
-            class="w-8 h-8"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          /></svg>
-        </div>
-        <div class="min-w-0">
-          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Recent Activity</span>
-          <p class="text-slate-900 text-2xl font-bold tracking-tight truncate">
-            {{ recentTransaction?.description || 'Idle' }}
-          </p>
-          <p class="text-slate-400 font-medium">
-            {{ recentTransaction ? formatCurrency(recentTransaction.amount, recentTransaction.currency) : 'No transactions' }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Analysis Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-      <!-- Category Breakdown Chart -->
-      <section class="lg:col-span-3 premium-card p-10 flex flex-col">
-        <h3 class="text-slate-900 text-xl font-bold tracking-tight mb-8 flex items-center gap-3">
-          <div class="w-1 h-6 bg-blue-500 rounded-full" />
-          Category Allocation
-        </h3>
-        
-        <div
-          v-if="categoriesToShow.length > 0"
-          class="flex flex-col md:flex-row items-center gap-10 flex-1"
-        >
-          <!-- Chart Container -->
-          <div class="relative w-48 h-48 sm:w-64 sm:h-64 shrink-0 mx-auto md:mx-0">
-            <Doughnut
-              :data="chartData"
-              :options="chartOptions"
-            />
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
-              <span class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total</span>
-              <span class="text-2xl font-black text-slate-900">{{ formatCurrency(store.monthlySummary?.totalSpend || '0', 'MYR') }}</span>
-            </div>
-          </div>
-          
-          <!-- Custom Legend -->
-          <div class="flex-1 w-full space-y-4">
-            <div
-              v-for="cat in categoriesToShow"
-              :key="cat.categoryId || cat.categoryName"
-              class="flex items-center justify-between group cursor-default p-3 hover:bg-slate-50 rounded-2xl transition-colors -mx-3"
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div class="min-w-0">
+            <span class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Total monthly spend</span>
+            <p
+              ref="spendCounterEl"
+              class="mt-2 break-words text-4xl font-black tracking-tight sm:text-6xl"
             >
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                  :style="{ backgroundColor: (cat.categoryColor || '#3b82f6') + '20', color: cat.categoryColor || '#3b82f6' }"
-                >
-                  <template v-if="cat.categoryIcon">
-                    {{ cat.categoryIcon }}
-                  </template>
-                  <svg
-                    v-else
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  ><path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  /></svg>
-                </div>
-                <div>
-                  <p class="text-slate-900 font-bold">
-                    {{ cat.categoryName }}
-                  </p>
-                  <p class="text-slate-400 text-xs font-medium">
-                    {{ cat.percentage.toFixed(1) }}%
-                  </p>
-                </div>
-              </div>
-              <span class="text-slate-900 font-bold group-hover:text-blue-400 transition-colors">{{ formatCurrency(cat.total, 'MYR') }}</span>
-            </div>
-          </div>
-        </div>
-        <div
-          v-else
-          class="py-20 flex-1 flex flex-col items-center justify-center opacity-30"
-        >
-          <div class="w-32 h-32 rounded-full border-4 border-dashed border-slate-700 mb-6" />
-          <p class="text-sm font-bold uppercase tracking-widest">
-            No spending data detected
-          </p>
-        </div>
-      </section>
-
-      <!-- Insights / CTA -->
-      <section class="lg:col-span-2 space-y-6">
-        <div class="bg-blue-600 rounded-[2.5rem] p-10 text-slate-900 shadow-2xl shadow-slate-200/50 shadow-blue-900/40 relative overflow-hidden group h-full md:h-auto min-h-[220px] flex flex-col justify-center">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -mr-10 -mt-10 blur-3xl group-hover:scale-150 transition-transform duration-700" />
-          <div class="relative z-10">
-            <h4 class="text-2xl font-bold tracking-tight mb-3">
-              Smart Insights
-            </h4>
-            <p class="text-blue-50 leading-relaxed font-medium opacity-90">
-              Analyzing your cashflow. We'll notify you when we find ways to optimize your spending.
+              RM 0.00
+            </p>
+            <p class="mt-3 text-sm font-medium leading-6 text-blue-50">
+              Based on synced transactions for {{ monthName }}.
             </p>
           </div>
+          <router-link
+            to="/transactions"
+            class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm transition hover:bg-blue-50 active:scale-[0.98]"
+          >
+            View transactions
+          </router-link>
         </div>
-
       </section>
-    </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Top spending"
+          :value="topCategory?.categoryName || 'No data yet'"
+          :description="topCategory ? formatCurrency(topCategory.total, 'MYR') : 'Awaiting signals'"
+          tone="blue"
+        >
+          <template #icon>
+            <span class="text-xl">{{ topCategory?.categoryIcon || '✨' }}</span>
+          </template>
+        </StatCard>
+        <StatCard
+          label="Recent activity"
+          :value="recentTransaction?.merchantName || recentTransaction?.description || 'Idle'"
+          :description="recentTransaction ? formatCurrency(recentTransaction.amount, recentTransaction.currency) : 'No transactions yet'"
+          tone="emerald"
+        >
+          <template #icon>
+            <span class="text-xl">{{ recentTransaction?.categoryIcon || '💳' }}</span>
+          </template>
+        </StatCard>
+      </div>
+
+      <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ActionTile
+          title="Add Transaction"
+          description="Record spending manually when you need a quick entry."
+          to="/transactions"
+          tone="purple"
+          action-label="Add now"
+        >
+          <template #icon>
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" /></svg>
+          </template>
+        </ActionTile>
+        <ActionTile
+          title="Upload Receipt"
+          description="Scan a receipt and let Duit extract transaction details."
+          to="/inbox"
+          tone="blue"
+          action-label="Scan"
+        >
+          <template #icon>
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+          </template>
+        </ActionTile>
+        <ActionTile
+          title="Import Statement"
+          description="Review statement rows before importing selected spending."
+          to="/statements"
+          tone="emerald"
+          action-label="Import"
+        >
+          <template #icon>
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6" /></svg>
+          </template>
+        </ActionTile>
+        <ActionTile
+          title="Generate Insight"
+          description="Ask Duit for weekly spending recommendations."
+          to="/insights"
+          tone="rose"
+          action-label="Generate"
+        >
+          <template #icon>
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </template>
+        </ActionTile>
+      </section>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:col-span-3">
+          <div class="mb-6">
+            <h2 class="text-xl font-black tracking-tight text-slate-950">
+              Category allocation
+            </h2>
+            <p class="mt-1 text-sm font-medium text-slate-500">
+              Where your money is going this month.
+            </p>
+          </div>
+
+          <div
+            v-if="categoriesToShow.length > 0"
+            class="flex flex-col items-center gap-8 md:flex-row"
+          >
+            <div class="relative mx-auto h-52 w-52 shrink-0 sm:h-60 sm:w-60 md:mx-0">
+              <Doughnut
+                :data="chartData"
+                :options="chartOptions"
+              />
+              <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+                <span class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Total</span>
+                <span class="mt-1 text-xl font-black text-slate-950">{{ formatCurrency(store.monthlySummary?.totalSpend || '0', 'MYR') }}</span>
+              </div>
+            </div>
+
+            <div class="w-full min-w-0 flex-1 space-y-3">
+              <div
+                v-for="cat in categoriesToShow"
+                :key="cat.categoryId || cat.categoryName"
+                class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <div
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+                    :style="{ backgroundColor: (cat.categoryColor || '#3b82f6') + '18', color: cat.categoryColor || '#3b82f6' }"
+                  >
+                    {{ cat.categoryIcon || '•' }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate font-black text-slate-900">
+                      {{ cat.categoryName }}
+                    </p>
+                    <p class="text-xs font-semibold text-slate-500">
+                      {{ cat.percentage.toFixed(1) }}% of spending
+                    </p>
+                  </div>
+                </div>
+                <span class="shrink-0 text-sm font-black tabular-nums text-slate-950">{{ formatCurrency(cat.total, 'MYR') }}</span>
+              </div>
+            </div>
+          </div>
+
+          <EmptyState
+            v-else
+            title="No spending data yet"
+            message="Import receipts, statements, or eReceipts and Duit will build this monthly view for you."
+            action-label="Open Magic Inbox"
+            tone="blue"
+            @action="$router.push('/inbox')"
+          />
+        </section>
+
+        <section class="space-y-6 lg:col-span-2">
+          <div class="rounded-[2rem] border border-emerald-100 bg-emerald-50 p-6">
+            <div class="flex items-start gap-4">
+              <FriendlyAvatar
+                tone="emerald"
+                size="sm"
+              />
+              <div>
+                <h2 class="text-xl font-black tracking-tight text-slate-950">
+                  Smart insights
+                </h2>
+                <p class="mt-2 text-sm font-medium leading-6 text-slate-600">
+                  Duit watches for weekly changes and turns spending patterns into practical recommendations.
+                </p>
+                <router-link
+                  to="/insights"
+                  class="mt-4 inline-flex min-h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-700"
+                >
+                  Open insights
+                </router-link>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h2 class="text-xl font-black tracking-tight text-slate-950">
+                Recent transactions
+              </h2>
+              <router-link
+                to="/transactions"
+                class="text-sm font-black text-blue-600 hover:text-blue-700"
+              >
+                View all
+              </router-link>
+            </div>
+            <div
+              v-if="store.transactions.length"
+              class="space-y-3"
+            >
+              <div
+                v-for="tx in store.transactions.slice(0, 4)"
+                :key="tx.id"
+                class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate font-black text-slate-900">
+                    {{ tx.merchantName || tx.description || 'Transaction' }}
+                  </p>
+                  <p class="truncate text-xs font-semibold text-slate-500">
+                    {{ tx.categoryName || 'General' }} · {{ new Date(tx.occurredAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) }}
+                  </p>
+                </div>
+                <p class="shrink-0 text-sm font-black tabular-nums text-slate-950">
+                  {{ formatCurrency(tx.amount, tx.currency) }}
+                </p>
+              </div>
+            </div>
+            <p
+              v-else
+              class="rounded-2xl bg-slate-50 p-4 text-sm font-medium text-slate-500"
+            >
+              Recent spending will appear here after your first import.
+            </p>
+          </div>
+        </section>
+      </div>
     </template>
   </div>
 </template>
-
-<style scoped>
-.premium-card {
-  @apply bg-white backdrop-blur-2xl border border-slate-100 rounded-[2.5rem] shadow-xl shadow-slate-200/50 shadow-black/10;
-}
-</style>

@@ -4,6 +4,10 @@ import { gsap } from 'gsap'
 import { useInsightStore } from '@/stores/insight'
 import InsightCard from '@/components/insights/InsightCard.vue'
 import AnomalyDashboard from '@/components/anomaly/AnomalyDashboard.vue'
+import EmptyState from '@/components/shared/EmptyState.vue'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 
 const store = useInsightStore()
 const listContainer = ref<HTMLElement | null>(null)
@@ -38,68 +42,64 @@ watch(() => store.insights.length, (newLen, oldLen) => {
 
 <template>
   <div class="relative min-h-[85vh] pb-32">
-    <!-- Header -->
-    <header class="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-          AI Insights
-        </h1>
-        <p class="text-slate-400 font-medium mt-1">
-          Seven-day spending analysis compared with the previous week
-        </p>
+    <header class="mb-8 rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-blue-50 p-5 sm:p-7">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 items-start gap-4">
+          <FriendlyAvatar
+            tone="emerald"
+            size="md"
+          />
+          <div class="min-w-0">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+              AI financial coach
+            </p>
+            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              Understand what changed this week
+            </h1>
+            <p class="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+              Duit compares recent spending with your previous week and turns the signal into concise recommendations.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="store.generating"
+          @click="store.generateWeeklyInsight"
+        >
+          {{ store.generating ? 'Generating...' : 'Generate Insight' }}
+        </button>
       </div>
-      <button
-        type="button"
-        class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-        :disabled="store.generating"
-        @click="store.generateWeeklyInsight"
-      >
-        {{ store.generating ? 'Generating…' : 'Generate Weekly Insight' }}
-      </button>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <!-- Insights Column -->
       <div class="space-y-8">
-        <h2 class="text-xl font-bold text-slate-900 mb-6">
-          Spending Patterns
-        </h2>
-        <!-- Error State -->
-        <div
-          v-if="store.error"
-          class="mb-8 p-5 bg-red-500/10 border border-red-500/20 rounded-[1.5rem] text-red-400 text-sm font-semibold flex items-center gap-3"
-        >
-          <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          {{ store.error }}
-        </div>
-
-        <!-- Loading Skeleton -->
-        <div
-          v-if="store.loading && store.insights.length === 0"
-          class="space-y-6"
-        >
-          <div
-            v-for="i in 2"
-            :key="i"
-            class="h-64 bg-white rounded-[2rem] border border-slate-100 animate-pulse"
-          />
-        </div>
-
-        <!-- Empty State -->
-        <div
-          v-else-if="!store.loading && store.insights.length === 0"
-          class="text-center py-32 bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center"
-        >
-          <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-4xl mb-6">
-            🤖
-          </div>
-          <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-2">
-            No weekly insight yet
-          </h3>
-          <p class="text-slate-400 text-base font-medium max-w-sm mx-auto leading-relaxed">
-            Generate an insight to compare your latest seven days with the previous week.
+        <div>
+          <h2 class="text-xl font-black text-slate-950">
+            Spending patterns
+          </h2>
+          <p class="mt-1 text-sm font-medium text-slate-500">
+            Weekly summaries and recommendation cards.
           </p>
         </div>
+
+        <ErrorBanner :message="store.error" />
+
+        <LoadingSkeleton
+          v-if="store.loading && store.insights.length === 0"
+          :rows="2"
+          variant="list"
+        />
+
+        <EmptyState
+          v-else-if="!store.loading && store.insights.length === 0"
+          title="No weekly insight yet"
+          message="Generate an insight to compare your latest seven days with the previous week."
+          action-label="Generate Insight"
+          tone="emerald"
+          @action="store.generateWeeklyInsight"
+        />
 
         <!-- Insights List -->
         <div

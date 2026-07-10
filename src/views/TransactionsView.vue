@@ -5,6 +5,10 @@ import { useTransactionStore } from '@/stores/transaction'
 import TransactionCard from '@/components/transactions/TransactionCard.vue'
 import AddTransactionModal from '@/components/transactions/AddTransactionModal.vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
+import EmptyState from '@/components/shared/EmptyState.vue'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
+import PageHeader from '@/components/shared/PageHeader.vue'
 import type { Transaction } from '@/types'
 
 const store = useTransactionStore()
@@ -75,30 +79,46 @@ async function handleReceiptClose() {
 
 <template>
   <div class="relative min-h-[85vh] pb-32">
-    <!-- Header -->
-    <header class="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-          Transactions
-        </h1>
-        <p class="text-slate-400 font-medium mt-1">
-          Keep track of your spending flow
-        </p>
-      </div>
+    <PageHeader
+      class="mb-8"
+      title="Transactions"
+      description="Review manual entries, receipt captures, and imported statement rows in one clean spending feed."
+    >
+      <template #actions>
       <RouterLink
         to="/statements"
-        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700"
+          class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
       >
         Import bank PDF
       </RouterLink>
-    </header>
+      </template>
+    </PageHeader>
 
-    <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="mb-6 grid grid-cols-2 gap-3 md:hidden">
+      <button
+        type="button"
+        aria-label="Add transaction"
+        class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200"
+        @click="editingTransaction = null; isModalOpen = true"
+      >
+        New
+      </button>
+      <button
+        type="button"
+        aria-label="Scan receipt"
+        class="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
+        @click="showReceiptModal = true"
+      >
+        Receipt
+      </button>
+    </div>
+
+    <div class="mb-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
       <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">
         Category
         <select
           :value="store.selectedCategoryId"
-          class="mt-2 w-full sm:w-64 bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10"
+          class="mt-2 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 sm:w-72"
           @change="handleCategoryFilterChange"
         >
           <option value="">
@@ -115,49 +135,25 @@ async function handleReceiptClose() {
       </label>
     </div>
 
-    <!-- Error State -->
-    <div
-      v-if="store.error"
-      class="mb-8 p-5 bg-red-500/10 border border-red-500/20 rounded-[1.5rem] text-red-400 text-sm font-semibold flex items-center gap-3"
-    >
-      <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-      {{ store.error }}
-    </div>
+    <ErrorBanner
+      class="mb-6"
+      :message="store.error"
+    />
 
-    <!-- Loading Skeleton -->
-    <div
+    <LoadingSkeleton
       v-if="store.loading && store.transactions.length === 0"
-      class="space-y-4"
-    >
-      <div
-        v-for="i in 6"
-        :key="i"
-        class="h-20 bg-white rounded-[1.5rem] border border-slate-100 animate-pulse"
-      />
-    </div>
+      :rows="6"
+      variant="list"
+    />
 
-    <!-- Empty State -->
-    <div
+    <EmptyState
       v-else-if="!store.loading && store.transactions.length === 0"
-      class="text-center py-32 bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center"
-    >
-      <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-4xl mb-6">
-        📝
-      </div>
-      <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-2">
-        {{ store.selectedCategoryId ? 'No Transactions In This Category' : 'No Transactions Yet' }}
-      </h3>
-      <p class="text-slate-400 text-base font-medium mb-10 max-w-xs mx-auto">
-        {{ store.selectedCategoryId ? 'Try another category or clear the filter.' : 'Your spending activity will appear here once you start tracking.' }}
-      </p>
-      <button 
-        v-if="!store.selectedCategoryId"
-        class="bg-white text-slate-950 px-8 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all shadow-xl shadow-slate-200/50 shadow-white/5"
-        @click="editingTransaction = null; isModalOpen = true"
-      >
-        Add Transaction
-      </button>
-    </div>
+      :title="store.selectedCategoryId ? 'No transactions in this category' : 'No transactions yet'"
+      :message="store.selectedCategoryId ? 'Try another category or clear the filter to widen the feed.' : 'Add one manually or import from the Magic Inbox to start building your spending history.'"
+      :action-label="store.selectedCategoryId ? undefined : 'Add Transaction'"
+      tone="blue"
+      @action="editingTransaction = null; isModalOpen = true"
+    />
 
     <!-- Activity Stream -->
     <div
@@ -189,9 +185,10 @@ async function handleReceiptClose() {
     </div>
 
     <!-- Floating Action Stack -->
-    <div class="fixed bottom-32 right-8 flex flex-col gap-4 z-40">
+    <div class="fixed bottom-8 right-8 z-40 hidden flex-col gap-3 md:flex">
       <button 
-        class="w-14 h-14 rounded-full bg-slate-800/80 backdrop-blur-xl border border-slate-200 flex items-center justify-center text-blue-400 shadow-2xl shadow-slate-200/50 active:scale-90 transition-transform"
+        class="w-12 h-12 rounded-full bg-white backdrop-blur-xl border border-slate-200 flex items-center justify-center text-blue-600 shadow-xl shadow-slate-200/70 active:scale-90 transition-transform sm:h-14 sm:w-14"
+        aria-label="Upload receipt"
         @click="showReceiptModal = true"
       >
         <svg
@@ -213,9 +210,11 @@ async function handleReceiptClose() {
       </button>
       
       <button 
-        class="w-16 h-16 rounded-full bg-blue-600 text-slate-900 shadow-[0_15px_35px_rgba(37,99,235,0.4)] flex items-center justify-center active:scale-90 transition-transform"
+        class="w-14 h-14 rounded-full bg-blue-600 text-white shadow-[0_15px_35px_rgba(37,99,235,0.35)] flex items-center justify-center active:scale-90 transition-transform sm:h-16 sm:w-16"
+        aria-label="Add transaction"
         @click="editingTransaction = null; isModalOpen = true"
       >
+        <span class="sr-only">Add Transaction</span>
         <svg
           class="w-8 h-8"
           fill="none"

@@ -2,83 +2,33 @@
 import { onMounted, ref } from 'vue'
 import { gsap } from 'gsap'
 import { useRouter } from 'vue-router'
+import FeatureCard from '@/components/shared/FeatureCard.vue'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 
 const router = useRouter()
-const heroTitle = ref<HTMLElement | null>(null)
-const heroSubtitle = ref<HTMLElement | null>(null)
-const ctaButton = ref<HTMLElement | null>(null)
-const features = ref<HTMLElement | null>(null)
-const appPreview = ref<HTMLElement | null>(null)
-
-// For spotlight hover effect
-const featuresRef = ref<HTMLElement | null>(null)
-
-const handleMouseMove = (e: MouseEvent) => {
-  if (!featuresRef.value) return
-  const cards = featuresRef.value.querySelectorAll('.feature-card')
-  for (const card of cards) {
-    const rect = (card as HTMLElement).getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    ;(card as HTMLElement).style.setProperty('--mouse-x', `${x}px`)
-    ;(card as HTMLElement).style.setProperty('--mouse-y', `${y}px`)
-  }
-}
+const hero = ref<HTMLElement | null>(null)
+const preview = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   const ctx = gsap.context(() => {
-    // Entrance animations
-    const tl = gsap.timeline()
-
-    tl.from(heroTitle.value, {
-      y: 40,
+    gsap.from(hero.value?.children || [], {
+      y: 24,
       opacity: 0,
-      duration: 0.8,
+      duration: 0.65,
+      stagger: 0.1,
       ease: 'power3.out'
     })
-    .from(heroSubtitle.value, {
-      y: 20,
+    gsap.from(preview.value, {
+      y: 28,
       opacity: 0,
-      duration: 0.6,
-      ease: 'power2.out'
-    }, "-=0.4")
-    .from(ctaButton.value, {
-      scale: 0.9,
-      opacity: 0,
-      duration: 0.5,
-      ease: 'back.out(1.5)'
-    }, "-=0.3")
-    .from(appPreview.value, {
-      y: 60,
-      opacity: 0,
-      rotationX: 15,
-      duration: 1,
-      ease: 'power3.out'
-    }, "-=0.2")
-    .from(features.value?.children || [], {
-      y: 40,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.15,
-      ease: 'power3.out'
-    }, "-=0.6")
-
-    // Continuous floating animation for the app preview
-    gsap.to(appPreview.value, {
-      y: "-=15",
-      duration: 3,
-      yoyo: true,
-      repeat: -1,
-      ease: "sine.inOut"
+      scale: 0.98,
+      duration: 0.75,
+      ease: 'power3.out',
+      delay: 0.15
     })
   })
 
-  window.addEventListener('mousemove', handleMouseMove)
-
-  return () => {
-    ctx.revert()
-    window.removeEventListener('mousemove', handleMouseMove)
-  }
+  return () => ctx.revert()
 })
 
 const navigateToLogin = () => {
@@ -87,263 +37,434 @@ const navigateToLogin = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900 overflow-hidden relative selection:bg-blue-500/20 selection:text-blue-900" style="font-family: Helvetica, Arial, sans-serif;">
-    <!-- Ambient Background Gradients -->
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
-    <div class="absolute top-1/4 -right-64 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[100px] opacity-40 pointer-events-none" />
-    <div class="absolute -bottom-64 -left-64 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[100px] opacity-40 pointer-events-none" />
-
-    <!-- Navigation -->
-    <nav class="relative z-10 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto md:px-12">
-      <div class="text-2xl font-bold tracking-tight text-slate-900">
-        duit<span class="text-blue-500">.</span>
+  <div class="min-h-screen overflow-hidden bg-[#f6f9ff] text-slate-950 selection:bg-blue-500/20 selection:text-blue-900">
+    <nav class="fixed inset-x-0 top-0 z-40 border-b border-white/70 bg-white/85 backdrop-blur-2xl">
+      <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
+        <button
+          type="button"
+          class="text-2xl font-black tracking-tight text-slate-950"
+          @click="$router.push('/')"
+        >
+          duit<span class="text-blue-600">.</span>
+        </button>
+        <button
+          class="min-h-10 rounded-2xl bg-slate-950 px-5 py-2 text-sm font-black text-white transition hover:bg-blue-700"
+          @click="navigateToLogin"
+        >
+          Login
+        </button>
       </div>
-      <button
-        class="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
-        @click="navigateToLogin"
-      >
-        Log In
-      </button>
     </nav>
 
-    <!-- Hero Section -->
-    <main class="relative z-10 flex flex-col items-center justify-center pt-20 pb-32 px-6 text-center">
-      <div class="max-w-4xl mx-auto perspective-1000">
-        <h1
-          ref="heroTitle"
-          class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-[1.1] text-slate-900"
-        >
-          Automated Receipt<br>Tracking.
-        </h1>
-        
-        <p
-          ref="heroSubtitle"
-          class="text-lg md:text-2xl text-slate-500 mb-12 max-w-2xl mx-auto font-medium"
-        >
-          Upload receipts to instantly extract, categorize, and prepare them for LHDN tax season.
-        </p>
-
+    <main>
+      <section class="hero-clean relative px-5 pb-16 pt-28 sm:px-8 lg:px-12">
         <div
-          ref="ctaButton"
-          class="flex flex-col sm:flex-row items-center justify-center gap-4"
+          ref="hero"
+          class="relative z-10 mx-auto flex min-h-[72vh] max-w-5xl flex-col items-center justify-center text-center"
         >
-          <button
-            class="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-blue-500/30 active:scale-95 flex items-center justify-center gap-2 relative overflow-hidden group"
-            @click="navigateToLogin"
-          >
-            <span class="relative z-10 flex items-center gap-2">
+          <div class="mb-5">
+            <FriendlyAvatar
+              tone="blue"
+              size="md"
+            />
+          </div>
+          <p class="rounded-full border border-blue-100 bg-white/85 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-blue-700 shadow-sm">
+            AI finance companion for Southeast Asian users
+          </p>
+          <h1 class="mt-6 max-w-4xl text-[3.35rem] font-black leading-[0.95] tracking-tight text-slate-950 sm:text-7xl lg:text-8xl">
+            Meet Duit, your AI spending companion
+          </h1>
+          <p class="mt-6 max-w-2xl text-lg font-semibold leading-8 text-slate-600 sm:text-xl">
+            Capture receipts, import bank statements, sync eReceipts, understand spending patterns, detect anomalies, and split bills with friends.
+          </p>
+          <div class="mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2">
+            <button
+              class="inline-flex min-h-13 items-center justify-center rounded-2xl bg-blue-600 px-7 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98]"
+              @click="navigateToLogin"
+            >
               Get Started
-              <svg
-                class="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M14 5l7 7m0 0l-7 7m7-7H3"
-              /></svg>
-            </span>
-            <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer" />
-          </button>
-        </div>
-      </div>
-
-      <!-- App Preview -->
-      <div
-        ref="appPreview"
-        class="mt-24 relative w-full max-w-5xl mx-auto rounded-[2.5rem] border border-slate-200 bg-white/80 backdrop-blur-3xl shadow-2xl shadow-slate-200/50 overflow-hidden transform-gpu"
-      >
-        <div class="h-12 border-b border-slate-100 flex items-center px-6 gap-2 bg-white">
-          <div class="w-3 h-3 rounded-full bg-red-400" />
-          <div class="w-3 h-3 rounded-full bg-yellow-400" />
-          <div class="w-3 h-3 rounded-full bg-green-400" />
-        </div>
-        <div class="p-8 md:p-12 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10 bg-slate-50/50">
-          <div class="col-span-1 space-y-4">
-            <div class="h-8 w-32 bg-slate-200 rounded-lg" />
-            <div class="h-24 bg-gradient-to-br from-blue-100 to-indigo-50 rounded-2xl border border-blue-100 relative overflow-hidden">
-              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-slow" />
-            </div>
-            <div class="h-24 bg-white border border-slate-100 rounded-2xl shadow-sm" />
-            <div class="h-24 bg-white border border-slate-100 rounded-2xl shadow-sm" />
-          </div>
-          <div class="col-span-1 md:col-span-2 bg-white rounded-3xl border border-slate-100 p-8 flex flex-col items-center justify-center text-center shadow-sm">
-            <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 text-blue-500">
-              <svg
-                class="w-10 h-10"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-              /></svg>
-            </div>
-            <h3 class="text-2xl font-bold text-slate-900 mb-2">
-              Categorized
-            </h3>
-            <p class="text-slate-500">
-              Receipts are automatically organized for tax reporting.
-            </p>
+            </button>
+            <a
+              href="#product-preview"
+              class="inline-flex min-h-13 items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-7 py-4 text-base font-black text-slate-800 shadow-sm transition hover:bg-white"
+            >
+              View Demo
+            </a>
           </div>
         </div>
-        
-        <div class="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent z-20 pointer-events-none" />
-      </div>
+      </section>
 
-      <!-- Features Grid -->
-      <div
-        id="features-container"
-        ref="featuresRef"
-        class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mt-32 px-6"
+      <section
+        id="product-preview"
+        class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12"
       >
+        <div class="mb-8 text-center">
+          <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+            Product preview
+          </p>
+          <h2 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            Spending signals, shown clearly
+          </h2>
+          <p class="mx-auto mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-600">
+            Duit is designed as a finance intelligence layer. It captures data, helps users review it, and explains what changed.
+          </p>
+        </div>
+
         <div
-          ref="features"
-          class="contents"
+          ref="preview"
+          class="grid gap-5 lg:grid-cols-[1fr_1.1fr]"
         >
-          <div class="feature-card relative text-left p-8 rounded-[2rem] bg-white border border-slate-100 backdrop-blur-xl overflow-hidden group shadow-lg shadow-slate-200/40">
-            <div class="feature-spotlight" />
-            <div class="relative z-10">
-              <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform duration-300">
-                <svg
-                  class="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10M7 8h10M7 16h5"
-                  />
-                </svg>
-              </div>
-              <h3 class="text-xl font-bold text-slate-900 mb-3">
-                Data Extraction
-              </h3>
-              <p class="text-slate-500 leading-relaxed group-hover:text-slate-700 transition-colors">
-                Extract merchant, items, amount, and taxes instantly from photos.
-              </p>
+          <div class="space-y-4">
+            <div class="floating-finance-card rotate-left">
+              <span>Nasi Lemak House</span>
+              <strong>RM 18.40</strong>
+              <small>Food & Dining suggested</small>
+            </div>
+            <div class="floating-finance-card rotate-right ml-auto">
+              <span>Gmail eReceipt</span>
+              <strong>RM 74.90</strong>
+              <small>Ready to review</small>
+            </div>
+            <div class="floating-finance-card rotate-left">
+              <span>Anomaly check</span>
+              <strong>Risk 82%</strong>
+              <small>Confirm or dismiss</small>
             </div>
           </div>
-          
-          <div class="feature-card relative text-left p-8 rounded-[2rem] bg-white border border-slate-100 backdrop-blur-xl overflow-hidden group shadow-lg shadow-slate-200/40">
-            <div class="feature-spotlight" />
-            <div class="relative z-10">
-              <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-6 group-hover:scale-110 transition-transform duration-300">
-                <svg
-                  class="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-              <h3 class="text-xl font-bold text-slate-900 mb-3">
-                LHDN Tax Ready
-              </h3>
-              <p class="text-slate-500 leading-relaxed group-hover:text-slate-700 transition-colors">
-                Tag receipts for Business or Personal to prepare your Borang BE / C.
-              </p>
+
+          <div class="phone-shell">
+            <div class="phone-top">
+              <span>duit.</span>
+              <small>July</small>
             </div>
-          </div>
-          
-          <div class="feature-card relative text-left p-8 rounded-[2rem] bg-white border border-slate-100 backdrop-blur-xl overflow-hidden group shadow-lg shadow-slate-200/40">
-            <div class="feature-spotlight" />
-            <div class="relative z-10">
-              <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-[#25D366] mb-6 group-hover:scale-110 transition-transform duration-300">
-                <svg
-                  class="w-8 h-8"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                </svg>
+            <div class="phone-balance">
+              <small>This month</small>
+              <strong>RM 1,284.50</strong>
+              <span>8 transactions captured</span>
+            </div>
+            <div class="phone-grid">
+              <div class="phone-tile bg-blue-50">
+                <span class="bg-blue-500" />
+                <strong>Magic Inbox</strong>
+                <small>3 import sources</small>
               </div>
-              <h3 class="text-xl font-bold text-slate-900 mb-3">
-                WhatsApp Bot
-              </h3>
-              <p class="text-slate-500 leading-relaxed group-hover:text-slate-700 transition-colors">
-                Forward receipts to our WhatsApp bot for automatic processing.
-              </p>
+              <div class="phone-tile bg-emerald-50">
+                <span class="bg-emerald-500" />
+                <strong>AI Insight</strong>
+                <small>Dining up 12%</small>
+              </div>
+              <div class="phone-tile bg-amber-50">
+                <span class="bg-amber-500" />
+                <strong>Split Bill</strong>
+                <small>Guest link ready</small>
+              </div>
+              <div class="phone-tile bg-violet-50">
+                <span class="bg-violet-500" />
+                <strong>Category</strong>
+                <small>Semantic match</small>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section id="features" class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12">
+        <div class="mb-8 text-center">
+          <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+            Feature system
+          </p>
+          <h2 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            Comprehensive enough for a real FYP demo
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <FeatureCard
+            title="Smart Receipt Capture"
+            description="Upload receipt images and review extracted merchant, amount, date, item, and category details before saving."
+            tone="blue"
+          >
+            <template #icon>01</template>
+          </FeatureCard>
+          <FeatureCard
+            title="Semantic Categorisation"
+            description="Merchant context helps Duit suggest sensible categories, so users do not need to organise every record manually."
+            tone="mint"
+          >
+            <template #icon>02</template>
+          </FeatureCard>
+          <FeatureCard
+            title="AI Weekly Insights"
+            description="Weekly summaries explain changes, spending risks, and practical recommendations in plain language."
+            tone="purple"
+          >
+            <template #icon>03</template>
+          </FeatureCard>
+          <FeatureCard
+            title="Anomaly Alerts"
+            description="Unusual transactions are shown with a risk score, explanation, and confirm or dismiss action."
+            tone="peach"
+          >
+            <template #icon>04</template>
+          </FeatureCard>
+          <FeatureCard
+            title="Magic Inbox"
+            description="Receipt Upload, Gmail eReceipts, and Bank Statement Import live together as one central import hub."
+            tone="blue"
+          >
+            <template #icon>05</template>
+          </FeatureCard>
+          <FeatureCard
+            title="Smart Bill Split"
+            description="Users scan a receipt, create a split, share a guest link, and manually mark settlement status."
+            tone="mint"
+          >
+            <template #icon>06</template>
+          </FeatureCard>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12">
+        <div class="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <div class="story-card bg-blue-600 text-white">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">User journey</p>
+            <h2>From messy spending to useful signals</h2>
+            <p>New users can understand the entire Duit loop: capture, review, categorise, learn, respond, and split.</p>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="mini-step">1. Capture receipts and eReceipts</div>
+            <div class="mini-step">2. Import bank statement history</div>
+            <div class="mini-step">3. Review categories and anomalies</div>
+            <div class="mini-step">4. Split shared bills simply</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-5 pb-24 sm:px-8 lg:px-12">
+        <div class="overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300/60 sm:p-10">
+          <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
+                PDPA and compliance framing
+              </p>
+              <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-5xl">
+                Designed as a finance intelligence layer, not a payment processor.
+              </h2>
+              <p class="mt-4 text-base font-medium leading-7 text-slate-300">
+                Duit supports the dissertation framing around Malaysia PDPA and MAS TRM principles by keeping the product focused on user-controlled spending records, review, and insight generation.
+              </p>
+            </div>
+            <div class="grid gap-3">
+              <div class="compliance-chip">
+                <strong>User-provided data</strong>
+                <span>Receipts, statements, and eReceipts are imported for review before transaction creation.</span>
+              </div>
+              <div class="compliance-chip">
+                <strong>No payment rails</strong>
+                <span>Duit displays user-provided payment QR assets but does not generate, forward, validate, or process payments.</span>
+              </div>
+              <div class="compliance-chip">
+                <strong>Clear user action</strong>
+                <span>Imports, anomaly feedback, and bill-settlement status rely on explicit user confirmation.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
-    
-    <!-- Footer -->
-    <footer class="border-t border-slate-200 py-12 text-center text-slate-500 relative z-10">
-      <p>© 2026 Project Duit.</p>
-    </footer>
   </div>
 </template>
 
 <style scoped>
-.perspective-1000 {
-  perspective: 1000px;
+.hero-clean {
+  background:
+    linear-gradient(135deg, rgba(219, 234, 254, 0.92), rgba(236, 253, 245, 0.92) 52%, rgba(255, 247, 237, 0.95)),
+    linear-gradient(180deg, #f6f9ff 0%, #eef7ff 100%);
 }
 
-/* Hover Spotlight Effect */
-.feature-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: radial-gradient(
-    800px circle at var(--mouse-x) var(--mouse-y),
-    rgba(255, 255, 255, 0.1),
-    transparent 40%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+.floating-finance-card {
+  width: min(22rem, 100%);
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 1.2rem;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
 }
 
-.feature-spotlight {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background: radial-gradient(
-    600px circle at var(--mouse-x) var(--mouse-y),
-    rgba(59, 130, 246, 0.1),
-    transparent 40%
-  );
-  transition: opacity 0.3s ease;
-  pointer-events: none;
+.floating-finance-card span,
+.floating-finance-card strong,
+.floating-finance-card small {
+  display: block;
 }
 
-.feature-card:hover .feature-spotlight {
-  opacity: 1;
+.floating-finance-card span {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
+.floating-finance-card strong {
+  margin-top: 0.55rem;
+  color: #0f172a;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.floating-finance-card small {
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.rotate-left {
+  transform: rotate(-2deg);
+}
+
+.rotate-right {
+  transform: rotate(2deg);
+}
+
+.phone-shell {
+  border-radius: 2.5rem;
+  border: 10px solid rgba(15, 23, 42, 0.94);
+  background: #ffffff;
+  padding: 1.2rem;
+  box-shadow: 0 28px 90px rgba(37, 99, 235, 0.22);
+}
+
+.phone-top,
+.phone-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.phone-top {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.phone-top span {
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.phone-top small {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.phone-balance {
+  margin-top: 1rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #2563eb, #0f172a);
+  color: #fff;
+  padding: 1.2rem;
+}
+
+.phone-balance small,
+.phone-balance span {
+  color: #bfdbfe;
+  font-weight: 800;
+}
+
+.phone-balance strong {
+  display: block;
+  margin: 0.35rem 0;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.phone-grid {
+  margin-top: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.phone-tile {
+  border-radius: 1.35rem;
+  padding: 1rem;
+}
+
+.phone-tile span {
+  display: block;
+  height: 0.7rem;
+  width: 0.7rem;
+  border-radius: 999px;
+}
+
+.phone-tile strong {
+  display: block;
+  margin-top: 0.8rem;
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.phone-tile small {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.story-card {
+  min-height: 18rem;
+  border-radius: 2rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 70px rgba(15, 23, 42, 0.12);
+}
+
+.story-card h2 {
+  margin-top: 1rem;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.story-card p:last-child {
+  margin-top: 1rem;
+  font-weight: 700;
+  line-height: 1.7;
+  opacity: 0.88;
+}
+
+.mini-step {
+  min-height: 8rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 1.2rem;
+  color: #0f172a;
+  font-weight: 900;
+  box-shadow: 0 14px 45px rgba(15, 23, 42, 0.07);
+}
+
+.compliance-chip {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1.2rem;
+}
+
+.compliance-chip strong,
+.compliance-chip span {
+  display: block;
+}
+
+.compliance-chip strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.compliance-chip span {
+  margin-top: 0.35rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+@media (max-width: 767px) {
+  .phone-grid {
+    grid-template-columns: 1fr;
   }
-}
-
-.animate-shimmer {
-  animation: shimmer 1.5s infinite;
-}
-
-.animate-shimmer-slow {
-  animation: shimmer 3s infinite linear;
 }
 </style>

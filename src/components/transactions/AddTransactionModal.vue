@@ -135,6 +135,7 @@ async function handleSubmit() {
             <label class="premium-label">Amount</label>
             <input 
               v-model="amount" 
+              name="amount"
               type="number" 
               step="0.01" 
               required

@@ -10,6 +10,7 @@ import GuestBillItemCard from '@/components/bill/GuestBillItemCard.vue'
 import LoadingSkeleton from '@/components/bill/LoadingSkeleton.vue'
 import PaymentQrCard from '@/components/bill/PaymentQrCard.vue'
 import SplitTotalBar from '@/components/bill/SplitTotalBar.vue'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 
 const route = useRoute()
 const billStore = useBillStore()
@@ -66,21 +67,29 @@ async function saveSelection() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 px-4 py-6 text-slate-700">
+  <main class="min-h-screen bg-slate-50 px-4 py-5 text-slate-700">
     <div class="mx-auto max-w-2xl space-y-6 pb-28">
-      <header class="rounded-3xl bg-slate-900 p-6 text-white shadow-xl shadow-slate-300/40">
-        <p class="text-xs font-black uppercase tracking-widest text-blue-300">
-          Duit split
-        </p>
-        <h1 class="mt-3 text-2xl font-black tracking-tight">
-          {{ guestBill?.merchantName || 'Shared bill' }}
-        </h1>
-        <p
-          v-if="guestBill"
-          class="mt-2 text-sm font-semibold text-slate-300"
-        >
-          Total {{ formatCurrency(guestBill.totalAmount, guestBill.currency) }} · Expires {{ new Date(guestBill.expiresAt).toLocaleDateString() }}
-        </p>
+      <header class="rounded-[2rem] border border-slate-800 bg-slate-950 p-5 text-white shadow-xl shadow-slate-300/40 sm:p-6">
+        <div class="flex items-start gap-4">
+          <FriendlyAvatar
+            tone="blue"
+            size="sm"
+          />
+          <div class="min-w-0">
+            <p class="text-xs font-black uppercase tracking-widest text-blue-300">
+              Duit split
+            </p>
+            <h1 class="mt-2 truncate text-2xl font-black tracking-tight">
+              {{ guestBill?.merchantName || 'Shared bill' }}
+            </h1>
+            <p
+              v-if="guestBill"
+              class="mt-2 text-sm font-semibold leading-6 text-slate-300"
+            >
+              Total {{ formatCurrency(guestBill.totalAmount, guestBill.currency) }} · Expires {{ new Date(guestBill.expiresAt).toLocaleDateString() }}
+            </p>
+          </div>
+        </div>
       </header>
 
       <ErrorBanner :message="error" />
@@ -89,7 +98,7 @@ async function saveSelection() {
       <template v-else-if="guestBill">
         <form
           v-if="!participantToken"
-          class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm"
+          class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
           @submit.prevent="joinBill"
         >
           <h2 class="text-xl font-black text-slate-900">
@@ -118,7 +127,7 @@ async function saveSelection() {
           v-else
           class="space-y-6"
         >
-          <div>
+          <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
             <h2 class="text-xl font-black text-slate-900">
               Select your items
             </h2>

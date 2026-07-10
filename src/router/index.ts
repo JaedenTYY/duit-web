@@ -22,6 +22,12 @@ const router = createRouter({
       meta: { hideNav: true }
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { hideNav: true }
+    },
+    {
       path: '/transactions',
       name: 'transactions',
       component: () => import('@/views/TransactionsView.vue'),
@@ -44,6 +50,11 @@ const router = createRouter({
     {
       path: '/insights',
       name: 'insights',
+      component: () => import('../views/InsightsView.vue')
+    },
+    {
+      path: '/anomalies',
+      name: 'anomalies',
       component: () => import('../views/InsightsView.vue')
     },
     {
@@ -80,7 +91,7 @@ router.beforeEach((to, from, next) => {
   
   if (!to.meta.hideNav && !authStore.isAuthenticated) {
     next({ name: 'landing' })
-  } else if (to.name === 'landing' && authStore.isAuthenticated) {
+  } else if ((to.name === 'landing' || to.name === 'login' || to.name === 'register') && authStore.isAuthenticated) {
     next({ name: 'dashboard' })
   } else {
     next()

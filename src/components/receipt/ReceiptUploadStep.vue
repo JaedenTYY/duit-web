@@ -30,15 +30,14 @@ function selectFile(file: File) {
   selectedFile.value = file
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = URL.createObjectURL(file)
-  
-  // Animation for preview
+
   setTimeout(() => {
     if (previewContainer.value) {
       gsap.from(previewContainer.value, {
-        scale: 0.8,
+        scale: 0.96,
         opacity: 0,
-        duration: 0.4,
-        ease: 'back.out(1.7)'
+        duration: 0.3,
+        ease: 'power2.out'
       })
     }
   }, 0)
@@ -70,28 +69,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div 
+  <div class="space-y-5">
+    <div
       v-if="!selectedFile"
       class="relative group"
       @dragover.prevent="isDragging = true"
       @dragleave.prevent="isDragging = false"
       @drop.prevent="handleDrop"
     >
-      <input 
-        type="file" 
-        accept="image/*" 
-        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+      <input
+        type="file"
+        accept="image/*"
+        class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         @change="handleFileChange"
       >
-      <div 
-        class="border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300"
-        :class="isDragging ? 'border-duit-primary bg-duit-light' : 'border-gray-200 group-hover:border-duit-primary/50'"
+      <div
+        class="rounded-[2rem] border-2 border-dashed p-6 text-center transition-all duration-300 sm:p-10"
+        :class="isDragging ? 'border-blue-500 bg-blue-50' : 'border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50 group-hover:border-blue-300'"
       >
-        <div class="w-16 h-16 bg-duit-light rounded-full flex items-center justify-center mx-auto mb-4 text-duit-primary">
+        <div class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-8 w-8"
+            class="h-9 w-9"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -110,12 +109,15 @@ onUnmounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-lg font-bold text-duit-dark mb-1">
-          Drop your receipt here
+        <h3 class="text-xl font-black tracking-tight text-slate-950">
+          Add a receipt photo
         </h3>
-        <p class="text-duit-mid text-sm">
-          or click to browse from your device
+        <p class="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-slate-600">
+          Take a clear picture or choose an image from your phone. Duit will extract the spending details.
         </p>
+        <div class="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200">
+          Choose image
+        </div>
       </div>
     </div>
 
@@ -124,14 +126,15 @@ onUnmounted(() => {
       ref="previewContainer"
       class="space-y-4"
     >
-      <div class="relative bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
+      <div class="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50">
         <img
           :src="previewUrl ?? undefined"
-          class="w-full h-64 object-contain mx-auto"
+          class="mx-auto h-72 w-full object-contain"
           alt="Receipt preview"
         >
-        <button 
-          class="absolute top-4 right-4 bg-white/90 backdrop-blur p-2 rounded-full text-duit-danger shadow-sm hover:bg-white transition-colors"
+        <button
+          class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-red-600 shadow-sm transition hover:bg-red-50"
+          aria-label="Remove selected receipt"
           @click="removeFile"
         >
           <svg
@@ -149,21 +152,23 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100">
-        <div class="min-w-0">
-          <p class="text-sm font-bold text-duit-dark truncate">
-            {{ selectedFile.name }}
-          </p>
-          <p class="text-xs text-duit-mid">
-            {{ formatSize(selectedFile.size) }}
-          </p>
+      <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex min-w-0 items-center justify-between gap-4">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-black text-slate-950">
+              {{ selectedFile.name }}
+            </p>
+            <p class="mt-1 text-xs font-semibold text-slate-500">
+              {{ formatSize(selectedFile.size) }}
+            </p>
+          </div>
+          <button
+            class="min-h-11 shrink-0 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+            @click="handleScan"
+          >
+            Scan
+          </button>
         </div>
-        <button 
-          class="bg-duit-primary text-slate-900 px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-duit-primary/20"
-          @click="handleScan"
-        >
-          Scan Receipt
-        </button>
       </div>
     </div>
   </div>

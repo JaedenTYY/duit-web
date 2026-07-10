@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useStatementStore } from '@/stores/statement'
 import { useTransactionStore } from '@/stores/transaction'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import PageHeader from '@/components/shared/PageHeader.vue'
 import type { StatementRow } from '@/types'
 
 const store = useStatementStore()
@@ -74,31 +76,24 @@ function money(row: StatementRow) {
 
 <template>
   <div class="pb-32">
-    <header class="mb-10">
-      <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
-        PDF import
-      </p>
-      <h1 class="mt-2 text-4xl font-bold tracking-tight text-slate-900">
-        Bank statements
-      </h1>
-      <p class="mt-2 max-w-2xl text-slate-500">
-        Upload a statement, review every parsed row, then import only the transactions you choose.
-      </p>
-    </header>
+    <PageHeader
+      class="mb-8"
+      eyebrow="PDF import"
+      title="Bank statements"
+      description="Upload a statement, review every parsed row, then import only the transactions you choose."
+    />
 
-    <div
-      v-if="store.error"
-      class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
-    >
-      {{ store.error }}
-    </div>
+    <ErrorBanner
+      class="mb-6"
+      :message="store.error"
+    />
 
     <section
       v-if="!store.upload"
-      class="rounded-3xl border-2 border-dashed border-slate-200 bg-white p-8 text-center md:p-14"
+      class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white p-6 text-center shadow-sm md:p-12"
     >
-      <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-3xl">
-        📄
+      <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6" /></svg>
       </div>
       <h2 class="text-xl font-bold text-slate-900">
         Choose a PDF statement
@@ -115,7 +110,7 @@ function money(row: StatementRow) {
       >
       <button
         type="button"
-        class="mt-6 rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white shadow-lg shadow-blue-200 disabled:opacity-60"
+        class="mt-6 min-h-11 rounded-2xl bg-blue-600 px-6 py-3 font-black text-white shadow-lg shadow-blue-200 disabled:opacity-60"
         :disabled="store.uploading"
         @click="fileInput?.click()"
       >
@@ -137,9 +132,9 @@ function money(row: StatementRow) {
         </p>
       </section>
 
-      <div class="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="font-bold text-slate-900">
+      <div class="mb-6 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <p class="truncate font-black text-slate-900">
             {{ store.upload.fileName }}
           </p>
           <p class="text-sm text-slate-500">
@@ -148,14 +143,14 @@ function money(row: StatementRow) {
         </div>
         <button
           type="button"
-          class="text-sm font-bold text-slate-500 hover:text-red-600"
+          class="min-h-10 rounded-2xl px-3 text-sm font-black text-slate-500 hover:bg-red-50 hover:text-red-600"
           @click="store.discardUpload"
         >
           {{ store.upload.status === 'pending' ? 'Discard draft' : 'Import another' }}
         </button>
       </div>
 
-      <div class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white md:block">
+      <div class="hidden overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm md:block">
         <table class="w-full text-left">
           <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
@@ -181,7 +176,7 @@ function money(row: StatementRow) {
                 >
               </td>
               <td class="p-4">
-                <p class="font-semibold text-slate-900">{{ row.merchantName }}</p>
+                <p class="max-w-xs truncate font-semibold text-slate-900">{{ row.merchantName }}</p>
                 <p class="max-w-xs truncate text-xs text-slate-500">{{ row.description }}</p>
                 <p class="mt-1 text-xs text-slate-400">{{ new Date(row.occurredAt).toLocaleDateString() }}</p>
               </td>
@@ -218,7 +213,7 @@ function money(row: StatementRow) {
         <article
           v-for="row in store.upload.rows"
           :key="row.id"
-          class="rounded-3xl border border-slate-200 bg-white p-5"
+          class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm"
           :class="{ 'opacity-50': row.status !== 'pending' }"
         >
           <div class="flex items-start gap-3">
@@ -231,12 +226,12 @@ function money(row: StatementRow) {
             >
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-3">
-                <p class="font-bold text-slate-900">{{ row.merchantName }}</p>
-                <p :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'" class="font-bold">
+                <p class="min-w-0 truncate font-black text-slate-900">{{ row.merchantName }}</p>
+                <p :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'" class="shrink-0 text-right font-black tabular-nums">
                   {{ row.direction === 'credit' ? '+' : '−' }}{{ money(row) }}
                 </p>
               </div>
-              <p class="mt-1 text-sm text-slate-500">{{ row.description }}</p>
+              <p class="mt-1 line-clamp-2 text-sm text-slate-500">{{ row.description }}</p>
               <p class="mt-1 text-xs text-slate-400">{{ new Date(row.occurredAt).toLocaleDateString() }}</p>
               <select
                 v-model="categoryOverrides[row.id]"
@@ -258,7 +253,7 @@ function money(row: StatementRow) {
 
       <div
         v-if="store.upload.status === 'pending'"
-        class="sticky bottom-20 mt-8 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-4"
+        class="sticky bottom-24 mt-8 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-4"
       >
         <div>
           <p class="text-sm text-slate-500">Selected debit total</p>
@@ -268,7 +263,7 @@ function money(row: StatementRow) {
         </div>
         <button
           type="button"
-          class="rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          class="min-h-11 rounded-2xl bg-blue-600 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
           :disabled="selectedIds.size === 0 || store.confirming"
           @click="confirmImport"
         >

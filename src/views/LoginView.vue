@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 type Mode = 'login' | 'register'
-const mode = ref<Mode>('login')
+const mode = ref<Mode>(route.name === 'register' ? 'register' : 'login')
 
 const email = ref('')
 const password = ref('')
@@ -32,163 +34,216 @@ async function handleSubmit() {
 }
 
 function toggleMode() {
-  mode.value = isLogin.value ? 'register' : 'login'
+  const nextMode = isLogin.value ? 'register' : 'login'
+  mode.value = nextMode
   authStore.error = null
+  router.replace({ name: nextMode })
 }
+
+watch(
+  () => route.name,
+  (name) => {
+    mode.value = name === 'register' ? 'register' : 'login'
+    authStore.error = null
+  },
+)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-6 relative overflow-hidden selection:bg-blue-500/20 selection:text-blue-900">
-    <!-- Premium Ambient Background Gradients -->
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
-    <div class="absolute -bottom-64 -right-64 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[100px] opacity-40 pointer-events-none" />
+  <div class="min-h-screen overflow-hidden bg-[#f6f9ff] text-slate-950 selection:bg-blue-500/20 selection:text-blue-900">
+    <div class="absolute inset-0 auth-scene" aria-hidden="true" />
 
-    <div class="w-full max-w-md relative z-10">
-      <!-- Logo -->
-      <div class="text-center mb-10 animate-fade-in">
-        <h1 class="text-4xl font-bold tracking-tight mb-2">
-          duit<span class="text-blue-500">.</span>
-        </h1>
-        <p class="text-slate-500 font-medium text-sm">
-          {{ isLogin ? 'Welcome back.' : 'Create your account.' }}
-        </p>
-      </div>
+    <nav class="relative z-10 flex h-16 items-center justify-between px-4 sm:px-8">
+      <button
+        type="button"
+        class="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/70 bg-white/80 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
+        @click="router.push('/')"
+      >
+        Back to Duit
+      </button>
+      <button
+        type="button"
+        class="inline-flex min-h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-black text-white shadow-lg shadow-slate-300/60 transition hover:bg-blue-700"
+        @click="toggleMode"
+      >
+        {{ isLogin ? 'Create account' : 'Sign in' }}
+      </button>
+    </nav>
 
-      <!-- Form Card -->
-      <div class="bg-white/90 backdrop-blur-3xl border border-slate-200 rounded-[2rem] p-8 shadow-2xl shadow-slate-200/50">
-        <!-- Error Response -->
-        <div 
-          v-if="authStore.error"
-          class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-3"
-        >
-          <svg
-            class="w-5 h-5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          /></svg>
-          {{ authStore.error }}
+    <main class="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-[1fr_0.85fr] lg:px-8">
+      <section class="hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-cyan-400 to-emerald-300 p-8 text-white shadow-2xl shadow-blue-200/70 lg:block">
+        <div class="flex items-center gap-4">
+          <FriendlyAvatar
+            tone="blue"
+            size="md"
+          />
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-50">
+              Friendly finance companion
+            </p>
+            <h1 class="mt-2 text-5xl font-black tracking-tight">
+              Duit helps money feel less messy.
+            </h1>
+          </div>
         </div>
-
-        <form
-          class="space-y-5"
-          @submit.prevent="handleSubmit"
-        >
-          <div
-            v-if="!isLogin"
-            class="space-y-2 animate-slide-up"
-          >
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Full Name</label>
-            <input
-              v-model="fullName"
-              type="text"
-              placeholder="Steve Jobs"
-              required
-              class="premium-input"
-            >
+        <div class="mt-10 grid gap-4">
+          <div class="auth-preview-card">
+            <span>Receipt captured</span>
+            <strong>RM 18.40</strong>
+            <small>Food & Dining suggested</small>
           </div>
-
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="you@example.com"
-              required
-              class="premium-input"
-            >
+          <div class="auth-preview-card ml-12">
+            <span>AI insight</span>
+            <strong>Dining up 12%</strong>
+            <small>Recommendation ready</small>
           </div>
-
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Password</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              class="premium-input"
-            >
+          <div class="auth-preview-card">
+            <span>Split bill</span>
+            <strong>4 friends joined</strong>
+            <small>Payment tracked manually</small>
           </div>
+        </div>
+      </section>
 
-          <button
-            type="submit"
-            :disabled="authStore.loading"
-            class="w-full py-4 bg-blue-600 text-white font-bold rounded-xl 
-                   hover:bg-blue-500 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/30 
-                   disabled:opacity-50 disabled:cursor-not-allowed mt-8 flex justify-center items-center gap-2"
-          >
-            <span v-if="authStore.loading">
-              <svg
-                class="animate-spin h-5 w-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            </span>
-            <span v-else>
-              {{ isLogin ? 'Sign In' : 'Sign Up' }}
-            </span>
-          </button>
-        </form>
-
-        <!-- Toggle mode -->
-        <div class="text-center mt-8 pt-6 border-t border-slate-100">
-          <p class="text-sm text-slate-500">
-            {{ isLogin ? "Don't have an account?" : "Already have an account?" }}
-            <button
-              class="font-bold text-blue-600 hover:text-blue-500 transition-colors"
-              type="button"
-              @click="toggleMode"
-            >
-              {{ isLogin ? 'Sign up' : 'Sign in' }}
-            </button>
+      <section class="mx-auto w-full max-w-md">
+        <div class="mb-6 flex flex-col items-center text-center">
+          <FriendlyAvatar
+            tone="blue"
+            size="md"
+          />
+          <h1 class="mt-5 text-4xl font-black tracking-tight">
+            duit<span class="text-blue-600">.</span>
+          </h1>
+          <p class="mt-2 max-w-xs text-sm font-semibold leading-6 text-slate-600">
+            {{ isLogin ? 'Welcome back. Continue organising your spending with Duit.' : 'Create your Duit account and start tracking with context.' }}
           </p>
         </div>
-      </div>
-    </div>
+
+        <div class="rounded-[2rem] border border-white/80 bg-white/88 p-5 shadow-2xl shadow-blue-100/70 backdrop-blur-xl sm:p-7">
+          <div
+            v-if="authStore.error"
+            class="mb-6 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
+          >
+            <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+            {{ authStore.error }}
+          </div>
+
+          <form
+            class="space-y-5"
+            @submit.prevent="handleSubmit"
+          >
+            <div
+              v-if="!isLogin"
+              class="space-y-2"
+            >
+              <label class="auth-label">Full Name</label>
+              <input
+                v-model="fullName"
+                type="text"
+                placeholder="Aina Rahman"
+                required
+                class="auth-input"
+              >
+            </div>
+
+            <div class="space-y-2">
+              <label class="auth-label">Email</label>
+              <input
+                v-model="email"
+                type="email"
+                placeholder="you@example.com"
+                required
+                class="auth-input"
+              >
+            </div>
+
+            <div class="space-y-2">
+              <label class="auth-label">Password</label>
+              <input
+                v-model="password"
+                type="password"
+                placeholder="••••••••"
+                required
+                class="auth-input"
+              >
+            </div>
+
+            <button
+              type="submit"
+              :disabled="authStore.loading"
+              class="mt-7 flex min-h-13 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ authStore.loading ? 'Please wait...' : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
+            </button>
+          </form>
+
+          <div class="mt-7 border-t border-slate-100 pt-5 text-center">
+            <p class="text-sm font-semibold text-slate-500">
+              {{ isLogin ? "Don't have an account?" : "Already have an account?" }}
+              <button
+                class="font-black text-blue-600 transition hover:text-blue-700"
+                type="button"
+                @click="toggleMode"
+              >
+                {{ isLogin ? 'Sign up' : 'Sign in' }}
+              </button>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.premium-input {
-  @apply w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 font-medium 
-         placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
-         focus:border-blue-500 transition-all shadow-sm;
+.auth-scene {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.18), transparent 28%),
+    radial-gradient(circle at 85% 20%, rgba(45, 212, 191, 0.22), transparent 30%),
+    radial-gradient(circle at 50% 85%, rgba(251, 146, 60, 0.16), transparent 32%),
+    linear-gradient(135deg, #f6f9ff, #eefdf8 48%, #fff7ed);
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.8s ease-out;
+.auth-preview-card {
+  width: min(26rem, 100%);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.22);
+  padding: 1.2rem;
+  backdrop-filter: blur(18px);
 }
 
-.animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.auth-preview-card span,
+.auth-preview-card strong,
+.auth-preview-card small {
+  display: block;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.auth-preview-card span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
 }
 
-@keyframes slideUp {
-  from { opacity: 0; height: 0; transform: translateY(-10px); }
-  to { opacity: 1; height: auto; transform: translateY(0); }
+.auth-preview-card strong {
+  margin-top: 0.45rem;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.auth-preview-card small {
+  margin-top: 0.25rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.auth-label {
+  @apply block px-1 text-xs font-black uppercase tracking-wider text-slate-500;
+}
+
+.auth-input {
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 font-semibold text-slate-950 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100;
 }
 </style>

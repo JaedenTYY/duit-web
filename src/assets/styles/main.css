@@ -8,13 +8,31 @@
 
 html {
   font-size: 90%; /* Scales 1rem down to 14.4px (10% scale up from previous 80%) */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  @apply m-0 p-0 bg-slate-50;
+  @apply m-0 p-0 bg-slate-50 antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #app {
   width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-200;
 }

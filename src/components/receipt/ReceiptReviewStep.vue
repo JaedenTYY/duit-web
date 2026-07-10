@@ -19,7 +19,6 @@ const emit = defineEmits<{
 
 const formContainer = ref<HTMLElement | null>(null)
 
-// Form state
 const amount = ref(props.extraction.extractedData.total.toString())
 const currency = ref(props.extraction.extractedData.currency)
 const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
@@ -27,8 +26,8 @@ const description = ref(props.extraction.extractedData.merchantName ?? '')
 const categoryId = ref('')
 const fxRate = ref(1)
 const occurredAt = ref(
-  props.extraction.extractedData.date 
-    ? new Date(props.extraction.extractedData.date).toISOString().slice(0, 16) 
+  props.extraction.extractedData.date
+    ? new Date(props.extraction.extractedData.date).toISOString().slice(0, 16)
     : new Date().toISOString().slice(0, 16)
 )
 
@@ -67,13 +66,13 @@ watch(merchantName, (newVal) => {
 onMounted(() => {
   if (formContainer.value) {
     gsap.from(formContainer.value, {
-      x: 40,
+      y: 18,
       opacity: 0,
-      duration: 0.5,
-      ease: 'power3.out'
+      duration: 0.35,
+      ease: 'power2.out'
     })
   }
-  
+
   if (merchantName.value) {
     fetchCategorisation(merchantName.value)
   }
@@ -104,92 +103,94 @@ function formatReviewField(field: string) {
 <template>
   <div
     ref="formContainer"
-    class="space-y-6"
+    class="space-y-5"
   >
-    <!-- Header & Confidence -->
-    <div class="flex items-center justify-between">
-      <h3 class="text-xl font-bold text-duit-dark">
-        Review Extraction
-      </h3>
-      <div 
-        class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+          Review before saving
+        </p>
+        <h3 class="mt-1 text-2xl font-black tracking-tight text-slate-950">
+          Check the receipt details
+        </h3>
+      </div>
+      <div
+        class="w-fit rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
         :class="{
-          'bg-duit-success/10 text-duit-success': extraction.confidence === 'high',
-          'bg-duit-warning/10 text-duit-warning': extraction.confidence === 'medium',
-          'bg-duit-danger/10 text-duit-danger': extraction.confidence === 'low'
+          'bg-emerald-50 text-emerald-700': extraction.confidence === 'high',
+          'bg-amber-50 text-amber-700': extraction.confidence === 'medium',
+          'bg-red-50 text-red-700': extraction.confidence === 'low'
         }"
       >
-        {{ extraction.confidence === 'high' ? 'High Confidence' : extraction.confidence === 'medium' ? 'Review Carefully' : 'Verify Fields' }}
+        {{ extraction.confidence === 'high' ? 'High confidence' : extraction.confidence === 'medium' ? 'Review carefully' : 'Verify fields' }}
       </div>
     </div>
 
     <div
       v-if="fieldsNeedingReview.length > 0"
-      class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+      class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
     >
-      <p class="font-semibold">
+      <p class="font-black">
         Please verify these fields before saving:
       </p>
       <div class="mt-2 flex flex-wrap gap-2">
         <span
           v-for="field in fieldsNeedingReview"
           :key="field"
-          class="rounded-md bg-white px-2 py-1 text-xs font-medium capitalize text-amber-900"
+          class="rounded-full bg-white px-3 py-1 text-xs font-bold capitalize text-amber-900"
         >
           {{ formatReviewField(field) }}
         </span>
       </div>
     </div>
 
-    <!-- Line Items -->
     <div
       v-if="extraction.extractedData.lineItems.length > 0"
-      class="bg-gray-50 rounded-2xl p-4 space-y-3"
+      class="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4"
     >
-      <div class="flex justify-between text-[10px] font-bold text-duit-mid uppercase tracking-widest px-2">
+      <div class="mb-3 flex justify-between px-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
         <span>Item</span>
         <span>Total</span>
       </div>
-      <div class="space-y-2">
+      <div class="max-h-56 space-y-2 overflow-y-auto pr-1">
         <div
           v-for="(item, index) in extraction.extractedData.lineItems"
           :key="index"
-          class="flex justify-between items-start bg-white p-3 rounded-xl border border-gray-100 shadow-sm"
+          class="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm"
         >
-          <div class="min-w-0 pr-4">
-            <p class="text-sm font-semibold text-duit-dark truncate">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-black text-slate-950">
               {{ item.name }}
             </p>
-            <p class="text-xs text-duit-mid">
-              {{ item.qty }} × {{ formatCurrency(item.unitPrice.toString(), currency) }}
+            <p class="text-xs font-medium text-slate-500">
+              {{ item.qty }} x {{ formatCurrency(item.unitPrice.toString(), currency) }}
             </p>
           </div>
-          <span class="text-sm font-bold text-duit-dark">{{ formatCurrency(lineTotal(item).toString(), currency) }}</span>
+          <span class="shrink-0 text-sm font-black tabular-nums text-slate-950">{{ formatCurrency(lineTotal(item).toString(), currency) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Editable Form -->
     <form
       class="space-y-4"
       @submit.prevent="handleConfirm"
     >
-      <div class="flex gap-3">
-        <div class="flex-grow">
-          <label class="block text-sm font-medium text-duit-dark mb-1">Amount</label>
-          <input 
-            v-model="amount" 
-            type="number" 
-            step="0.01" 
+      <div class="grid grid-cols-[1fr_6rem] gap-3">
+        <div>
+          <label class="receipt-label">Amount</label>
+          <input
+            v-model="amount"
+            type="number"
+            step="0.01"
             required
-            class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition"
+            class="receipt-input"
           >
         </div>
-        <div class="w-24">
-          <label class="block text-sm font-medium text-duit-dark mb-1">Currency</label>
-          <select 
+        <div>
+          <label class="receipt-label">Currency</label>
+          <select
             v-model="currency"
-            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition bg-white"
+            class="receipt-input px-3"
           >
             <option>MYR</option>
             <option>SGD</option>
@@ -201,32 +202,32 @@ function formatReviewField(field: string) {
       </div>
 
       <div v-if="showFxRate">
-        <label class="block text-sm font-medium text-duit-dark mb-1">Exchange Rate (to MYR)</label>
-        <input 
-          v-model="fxRate" 
-          type="number" 
-          step="0.0001" 
+        <label class="receipt-label">Exchange Rate (to MYR)</label>
+        <input
+          v-model="fxRate"
+          type="number"
+          step="0.0001"
           required
-          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition"
+          class="receipt-input"
         >
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-duit-dark mb-1">Merchant</label>
-        <input 
-          v-model="merchantName" 
+        <label class="receipt-label">Merchant</label>
+        <input
+          v-model="merchantName"
           type="text"
-          placeholder="e.g. Starbucks"
-          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition"
+          placeholder="e.g. Kopitiam"
+          class="receipt-input"
         >
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-duit-dark mb-1">Category</label>
-        <select 
+        <label class="receipt-label">Category</label>
+        <select
           v-model="categoryId"
           required
-          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition bg-white"
+          class="receipt-input bg-white"
         >
           <option value="">
             Select category
@@ -239,7 +240,7 @@ function formatReviewField(field: string) {
             {{ cat.icon }} {{ cat.name }}
           </option>
         </select>
-        
+
         <CategorySuggestion
           v-if="categorisation"
           :categorisation="categorisation"
@@ -249,35 +250,35 @@ function formatReviewField(field: string) {
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-duit-dark mb-1">Description</label>
-        <input 
-          v-model="description" 
+        <label class="receipt-label">Description</label>
+        <input
+          v-model="description"
           type="text"
-          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition"
+          class="receipt-input"
         >
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-duit-dark mb-1">Date & Time</label>
-        <input 
-          v-model="occurredAt" 
-          type="datetime-local" 
+        <label class="receipt-label">Date & Time</label>
+        <input
+          v-model="occurredAt"
+          type="datetime-local"
           required
-          class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-duit-primary/30 focus:border-duit-primary transition bg-white"
+          class="receipt-input bg-white"
         >
       </div>
 
-      <div class="flex gap-4 pt-4">
-        <button 
+      <div class="grid grid-cols-[0.8fr_1.2fr] gap-3 pt-2">
+        <button
           type="button"
-          class="flex-1 py-3 border border-gray-200 text-duit-dark font-bold rounded-xl hover:bg-gray-50 transition-colors"
+          class="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
           @click="emit('back')"
         >
           Re-scan
         </button>
-        <button 
-          type="submit" 
-          class="flex-[2] py-3 bg-duit-primary text-slate-900 font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-duit-primary/20"
+        <button
+          type="submit"
+          class="min-h-12 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
         >
           Confirm & Save
         </button>
@@ -285,3 +286,13 @@ function formatReviewField(field: string) {
     </form>
   </div>
 </template>
+
+<style scoped>
+.receipt-label {
+  @apply mb-1 block px-1 text-xs font-black uppercase tracking-wider text-slate-500;
+}
+
+.receipt-input {
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100;
+}
+</style>

@@ -18,42 +18,37 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <aside class="sticky bottom-4 z-30 mx-4 rounded-3xl border border-white/20 bg-slate-900/95 px-5 py-4 shadow-2xl shadow-blue-900/20 backdrop-blur-xl sm:mx-0 sm:bottom-0 sm:rounded-b-none sm:rounded-t-3xl text-white">
+  <aside class="sticky bottom-3 z-30 rounded-[1.75rem] border border-white/20 bg-slate-950/95 px-4 py-4 text-white shadow-2xl shadow-blue-900/20 backdrop-blur-xl sm:bottom-4 sm:px-5">
     <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between text-xs font-semibold text-slate-300 sm:justify-start sm:gap-6">
+      <div class="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-300 sm:grid-cols-4">
         <div class="flex flex-col">
           <span class="text-slate-400">Items</span>
-          <span class="text-white text-sm">{{ formatCurrency(subtotal, currency) }}</span>
+          <span class="text-sm text-white">{{ formatCurrency(subtotal, currency) }}</span>
         </div>
         <div class="flex flex-col">
           <span class="text-slate-400">Tax</span>
-          <span class="text-white text-sm">{{ formatCurrency(tax, currency) }}</span>
+          <span class="text-sm text-white">{{ formatCurrency(tax, currency) }}</span>
         </div>
         <div class="flex flex-col">
           <span class="text-slate-400">Service</span>
-          <span class="text-white text-sm">{{ formatCurrency(service, currency) }}</span>
+          <span class="text-sm text-white">{{ formatCurrency(service, currency) }}</span>
         </div>
-        <div class="flex flex-col items-end sm:hidden">
+        <div class="flex flex-col items-end">
           <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total owed</span>
           <span class="text-lg font-black text-white">{{ formatCurrency(total, currency) }}</span>
         </div>
       </div>
       
-      <div class="flex items-center justify-between gap-4 border-t border-white/10 pt-3 sm:border-none sm:pt-0">
-        <div class="hidden flex-col items-start sm:flex">
-          <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total owed</span>
-          <span class="text-2xl font-black text-white">{{ formatCurrency(total, currency) }}</span>
-        </div>
-        
-        <p class="text-xs text-slate-400 font-medium sm:max-w-xs">
-          Duit calculates your share but does not process payments.
+      <div class="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-xs font-medium leading-5 text-slate-400 sm:max-w-xs">
+          Duit calculates your share but does not process payment.
         </p>
         
         <button
           v-if="actionLabel"
           type="button"
           :disabled="disabled || loading"
-          class="shrink-0 rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          class="min-h-11 w-full shrink-0 rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           @click="emit('submit')"
         >
           {{ loading ? 'Saving...' : actionLabel }}

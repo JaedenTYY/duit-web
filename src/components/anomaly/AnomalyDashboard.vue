@@ -3,6 +3,9 @@ import { onMounted, onUnmounted } from 'vue'
 import { useAnomalyStore } from '@/stores/anomaly'
 import { storeToRefs } from 'pinia'
 import gsap from 'gsap'
+import EmptyState from '@/components/shared/EmptyState.vue'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 
 const anomalyStore = useAnomalyStore()
 const { anomalies, loading, resolvingIds, error } = storeToRefs(anomalyStore)
@@ -43,88 +46,36 @@ function formatScore(score: number) {
 
 <template>
   <div class="w-full">
-    <div class="mb-8 flex items-center justify-between">
+    <div class="mb-6">
       <div>
-        <h2 class="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Anomaly Engine
+        <h2 class="text-xl font-black text-slate-950 tracking-tight flex items-center gap-3">
+          Anomaly alerts
         </h2>
-        <p class="text-slate-400 mt-1">
+        <p class="mt-1 text-sm font-medium text-slate-500">
           Each new transaction is compared with your personal spending baseline.
         </p>
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div
+    <LoadingSkeleton
       v-if="loading"
-      class="bg-white backdrop-blur-xl border border-slate-100 rounded-[2rem] p-12 text-center"
-    >
-      <svg
-        class="animate-spin h-8 w-8 text-blue-500 mx-auto mb-4"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
-      <p class="text-slate-400 font-medium">
-        Scanning transactions...
-      </p>
-    </div>
+      :rows="2"
+      variant="list"
+    />
 
-    <!-- Error State -->
-    <div
+    <ErrorBanner
       v-else-if="error"
-      class="bg-red-500/10 border border-red-500/20 rounded-[2rem] p-8 text-center"
-    >
-      <p class="text-red-400 font-bold mb-4">
-        {{ error }}
-      </p>
-      <button
-        class="bg-red-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-600 transition-colors"
-        @click="anomalyStore.fetchAnomalies"
-      >
-        Try Again
-      </button>
-    </div>
+      :message="error"
+      action-label="Try again"
+      @action="anomalyStore.fetchAnomalies"
+    />
 
-    <!-- Empty State -->
-    <div
+    <EmptyState
       v-else-if="anomalies.length === 0"
-      class="bg-white backdrop-blur-xl border border-emerald-500/10 rounded-[2rem] p-12 text-center shadow-lg shadow-emerald-500/5"
-    >
-      <div class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-4">
-        <svg
-          class="w-8 h-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        /></svg>
-      </div>
-      <h3 class="text-slate-900 font-bold text-lg">
-        All clear!
-      </h3>
-      <p class="text-slate-400 mt-1">
-        No unusual spending detected in your ledger.
-      </p>
-    </div>
+      title="All clear"
+      message="No unusual spending detected in your ledger."
+      tone="emerald"
+    />
 
     <!-- Alerts Container -->
     <div
@@ -135,13 +86,14 @@ function formatScore(score: number) {
         v-for="alert in anomalies" 
         :id="`alert-${alert.id}`"
         :key="alert.id"
-        class="alert-card bg-white backdrop-blur-xl border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl shadow-slate-200/50 transition-all"
-        :class="alert.status !== 'pending' ? 'opacity-50 grayscale' : 'border-l-4 border-l-red-500 hover:bg-slate-50'"
+        class="alert-card rounded-[1.75rem] border bg-white p-5 shadow-sm transition-all sm:p-6"
+        :class="alert.status !== 'pending' ? 'border-slate-200 opacity-70' : 'border-amber-200 shadow-amber-100/60'"
       >
-        <div class="flex items-start md:items-center gap-4">
+        <div class="flex flex-col gap-5">
+          <div class="flex items-start gap-4">
           <div
-            class="w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-xl"
-            :class="alert.status === 'pending' ? 'bg-red-500/10 text-red-400' : 'bg-slate-100 text-slate-400'"
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+              :class="alert.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'"
           >
             <svg
               v-if="alert.status === 'pending'"
@@ -168,25 +120,25 @@ function formatScore(score: number) {
               d="M5 13l4 4L19 7"
             /></svg>
           </div>
-          <div>
+            <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-slate-900 font-bold">
+                <h3 class="min-w-0 truncate text-base font-black text-slate-950">
                 {{ alert.title }}
               </h3>
-              <span class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">
-                Score {{ formatScore(alert.anomalyScore) }}
+                <span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700">
+                  Risk {{ formatScore(alert.anomalyScore) }}
               </span>
             </div>
-            <p class="mt-1 font-semibold text-slate-700">
+              <p class="mt-1 truncate font-bold text-slate-800">
               {{ formatMoney(alert.amount, alert.currency) }} · {{ alert.merchantName }}
             </p>
-            <p class="text-sm text-slate-500">
+              <p class="text-sm font-medium text-slate-500">
               {{ alert.categoryName }}
             </p>
-            <p class="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+              <p class="mt-3 text-sm font-medium leading-6 text-slate-600">
               {{ alert.explanation }}
             </p>
-            <p class="text-slate-400 text-sm mt-1">
+              <p class="mt-2 text-xs font-semibold text-slate-400">
               Detected on {{ new Date(alert.createdAt).toLocaleDateString() }}
             </p>
           </div>
@@ -194,17 +146,17 @@ function formatScore(score: number) {
 
         <div
           v-if="alert.status === 'pending'"
-          class="flex items-center gap-3 w-full md:w-auto"
+            class="grid grid-cols-2 gap-3"
         >
           <button
-            class="flex-1 md:flex-none px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              class="min-h-11 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-700 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="resolvingIds.has(alert.id)"
             @click="handleResolve(alert.id, 'dismiss')"
           >
             Dismiss
           </button>
           <button
-            class="flex-1 md:flex-none px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              class="min-h-11 rounded-2xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="resolvingIds.has(alert.id)"
             @click="handleResolve(alert.id, 'confirm')"
           >
@@ -213,9 +165,10 @@ function formatScore(score: number) {
         </div>
         <div
           v-else
-          class="px-4 py-1.5 bg-slate-100 text-slate-400 rounded-lg text-sm font-bold uppercase tracking-wider"
+            class="rounded-2xl bg-slate-100 px-4 py-3 text-center text-sm font-black uppercase tracking-wider text-slate-500"
         >
           {{ alert.status === 'confirmed' ? 'Confirmed anomaly' : 'Dismissed' }}
+        </div>
         </div>
       </div>
     </div>

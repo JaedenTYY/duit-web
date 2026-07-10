@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
+import ActionTile from '@/components/shared/ActionTile.vue'
+import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import PageHeader from '@/components/shared/PageHeader.vue'
 
 const showUpload = ref(false)
 
@@ -11,23 +14,37 @@ const handleUploadSuccess = () => {
 
 <template>
   <div class="space-y-8 pb-20">
-    <header class="flex flex-col gap-2">
-      <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
-        Magic Inbox
-      </h1>
-      <p class="text-slate-400 text-lg font-medium">
-        Choose how you want to import your spending data.
-      </p>
-    </header>
+    <PageHeader
+      title="Magic Inbox"
+      description="Import receipts, statements, and eReceipts in one place. Duit keeps every import reviewable before it becomes a transaction."
+    />
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+    <section class="rounded-[2rem] border border-blue-100 bg-blue-50 p-5 sm:p-7">
+      <div class="flex items-start gap-4">
+        <FriendlyAvatar
+          tone="blue"
+          size="sm"
+        />
+        <div>
+          <h2 class="text-xl font-black tracking-tight text-slate-950">
+            Pick the fastest capture path
+          </h2>
+          <p class="mt-2 text-sm font-medium leading-6 text-slate-600">
+            Use receipt photos for item-level detail, PDFs for bulk history, and Gmail for digital purchases.
+          </p>
+        </div>
+      </div>
+    </section>
 
-      <!-- Receipt Upload -->
-      <button
-        class="bg-white backdrop-blur-xl border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:border-blue-300 hover:shadow-blue-500/10 transition-all text-left flex flex-col items-start active:scale-95 group"
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <ActionTile
+        title="Receipt Upload"
+        description="Snap a photo or upload an image to parse receipt totals and categories."
+        tone="blue"
+        action-label="Start scan"
         @click="showUpload = true"
       >
-        <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
+        <template #icon>
           <svg
             class="w-8 h-8"
             fill="none"
@@ -44,17 +61,17 @@ const handleUploadSuccess = () => {
             stroke-width="2"
             d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
           /></svg>
-        </div>
-        <h3 class="text-xl font-bold text-slate-900 mb-2 tracking-tight">Receipt Upload</h3>
-        <p class="text-slate-400 font-medium text-sm">Snap a photo or upload an image of a physical receipt to parse items automatically.</p>
-      </button>
+        </template>
+      </ActionTile>
 
-      <!-- Gmail eReceipts -->
-      <RouterLink
+      <ActionTile
+        title="Gmail eReceipts"
+        description="Connect read-only Gmail access and confirm each eReceipt before import."
         to="/gmail"
-        class="bg-white backdrop-blur-xl border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:border-red-300 hover:shadow-red-500/10 transition-all text-left flex flex-col items-start active:scale-95 group"
+        tone="rose"
+        action-label="Connect Gmail"
       >
-        <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 group-hover:scale-110 transition-transform">
+        <template #icon>
           <svg
             class="w-8 h-8"
             fill="none"
@@ -66,17 +83,17 @@ const handleUploadSuccess = () => {
             stroke-width="2"
             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
           /></svg>
-        </div>
-        <h3 class="text-xl font-bold text-slate-900 mb-2 tracking-tight">Gmail eReceipts</h3>
-        <p class="text-slate-400 font-medium text-sm">Connect your Gmail account to securely scan and extract digital receipts and invoices.</p>
-      </RouterLink>
+        </template>
+      </ActionTile>
 
-      <!-- Bank Statement Import -->
-      <RouterLink
+      <ActionTile
+        title="Bank Statement Import"
+        description="Upload a PDF statement and select the rows you want to keep."
         to="/statements"
-        class="bg-white backdrop-blur-xl border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:border-emerald-300 hover:shadow-emerald-500/10 transition-all text-left flex flex-col items-start active:scale-95 group"
+        tone="emerald"
+        action-label="Import PDF"
       >
-        <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform">
+        <template #icon>
           <svg
             class="w-8 h-8"
             fill="none"
@@ -88,10 +105,8 @@ const handleUploadSuccess = () => {
             stroke-width="2"
             d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6"
           /></svg>
-        </div>
-        <h3 class="text-xl font-bold text-slate-900 mb-2 tracking-tight">Bank Statement Import</h3>
-        <p class="text-slate-400 font-medium text-sm">Upload a PDF bank statement to ingest bulk transactions securely in one go.</p>
-      </RouterLink>
+        </template>
+      </ActionTile>
 
     </div>
 

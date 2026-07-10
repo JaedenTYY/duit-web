@@ -11,6 +11,8 @@ import LoadingSkeleton from '@/components/bill/LoadingSkeleton.vue'
 import ParticipantStatusCard from '@/components/bill/ParticipantStatusCard.vue'
 import PaymentQrCard from '@/components/bill/PaymentQrCard.vue'
 import QRShareCard from '@/components/bill/QRShareCard.vue'
+import PageHeader from '@/components/shared/PageHeader.vue'
+import StatCard from '@/components/shared/StatCard.vue'
 
 const route = useRoute()
 const billStore = useBillStore()
@@ -73,41 +75,35 @@ async function applyPaymentProfile() {
 
 <template>
   <div class="mx-auto max-w-5xl space-y-8 pb-28">
-    <header>
-      <p class="text-xs font-black uppercase tracking-widest text-blue-600">
-        Bill split
-      </p>
-      <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">
-        {{ bill?.merchantName || 'Receipt split' }}
-      </h1>
-      <p
-        v-if="bill"
-        class="mt-2 text-sm font-semibold text-slate-500"
-      >
-        Expires {{ new Date(bill.expiresAt).toLocaleString() }}
-      </p>
-    </header>
+    <PageHeader
+      eyebrow="Bill split"
+      :title="bill?.merchantName || 'Receipt split'"
+      :description="bill ? `Expires ${new Date(bill.expiresAt).toLocaleString()}` : 'Review receipt items, share the guest link, and track settlement.'"
+    />
 
     <ErrorBanner :message="error" />
     <LoadingSkeleton v-if="loading && !bill" />
 
     <template v-else-if="bill">
-      <section class="grid gap-4 sm:grid-cols-4">
-        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Subtotal</p>
-          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.subtotal, bill.currency) }}</p>
-        </div>
-        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tax</p>
-          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.taxAmount, bill.currency) }}</p>
-        </div>
-        <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Service</p>
-          <p class="mt-2 text-2xl font-black text-slate-900">{{ formatCurrency(bill.serviceCharge, bill.currency) }}</p>
-        </div>
-        <div class="rounded-3xl border border-transparent bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-lg shadow-slate-900/20">
-          <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total</p>
-          <p class="mt-2 text-2xl font-black text-white">{{ formatCurrency(bill.totalAmount, bill.currency) }}</p>
+      <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Subtotal"
+          :value="formatCurrency(bill.subtotal, bill.currency)"
+          tone="slate"
+        />
+        <StatCard
+          label="Tax"
+          :value="formatCurrency(bill.taxAmount, bill.currency)"
+          tone="blue"
+        />
+        <StatCard
+          label="Service"
+          :value="formatCurrency(bill.serviceCharge, bill.currency)"
+          tone="amber"
+        />
+        <div class="rounded-[2rem] border border-transparent bg-gradient-to-br from-slate-800 to-slate-950 p-5 shadow-lg shadow-slate-900/20">
+          <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-300">Total</p>
+          <p class="mt-2 truncate text-2xl font-black text-white">{{ formatCurrency(bill.totalAmount, bill.currency) }}</p>
         </div>
       </section>
 
@@ -131,11 +127,11 @@ async function applyPaymentProfile() {
         <div class="space-y-4">
           <PaymentQrCard :profile="selectedProfile" />
 
-          <section class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <h2 class="text-xl font-black text-slate-900">
               Select payment QR
             </h2>
-            <div class="mt-5 flex gap-3">
+            <div class="mt-5 flex flex-col gap-3 sm:flex-row">
               <select
                 v-model="selectedProfileId"
                 class="min-w-0 flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
@@ -161,7 +157,7 @@ async function applyPaymentProfile() {
           </section>
 
           <form
-            class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm"
+            class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
             @submit.prevent="savePaymentProfile"
           >
             <h2 class="text-xl font-black text-slate-900">
@@ -217,7 +213,7 @@ async function applyPaymentProfile() {
           </h2>
           <button
             type="button"
-            class="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 border border-slate-200"
+            class="min-h-11 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 border border-slate-200"
             @click="billStore.fetchParticipants(bill.id)"
           >
             Refresh
