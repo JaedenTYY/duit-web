@@ -24,6 +24,15 @@ jobs:
       
     - name: Run Linter
       run: npm run lint
-      
+
+    - name: Type check
+      run: npm run type-check
+
     - name: Build project
       run: npm run build
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Run E2E tests
+      run: npm run test:e2e

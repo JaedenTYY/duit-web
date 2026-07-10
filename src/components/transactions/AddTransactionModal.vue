@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useTransactionStore } from '@/stores/transaction'
 import type { Transaction, CategorisationResult } from '@/types'
 import api from '@/lib/api'
+import { logger } from '@/utils/logger'
 import CategorySuggestion from './CategorySuggestion.vue'
 
 const emit = defineEmits<{
@@ -44,7 +45,7 @@ async function fetchCategorisation(name: string) {
     })
     categorisation.value = res.data.data
   } catch (err) {
-    console.error(err)
+    logger.error('Failed to fetch merchant categorisation', err)
   }
 }
 

@@ -5,6 +5,7 @@ import api from '@/lib/api'
 import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
+import { logger } from '@/utils/logger'
 import CategorySuggestion from '../transactions/CategorySuggestion.vue'
 
 const props = defineProps<{
@@ -48,7 +49,7 @@ async function fetchCategorisation(name: string) {
     })
     categorisation.value = res.data.data
   } catch (err) {
-    console.error(err)
+    logger.error('Failed to fetch merchant categorisation', err)
   }
 }
 

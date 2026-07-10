@@ -1,57 +1,104 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { z } from 'zod'
+import { useLoginMutation, useRegisterMutation } from '@/composables/useAuthMutations'
 import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 
 type Mode = 'login' | 'register'
+interface AuthFormValues {
+  fullName: string
+  email: string
+  password: string
+}
+
+const loginSchema = z.object({
+  fullName: z.string(),
+  email: z.string().email('Enter a valid email address.'),
+  password: z.string().min(1, 'Password is required.'),
+})
+
+const registerSchema = loginSchema.extend({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.'),
+})
+
 const mode = ref<Mode>(route.name === 'register' ? 'register' : 'login')
+const apiError = ref<string | null>(null)
+const loginMutation = useLoginMutation()
+const registerMutation = useRegisterMutation()
 
-const email = ref('')
-const password = ref('')
-const fullName = ref('')
 const isLogin = computed(() => mode.value === 'login')
+const isSubmitting = computed(() => loginMutation.isPending.value || registerMutation.isPending.value)
+const validationSchema = computed(() => toTypedSchema(isLogin.value ? loginSchema : registerSchema))
 
-async function handleSubmit() {
+const { defineField, errors, handleSubmit, resetForm } = useForm<AuthFormValues>({
+  validationSchema,
+  initialValues: {
+    fullName: '',
+    email: '',
+    password: '',
+  },
+})
+
+const [fullName, fullNameAttrs] = defineField('fullName')
+const [email, emailAttrs] = defineField('email')
+const [password, passwordAttrs] = defineField('password')
+
+const onSubmit = handleSubmit(async (values) => {
+  apiError.value = null
   try {
     if (isLogin.value) {
-      await authStore.login({ email: email.value, password: password.value })
+      await loginMutation.mutateAsync({ email: values.email, password: values.password })
     } else {
-      await authStore.register({
-        email: email.value,
-        password: password.value,
-        fullName: fullName.value,
+      await registerMutation.mutateAsync({
+        email: values.email,
+        password: values.password,
+        fullName: values.fullName,
       })
     }
     router.push('/dashboard')
-  } catch {
-    // Error is already set in authStore.error
+  } catch (err: unknown) {
+    apiError.value = extractApiError(err)
   }
-}
+})
 
 function toggleMode() {
   const nextMode = isLogin.value ? 'register' : 'login'
   mode.value = nextMode
-  authStore.error = null
+  apiError.value = null
   router.replace({ name: nextMode })
+}
+
+function extractApiError(err: unknown): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
+    return axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred'
+  }
+  return 'An unexpected error occurred'
 }
 
 watch(
   () => route.name,
   (name) => {
     mode.value = name === 'register' ? 'register' : 'login'
-    authStore.error = null
+    apiError.value = null
+    resetForm()
   },
 )
 </script>
 
 <template>
   <div class="min-h-screen overflow-hidden bg-[#f6f9ff] text-slate-950 selection:bg-blue-500/20 selection:text-blue-900">
-    <div class="absolute inset-0 auth-scene" aria-hidden="true" />
+    <div
+      class="absolute inset-0 auth-scene"
+      aria-hidden="true"
+    />
 
     <nav class="relative z-10 flex h-16 items-center justify-between px-4 sm:px-8">
       <button
@@ -121,16 +168,16 @@ watch(
 
         <div class="rounded-[2rem] border border-white/80 bg-white/88 p-5 shadow-2xl shadow-blue-100/70 backdrop-blur-xl sm:p-7">
           <div
-            v-if="authStore.error"
+            v-if="apiError"
             class="mb-6 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
           >
             <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" />
-            {{ authStore.error }}
+            {{ apiError }}
           </div>
 
           <form
             class="space-y-5"
-            @submit.prevent="handleSubmit"
+            @submit.prevent="onSubmit"
           >
             <div
               v-if="!isLogin"
@@ -139,41 +186,62 @@ watch(
               <label class="auth-label">Full Name</label>
               <input
                 v-model="fullName"
+                v-bind="fullNameAttrs"
                 type="text"
                 placeholder="Aina Rahman"
-                required
                 class="auth-input"
+                :aria-invalid="!!errors.fullName"
               >
+              <p
+                v-if="errors.fullName"
+                class="auth-error"
+              >
+                {{ errors.fullName }}
+              </p>
             </div>
 
             <div class="space-y-2">
               <label class="auth-label">Email</label>
               <input
                 v-model="email"
+                v-bind="emailAttrs"
                 type="email"
                 placeholder="you@example.com"
-                required
                 class="auth-input"
+                :aria-invalid="!!errors.email"
               >
+              <p
+                v-if="errors.email"
+                class="auth-error"
+              >
+                {{ errors.email }}
+              </p>
             </div>
 
             <div class="space-y-2">
               <label class="auth-label">Password</label>
               <input
                 v-model="password"
+                v-bind="passwordAttrs"
                 type="password"
-                placeholder="••••••••"
-                required
+                placeholder="Password"
                 class="auth-input"
+                :aria-invalid="!!errors.password"
               >
+              <p
+                v-if="errors.password"
+                class="auth-error"
+              >
+                {{ errors.password }}
+              </p>
             </div>
 
             <button
               type="submit"
-              :disabled="authStore.loading"
+              :disabled="isSubmitting"
               class="mt-7 flex min-h-13 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {{ authStore.loading ? 'Please wait...' : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
+              {{ isSubmitting ? 'Please wait...' : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
             </button>
           </form>
 
@@ -245,5 +313,9 @@ watch(
 
 .auth-input {
   @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 font-semibold text-slate-950 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100;
+}
+
+.auth-error {
+  @apply px-1 text-xs font-bold text-red-600;
 }
 </style>

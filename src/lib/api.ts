@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import { logger } from '@/utils/logger'
+import { CONFIG } from '@/config'
 
 const api = axios.create({
   baseURL: '/api',
@@ -13,8 +14,9 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    const token = authStore.token ?? localStorage.getItem(CONFIG.TOKEN_KEY)
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -33,7 +35,7 @@ api.interceptors.response.use(
       logger.error(`[API ERROR] ${method?.toUpperCase()} ${url} | Status: ${status}`, data)
 
       if (status === 401) {
-        authStore.logout()
+        authStore.clearSession()
         router.push('/login')
       }
     } else if (error.request) {

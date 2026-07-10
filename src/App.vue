@@ -3,17 +3,19 @@ import { onMounted, ref, computed } from 'vue'
 import { gsap } from 'gsap'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useLogoutMutation } from '@/composables/useAuthMutations'
 import OnboardingWalkthrough from '@/components/shared/OnboardingWalkthrough.vue'
 
 const routerViewContainer = ref<HTMLElement | null>(null)
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const logoutMutation = useLogoutMutation()
 
 const hideNav = computed(() => route.meta.hideNav === true)
 
 const handleLogout = async () => {
-  await authStore.logout()
+  await logoutMutation.mutateAsync()
   router.push('/login')
 }
 

@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 const { chromium } = require('playwright');
 const path = require('path');
 

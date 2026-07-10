@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
     testIdAttribute: 'data-testid',
   },
@@ -20,10 +20,10 @@ export default defineConfig({
     },
   ],
 
-  /* 
-   We assume the backend and frontend are already running. 
-   Running them within playwright might conflict with manual running.
-   If needed, we could add webServer config here, but the user explicitly
-   said "Assume backend is running at http://localhost:8080 and frontend at 5173".
-  */
+  webServer: {
+    command: 'npm run dev -- --host 127.0.0.1',
+    url: 'http://127.0.0.1:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 });
