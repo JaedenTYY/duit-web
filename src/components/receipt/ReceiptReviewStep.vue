@@ -22,8 +22,8 @@ const formContainer = ref<HTMLElement | null>(null)
 // Form state
 const amount = ref(props.extraction.extractedData.total.toString())
 const currency = ref(props.extraction.extractedData.currency)
-const merchantName = ref(props.extraction.extractedData.merchant)
-const description = ref(props.extraction.extractedData.merchant)
+const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
+const description = ref(props.extraction.extractedData.merchantName ?? '')
 const categoryId = ref('')
 const fxRate = ref(1)
 const occurredAt = ref(
@@ -33,6 +33,7 @@ const occurredAt = ref(
 )
 
 const showFxRate = computed(() => currency.value !== 'MYR')
+const fieldsNeedingReview = computed(() => props.extraction.extractedData.fieldsNeedingReview ?? [])
 
 const categorisation = ref<CategorisationResult | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout>
@@ -90,6 +91,14 @@ function handleConfirm() {
     fxRate: showFxRate.value ? fxRate.value : undefined,
   })
 }
+
+function lineTotal(item: { qty: number; unitPrice: number }) {
+  return Number(item.qty) * Number(item.unitPrice)
+}
+
+function formatReviewField(field: string) {
+  return field.replaceAll('_', ' ')
+}
 </script>
 
 <template>
@@ -114,6 +123,24 @@ function handleConfirm() {
       </div>
     </div>
 
+    <div
+      v-if="fieldsNeedingReview.length > 0"
+      class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+    >
+      <p class="font-semibold">
+        Please verify these fields before saving:
+      </p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <span
+          v-for="field in fieldsNeedingReview"
+          :key="field"
+          class="rounded-md bg-white px-2 py-1 text-xs font-medium capitalize text-amber-900"
+        >
+          {{ formatReviewField(field) }}
+        </span>
+      </div>
+    </div>
+
     <!-- Line Items -->
     <div
       v-if="extraction.extractedData.lineItems.length > 0"
@@ -131,13 +158,13 @@ function handleConfirm() {
         >
           <div class="min-w-0 pr-4">
             <p class="text-sm font-semibold text-duit-dark truncate">
-              {{ item.description }}
+              {{ item.name }}
             </p>
             <p class="text-xs text-duit-mid">
               {{ item.qty }} × {{ formatCurrency(item.unitPrice.toString(), currency) }}
             </p>
           </div>
-          <span class="text-sm font-bold text-duit-dark">{{ formatCurrency(item.lineTotal.toString(), currency) }}</span>
+          <span class="text-sm font-bold text-duit-dark">{{ formatCurrency(lineTotal(item).toString(), currency) }}</span>
         </div>
       </div>
     </div>

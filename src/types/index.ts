@@ -246,29 +246,24 @@ export interface CategorySummary {
 
 export interface ReceiptLineItem {
   qty: number
-  code: string | null
-  description: string
   unitPrice: number
-  lineTotal: number
-  category: string | null
+  name: string
 }
 
 export interface ParsedReceipt {
-  merchant: string
-  branch: string | null
-  brn: string | null
-  sstNo: string | null
+  merchantName: string | null
+  merchantCategoryHint: string | null
   date: string | null
-  receiptRef: string | null
+  currency: string
   lineItems: ReceiptLineItem[]
-  discount: number | null
   subtotal: number | null
   serviceCharge: number | null
-  sst: number | null
-  rounding: number | null
+  tax: number | null
+  discountAmount: number | null
   total: number
-  paymentMethod: string | null
-  currency: string
+  paymentMethod: string
+  confidence: 'high' | 'medium' | 'low'
+  fieldsNeedingReview: string[]
 }
 
 export interface ReceiptExtractionResponse {
