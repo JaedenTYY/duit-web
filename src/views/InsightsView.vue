@@ -6,8 +6,9 @@ import InsightCard from '@/components/insights/InsightCard.vue'
 import AnomalyDashboard from '@/components/anomaly/AnomalyDashboard.vue'
 import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorBanner from '@/components/shared/ErrorBanner.vue'
-import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
+import PageHeader from '@/components/shared/PageHeader.vue'
+import QuestCard from '@/components/shared/QuestCard.vue'
 
 const store = useInsightStore()
 const listContainer = ref<HTMLElement | null>(null)
@@ -42,44 +43,61 @@ watch(() => store.insights.length, (newLen, oldLen) => {
 
 <template>
   <div class="relative min-h-[85vh] pb-32">
-    <header class="mb-8 rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-blue-50 p-5 sm:p-7">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 items-start gap-4">
-          <FriendlyAvatar
-            tone="emerald"
-            size="md"
-          />
-          <div class="min-w-0">
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-              AI financial coach
-            </p>
-            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Understand what changed this week
-            </h1>
-            <p class="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-600">
-              Duit compares recent spending with your previous week and turns the signal into concise recommendations.
-            </p>
-          </div>
-        </div>
+    <PageHeader
+      class="mb-6"
+      eyebrow="Weekly coach"
+      title="Beat this week’s money challenge"
+      description="Generate an insight, inspect anomalies, and turn spending changes into one practical next move."
+    >
+      <template #actions>
         <button
           type="button"
-          class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="store.generating"
           @click="store.generateWeeklyInsight"
         >
-          {{ store.generating ? 'Generating...' : 'Generate Insight' }}
+          {{ store.generating ? 'Thinking...' : 'Earn +60 XP' }}
         </button>
-      </div>
-    </header>
+      </template>
+    </PageHeader>
+
+    <section class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <QuestCard
+        title="Find the pattern"
+        description="Generate the weekly insight and learn what changed in your spending."
+        reward="+60 XP"
+        icon="🧠"
+        tone="mint"
+        action-label="Generate"
+        @click="store.generateWeeklyInsight"
+      />
+      <QuestCard
+        title="Resolve alerts"
+        description="Check unusual spending and keep your financial feed clean."
+        reward="+30 XP"
+        icon="🚦"
+        tone="coral"
+        action-label="Review"
+      />
+      <QuestCard
+        title="Scan more proof"
+        description="Add receipts so the coach has better evidence for next week."
+        reward="+50 XP"
+        icon="📸"
+        tone="sky"
+        to="/inbox"
+        action-label="Scan"
+      />
+    </section>
 
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
       <!-- Insights Column -->
       <div class="space-y-8">
         <div>
           <h2 class="text-xl font-black text-slate-950">
-            Spending patterns
+            Coach notes
           </h2>
-          <p class="mt-1 text-sm font-medium text-slate-500">
+          <p class="mt-1 text-sm font-semibold text-slate-500">
             Weekly summaries and recommendation cards.
           </p>
         </div>

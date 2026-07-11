@@ -102,8 +102,12 @@ async function applyPaymentProfile() {
           tone="amber"
         />
         <div class="rounded-[2rem] border border-transparent bg-gradient-to-br from-slate-800 to-slate-950 p-5 shadow-lg shadow-slate-900/20">
-          <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-300">Total</p>
-          <p class="mt-2 truncate text-2xl font-black text-white">{{ formatCurrency(bill.totalAmount, bill.currency) }}</p>
+          <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+            Total
+          </p>
+          <p class="mt-2 truncate text-2xl font-black text-white">
+            {{ formatCurrency(bill.totalAmount, bill.currency) }}
+          </p>
         </div>
       </section>
 
@@ -136,7 +140,9 @@ async function applyPaymentProfile() {
                 v-model="selectedProfileId"
                 class="min-w-0 flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
               >
-                <option value="">No QR selected</option>
+                <option value="">
+                  No QR selected
+                </option>
                 <option
                   v-for="profile in paymentProfiles"
                   :key="profile.id"

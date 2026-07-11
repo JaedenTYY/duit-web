@@ -93,7 +93,17 @@ function money(row: StatementRow) {
       class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white p-6 text-center shadow-sm md:p-12"
     >
       <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6" /></svg>
+        <svg
+          class="h-8 w-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        ><path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6"
+        /></svg>
       </div>
       <h2 class="text-xl font-bold text-slate-900">
         Choose a PDF statement
@@ -154,10 +164,18 @@ function money(row: StatementRow) {
         <table class="w-full text-left">
           <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
-              <th class="p-4">Import</th>
-              <th class="p-4">Transaction</th>
-              <th class="p-4">Category</th>
-              <th class="p-4 text-right">Amount</th>
+              <th class="p-4">
+                Import
+              </th>
+              <th class="p-4">
+                Transaction
+              </th>
+              <th class="p-4">
+                Category
+              </th>
+              <th class="p-4 text-right">
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -176,9 +194,15 @@ function money(row: StatementRow) {
                 >
               </td>
               <td class="p-4">
-                <p class="max-w-xs truncate font-semibold text-slate-900">{{ row.merchantName }}</p>
-                <p class="max-w-xs truncate text-xs text-slate-500">{{ row.description }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ new Date(row.occurredAt).toLocaleDateString() }}</p>
+                <p class="max-w-xs truncate font-semibold text-slate-900">
+                  {{ row.merchantName }}
+                </p>
+                <p class="max-w-xs truncate text-xs text-slate-500">
+                  {{ row.description }}
+                </p>
+                <p class="mt-1 text-xs text-slate-400">
+                  {{ new Date(row.occurredAt).toLocaleDateString() }}
+                </p>
               </td>
               <td class="p-4">
                 <select
@@ -186,12 +210,21 @@ function money(row: StatementRow) {
                   class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   :disabled="row.status !== 'pending'"
                 >
-                  <option value="">No category</option>
-                  <option v-for="category in transactionStore.categories" :key="category.id" :value="category.id">
+                  <option value="">
+                    No category
+                  </option>
+                  <option
+                    v-for="category in transactionStore.categories"
+                    :key="category.id"
+                    :value="category.id"
+                  >
                     {{ category.icon }} {{ category.name }}
                   </option>
                 </select>
-                <p v-if="row.categorisationConfidence" class="mt-1 text-xs text-slate-400">
+                <p
+                  v-if="row.categorisationConfidence"
+                  class="mt-1 text-xs text-slate-400"
+                >
                   {{ row.categorisationConfidence }} confidence
                 </p>
               </td>
@@ -226,24 +259,42 @@ function money(row: StatementRow) {
             >
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-3">
-                <p class="min-w-0 truncate font-black text-slate-900">{{ row.merchantName }}</p>
-                <p :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'" class="shrink-0 text-right font-black tabular-nums">
+                <p class="min-w-0 truncate font-black text-slate-900">
+                  {{ row.merchantName }}
+                </p>
+                <p
+                  :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'"
+                  class="shrink-0 text-right font-black tabular-nums"
+                >
                   {{ row.direction === 'credit' ? '+' : '−' }}{{ money(row) }}
                 </p>
               </div>
-              <p class="mt-1 line-clamp-2 text-sm text-slate-500">{{ row.description }}</p>
-              <p class="mt-1 text-xs text-slate-400">{{ new Date(row.occurredAt).toLocaleDateString() }}</p>
+              <p class="mt-1 line-clamp-2 text-sm text-slate-500">
+                {{ row.description }}
+              </p>
+              <p class="mt-1 text-xs text-slate-400">
+                {{ new Date(row.occurredAt).toLocaleDateString() }}
+              </p>
               <select
                 v-model="categoryOverrides[row.id]"
                 class="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                 :disabled="row.status !== 'pending'"
               >
-                <option value="">No category</option>
-                <option v-for="category in transactionStore.categories" :key="category.id" :value="category.id">
+                <option value="">
+                  No category
+                </option>
+                <option
+                  v-for="category in transactionStore.categories"
+                  :key="category.id"
+                  :value="category.id"
+                >
                   {{ category.icon }} {{ category.name }}
                 </option>
               </select>
-              <p v-if="row.categorisationConfidence" class="mt-1 text-xs text-slate-400">
+              <p
+                v-if="row.categorisationConfidence"
+                class="mt-1 text-xs text-slate-400"
+              >
                 {{ row.categorisationConfidence }} confidence suggestion
               </p>
             </div>
@@ -256,7 +307,9 @@ function money(row: StatementRow) {
         class="sticky bottom-24 mt-8 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-4"
       >
         <div>
-          <p class="text-sm text-slate-500">Selected debit total</p>
+          <p class="text-sm text-slate-500">
+            Selected debit total
+          </p>
           <p class="text-xl font-bold text-slate-900">
             RM {{ selectedTotal.toFixed(2) }}
           </p>

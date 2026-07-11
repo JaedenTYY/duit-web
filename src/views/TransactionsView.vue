@@ -85,12 +85,12 @@ async function handleReceiptClose() {
       description="Review manual entries, receipt captures, and imported statement rows in one clean spending feed."
     >
       <template #actions>
-      <RouterLink
-        to="/statements"
-          class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
-      >
-        Import bank PDF
-      </RouterLink>
+        <RouterLink
+          to="/statements"
+          class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+        >
+          Import bank PDF
+        </RouterLink>
       </template>
     </PageHeader>
 
@@ -98,7 +98,7 @@ async function handleReceiptClose() {
       <button
         type="button"
         aria-label="Add transaction"
-        class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200"
+        class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white shadow-sm"
         @click="editingTransaction = null; isModalOpen = true"
       >
         New
@@ -118,7 +118,7 @@ async function handleReceiptClose() {
         Category
         <select
           :value="store.selectedCategoryId"
-          class="mt-2 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 sm:w-72"
+          class="mt-2 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 sm:w-72"
           @change="handleCategoryFilterChange"
         >
           <option value="">
@@ -187,7 +187,7 @@ async function handleReceiptClose() {
     <!-- Floating Action Stack -->
     <div class="fixed bottom-8 right-8 z-40 hidden flex-col gap-3 md:flex">
       <button 
-        class="w-12 h-12 rounded-full bg-white backdrop-blur-xl border border-slate-200 flex items-center justify-center text-blue-600 shadow-xl shadow-slate-200/70 active:scale-90 transition-transform sm:h-14 sm:w-14"
+        class="w-12 h-12 rounded-full bg-white backdrop-blur-xl border border-slate-200 flex items-center justify-center text-amber-600 shadow-xl shadow-slate-200/70 active:scale-90 transition-transform sm:h-14 sm:w-14"
         aria-label="Upload receipt"
         @click="showReceiptModal = true"
       >
@@ -210,7 +210,7 @@ async function handleReceiptClose() {
       </button>
       
       <button 
-        class="w-14 h-14 rounded-full bg-blue-600 text-white shadow-[0_15px_35px_rgba(37,99,235,0.35)] flex items-center justify-center active:scale-90 transition-transform sm:h-16 sm:w-16"
+        class="w-14 h-14 rounded-full bg-emerald-500 text-white shadow-[0_15px_35px_rgba(16,185,129,0.28)] flex items-center justify-center active:scale-90 transition-transform sm:h-16 sm:w-16"
         aria-label="Add transaction"
         @click="editingTransaction = null; isModalOpen = true"
       >

@@ -28,7 +28,10 @@ const confidenceColor = computed(() => {
 </script>
 
 <template>
-  <div class="mt-3 p-4 rounded-xl border bg-slate-50/50 flex flex-col gap-3" :class="confidenceColor.split(' ')[2]">
+  <div
+    class="mt-3 p-4 rounded-xl border bg-slate-50/50 flex flex-col gap-3"
+    :class="confidenceColor.split(' ')[2]"
+  >
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold uppercase tracking-widest text-slate-500">AI Suggestion</span>
@@ -40,7 +43,7 @@ const confidenceColor = computed(() => {
         </span>
       </div>
       <div class="text-[10px] font-bold text-slate-400 font-mono">
-        Score: {{(categorisation.similarityScore * 100).toFixed(1)}}%
+        Score: {{ (categorisation.similarityScore * 100).toFixed(1) }}%
       </div>
     </div>
     

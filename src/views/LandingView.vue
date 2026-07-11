@@ -168,7 +168,10 @@ const navigateToLogin = () => {
         </div>
       </section>
 
-      <section id="features" class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12">
+      <section
+        id="features"
+        class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12"
+      >
         <div class="mb-8 text-center">
           <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
             Feature system
@@ -183,42 +186,54 @@ const navigateToLogin = () => {
             description="Upload receipt images and review extracted merchant, amount, date, item, and category details before saving."
             tone="blue"
           >
-            <template #icon>01</template>
+            <template #icon>
+              01
+            </template>
           </FeatureCard>
           <FeatureCard
             title="Semantic Categorisation"
             description="Merchant context helps Duit suggest sensible categories, so users do not need to organise every record manually."
             tone="mint"
           >
-            <template #icon>02</template>
+            <template #icon>
+              02
+            </template>
           </FeatureCard>
           <FeatureCard
             title="AI Weekly Insights"
             description="Weekly summaries explain changes, spending risks, and practical recommendations in plain language."
             tone="purple"
           >
-            <template #icon>03</template>
+            <template #icon>
+              03
+            </template>
           </FeatureCard>
           <FeatureCard
             title="Anomaly Alerts"
             description="Unusual transactions are shown with a risk score, explanation, and confirm or dismiss action."
             tone="peach"
           >
-            <template #icon>04</template>
+            <template #icon>
+              04
+            </template>
           </FeatureCard>
           <FeatureCard
             title="Magic Inbox"
             description="Receipt Upload, Gmail eReceipts, and Bank Statement Import live together as one central import hub."
             tone="blue"
           >
-            <template #icon>05</template>
+            <template #icon>
+              05
+            </template>
           </FeatureCard>
           <FeatureCard
             title="Smart Bill Split"
             description="Users scan a receipt, create a split, share a guest link, and manually mark settlement status."
             tone="mint"
           >
-            <template #icon>06</template>
+            <template #icon>
+              06
+            </template>
           </FeatureCard>
         </div>
       </section>
@@ -226,15 +241,25 @@ const navigateToLogin = () => {
       <section class="mx-auto max-w-7xl px-5 pb-20 sm:px-8 lg:px-12">
         <div class="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div class="story-card bg-blue-600 text-white">
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">User journey</p>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">
+              User journey
+            </p>
             <h2>From messy spending to useful signals</h2>
             <p>New users can understand the entire Duit loop: capture, review, categorise, learn, respond, and split.</p>
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
-            <div class="mini-step">1. Capture receipts and eReceipts</div>
-            <div class="mini-step">2. Import bank statement history</div>
-            <div class="mini-step">3. Review categories and anomalies</div>
-            <div class="mini-step">4. Split shared bills simply</div>
+            <div class="mini-step">
+              1. Capture receipts and eReceipts
+            </div>
+            <div class="mini-step">
+              2. Import bank statement history
+            </div>
+            <div class="mini-step">
+              3. Review categories and anomalies
+            </div>
+            <div class="mini-step">
+              4. Split shared bills simply
+            </div>
           </div>
         </div>
       </section>

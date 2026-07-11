@@ -59,13 +59,26 @@ async function sync() {
         <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-start gap-4">
             <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
-              <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              <svg
+                class="h-7 w-7"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              /></svg>
             </div>
             <div class="min-w-0">
               <h2 class="text-xl font-bold text-slate-900">
                 {{ store.status?.connected ? 'Gmail connected' : 'Connect Gmail' }}
               </h2>
-              <p v-if="store.status?.providerEmail" class="mt-1 truncate text-sm font-semibold text-slate-600">
+              <p
+                v-if="store.status?.providerEmail"
+                class="mt-1 truncate text-sm font-semibold text-slate-600"
+              >
                 {{ store.status.providerEmail }}
               </p>
               <p class="mt-1 text-sm text-slate-500">
@@ -126,8 +139,12 @@ async function sync() {
       <section v-if="store.status?.connected">
         <div class="mb-5 flex items-center justify-between">
           <div>
-            <h2 class="text-2xl font-bold text-slate-900">Pending eReceipts</h2>
-            <p class="text-sm text-slate-500">Nothing imports until you confirm it.</p>
+            <h2 class="text-2xl font-bold text-slate-900">
+              Pending eReceipts
+            </h2>
+            <p class="text-sm text-slate-500">
+              Nothing imports until you confirm it.
+            </p>
           </div>
           <span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-600">
             {{ store.extractions.length }}
@@ -144,7 +161,10 @@ async function sync() {
           />
         </div>
 
-        <div v-else class="grid gap-5 lg:grid-cols-2">
+        <div
+          v-else
+          class="grid gap-5 lg:grid-cols-2"
+        >
           <article
             v-for="extraction in store.extractions"
             :key="extraction.id"
@@ -169,13 +189,17 @@ async function sync() {
 
             <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
               <div class="rounded-xl bg-slate-50 p-3">
-                <p class="text-xs text-slate-400">Transaction date</p>
+                <p class="text-xs text-slate-400">
+                  Transaction date
+                </p>
                 <p class="mt-1 font-semibold text-slate-700">
                   {{ new Date(extraction.occurredAt).toLocaleDateString() }}
                 </p>
               </div>
               <div class="rounded-xl bg-slate-50 p-3">
-                <p class="text-xs text-slate-400">Confidence</p>
+                <p class="text-xs text-slate-400">
+                  Confidence
+                </p>
                 <p class="mt-1 font-semibold text-slate-700">
                   {{ extraction.categorisationConfidence ?? 'No match' }}
                 </p>

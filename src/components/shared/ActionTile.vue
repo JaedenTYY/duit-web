@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   tone: 'blue',
   actionLabel: 'Open',
+  to: undefined,
 })
 
 const emit = defineEmits<{
@@ -18,23 +19,23 @@ const emit = defineEmits<{
 
 const component = computed(() => props.to ? 'RouterLink' : 'button')
 const toneClasses = {
-  blue: 'bg-blue-50 text-blue-700 group-hover:border-blue-200 group-hover:bg-blue-100/70',
+  blue: 'bg-sky-50 text-sky-700 group-hover:border-sky-200 group-hover:bg-sky-100/70',
   emerald: 'bg-emerald-50 text-emerald-700 group-hover:border-emerald-200 group-hover:bg-emerald-100/70',
   rose: 'bg-rose-50 text-rose-700 group-hover:border-rose-200 group-hover:bg-rose-100/70',
   amber: 'bg-amber-50 text-amber-700 group-hover:border-amber-200 group-hover:bg-amber-100/70',
   purple: 'bg-violet-50 text-violet-700 group-hover:border-violet-200 group-hover:bg-violet-100/70',
 }
 const cardToneClasses = {
-  blue: 'from-white via-blue-50 to-cyan-50',
-  emerald: 'from-white via-emerald-50 to-cyan-50',
-  rose: 'from-white via-rose-50 to-orange-50',
-  amber: 'from-white via-amber-50 to-orange-50',
-  purple: 'from-white via-violet-50 to-cyan-50',
+  blue: 'bg-white border-sky-100',
+  emerald: 'bg-white border-emerald-100',
+  rose: 'bg-white border-rose-100',
+  amber: 'bg-white border-amber-100',
+  purple: 'bg-white border-violet-100',
 }
 const ctaToneClasses = {
-  blue: 'bg-blue-600 text-white shadow-blue-200',
-  emerald: 'bg-emerald-600 text-white shadow-emerald-200',
-  rose: 'bg-rose-600 text-white shadow-rose-200',
+  blue: 'bg-sky-500 text-white shadow-sky-100',
+  emerald: 'bg-emerald-500 text-white shadow-emerald-100',
+  rose: 'bg-rose-500 text-white shadow-rose-100',
   amber: 'bg-amber-500 text-slate-950 shadow-amber-200',
   purple: 'bg-violet-600 text-white shadow-violet-200',
 }
@@ -45,7 +46,7 @@ const ctaToneClasses = {
     :is="component"
     :to="to"
     type="button"
-    class="group flex min-h-48 w-full flex-col items-start rounded-[2rem] border border-white/80 bg-gradient-to-br p-6 text-left shadow-lg shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/80 focus:outline-none focus:ring-4 focus:ring-blue-200 active:scale-[0.99]"
+    class="group flex min-h-48 w-full flex-col items-start rounded-[2rem] border p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100 active:scale-[0.99]"
     :class="cardToneClasses[tone]"
     @click="emit('click')"
   >
@@ -55,10 +56,10 @@ const ctaToneClasses = {
     >
       <slot name="icon" />
     </span>
-    <span class="mt-5 text-lg font-black tracking-tight text-slate-950">
+    <span class="mt-5 text-lg font-black text-slate-950">
       {{ title }}
     </span>
-    <span class="mt-2 text-sm font-medium leading-6 text-slate-500">
+    <span class="mt-2 text-sm font-semibold leading-6 text-slate-500">
       {{ description }}
     </span>
     <span

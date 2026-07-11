@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useBillStore } from '@/stores/bill'
 import BillUploadCard from '@/components/bill/BillUploadCard.vue'
 import ErrorBanner from '@/components/bill/ErrorBanner.vue'
-import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import QuestCard from '@/components/shared/QuestCard.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
 
 const router = useRouter()
@@ -22,33 +22,69 @@ async function uploadReceipt(file: File) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 pb-28">
+  <div class="mx-auto max-w-5xl space-y-6 pb-28">
     <PageHeader
-      title="Split bill"
-      description="Scan a receipt, share a guest link, and track who picked which items without asking guests to create an account."
-    />
+      eyebrow="Party quest"
+      title="Split the bill without the awkward math"
+      description="Scan a receipt, share a guest link, and let everyone claim their items without creating an account."
+    >
+      <template #actions>
+        <RouterLink
+          to="/inbox"
+          class="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+        >
+          Scan receipt first
+        </RouterLink>
+      </template>
+    </PageHeader>
 
-    <section class="rounded-[2rem] border border-amber-100 bg-amber-50 p-5 sm:p-7">
-      <div class="flex items-start gap-4">
-        <FriendlyAvatar
-          tone="amber"
-          size="sm"
-        />
-        <div>
-          <h2 class="text-xl font-black tracking-tight text-slate-950">
-            Guest-friendly by design
-          </h2>
-          <p class="mt-2 text-sm font-medium leading-6 text-slate-600">
-            Duit displays payment details you provide, but it does not generate payment payloads or process payments.
-          </p>
-        </div>
-      </div>
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <QuestCard
+        title="Upload bill"
+        description="Use the receipt to create item choices for your group."
+        reward="+40 XP"
+        icon="🧾"
+        tone="amber"
+        action-label="Upload below"
+      />
+      <QuestCard
+        title="Share link"
+        description="Guests can claim items without installing anything."
+        reward="+20 XP"
+        icon="🔗"
+        tone="sky"
+        action-label="After upload"
+      />
+      <QuestCard
+        title="Settle fairly"
+        description="Show your own payment details; Duit does not process payments."
+        reward="+30 XP"
+        icon="✅"
+        tone="mint"
+        action-label="Stay compliant"
+      />
     </section>
 
-    <ErrorBanner :message="error" />
-    <BillUploadCard
-      :uploading="uploading"
-      @upload="uploadReceipt"
-    />
+    <section class="grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+      <div class="rounded-[2rem] border border-amber-100 bg-amber-50 p-6">
+        <p class="text-xs font-black uppercase text-amber-700">
+          Important
+        </p>
+        <h2 class="mt-2 text-2xl font-black text-slate-950">
+          Guest-friendly, not payment processing.
+        </h2>
+        <p class="mt-3 text-sm font-semibold leading-6 text-slate-600">
+          Duit displays payment details you provide, but it does not generate payment payloads or process payments.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <ErrorBanner :message="error" />
+        <BillUploadCard
+          :uploading="uploading"
+          @upload="uploadReceipt"
+        />
+      </div>
+    </section>
   </div>
 </template>

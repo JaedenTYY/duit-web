@@ -6,6 +6,7 @@ withDefaults(defineProps<{
   tone?: 'blue' | 'emerald' | 'amber' | 'slate'
 }>(), {
   tone: 'blue',
+  description: undefined,
 })
 
 const toneClasses = {
@@ -24,15 +25,15 @@ const cardToneClasses = {
 
 <template>
   <article
-    class="rounded-[2rem] border border-white/80 bg-gradient-to-br p-5 shadow-lg shadow-slate-200/60"
+    class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm"
     :class="cardToneClasses[tone]"
   >
     <div class="flex items-start justify-between gap-4">
       <div class="min-w-0">
-        <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+        <p class="text-xs font-black uppercase text-slate-400">
           {{ label }}
         </p>
-        <p class="mt-2 truncate text-2xl font-black tracking-tight text-slate-950">
+        <p class="mt-2 truncate text-2xl font-black text-slate-950">
           {{ value }}
         </p>
         <p

@@ -37,20 +37,20 @@ const sourceLabel = computed(() => {
   <article class="group relative rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 ease-out hover:border-blue-100 hover:shadow-lg hover:shadow-slate-200/70 active:scale-[0.99] sm:p-5">
     <div class="flex items-start justify-between gap-3">
       <div class="flex min-w-0 items-start gap-4">
-      <div 
+        <div
           class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-inner sm:h-14 sm:w-14 sm:text-2xl"
-        :style="{ 
+          :style="{
             backgroundColor: transaction.categoryColor ? `${transaction.categoryColor}18` : '#f1f5f9',
-          color: transaction.categoryColor || '#94a3b8'
-        }"
-      >
-        {{ transaction.categoryIcon || '📦' }}
-      </div>
+            color: transaction.categoryColor || '#94a3b8'
+          }"
+        >
+          {{ transaction.categoryIcon || '📦' }}
+        </div>
 
         <div class="min-w-0">
           <h3 class="truncate pr-1 text-base font-black tracking-tight text-slate-950">
             {{ transaction.merchantName || transaction.description || 'Transaction' }}
-        </h3>
+          </h3>
           <p class="mt-1 truncate text-sm font-medium text-slate-500">
             {{ transaction.description || transaction.categoryName || 'Spending activity' }}
           </p>
