@@ -3,18 +3,16 @@ import { computed, onMounted } from 'vue'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import type { TooltipItem } from 'chart.js'
-import { useAuthStore } from '@/stores/auth'
 import { useTransactionStore } from '@/stores/transaction'
 import { formatCurrency } from '@/utils/currency'
 import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorBanner from '@/components/shared/ErrorBanner.vue'
-import GameProgressCard from '@/components/shared/GameProgressCard.vue'
+import HabitSummaryCard from '@/components/shared/HabitSummaryCard.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
-import QuestCard from '@/components/shared/QuestCard.vue'
+import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const authStore = useAuthStore()
 const store = useTransactionStore()
 
 const now = new Date()
@@ -28,13 +26,17 @@ onMounted(async () => {
   ])
 })
 
-const firstName = computed(() => authStore.user?.fullName?.split(' ')[0] ?? 'there')
 const monthName = computed(() => now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }))
 const categoriesToShow = computed(() => store.monthlySummary?.byCategory?.slice(0, 5) ?? [])
 const topCategory = computed(() => store.monthlySummary?.byCategory?.[0] ?? null)
 const recentTransactions = computed(() => store.transactions.slice(0, 4))
-const xp = computed(() => Math.min(360, 80 + store.transactions.length * 12 + categoriesToShow.value.length * 18))
-const level = computed(() => Math.max(1, Math.floor(xp.value / 120) + 1))
+const completedTasks = computed(() => {
+  let count = 0
+  if (store.transactions.length > 0) count += 1
+  if (categoriesToShow.value.length > 0) count += 1
+  if (store.monthlySummary) count += 1
+  return count
+})
 
 const chartData = computed(() => {
   if (!categoriesToShow.value.length) {
@@ -86,34 +88,34 @@ const chartOptions = {
           {{ monthName }}
         </p>
         <h1 class="mt-3 max-w-3xl text-4xl font-black text-slate-950 sm:text-5xl">
-          Keep your money streak alive, {{ firstName }}.
+          Your money, clearly organized.
         </h1>
         <p class="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Complete small quests, scan spending evidence, split fairly, and check your weekly coach to level up your money habits.
+          Start with the most common tasks: scan receipts, review transactions, split shared bills, and check weekly insights.
         </p>
         <div class="mt-6 flex flex-col gap-3 sm:flex-row">
           <RouterLink
             to="/inbox"
             class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
           >
-            Start today’s quest
+            Import a receipt
           </RouterLink>
           <RouterLink
             to="/insights"
             class="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
           >
-            Visit money coach
+            View insights
           </RouterLink>
         </div>
       </section>
 
-      <GameProgressCard
-        :level="level"
-        :xp="xp"
-        :next-level-xp="360"
+      <HabitSummaryCard
+        :completion="(completedTasks / 3) * 100"
+        :completed-tasks="completedTasks"
+        :total-tasks="3"
         :streak-days="4"
-        title="Habit streak"
-        subtitle="Your progress grows when you scan, split, and review."
+        title="Weekly habits"
+        subtitle="Complete the three core actions to keep your records accurate."
       />
     </header>
 
@@ -126,28 +128,28 @@ const chartOptions = {
 
     <template v-else>
       <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <QuestCard
+        <FeatureActionCard
           title="Scan a receipt"
           description="Upload a receipt image and let Duit turn it into structured spending."
-          reward="+50 XP"
+          status="Most used"
           icon="📸"
           tone="mint"
           to="/inbox"
           action-label="Scan"
         />
-        <QuestCard
-          title="Split with friends"
+        <FeatureActionCard
+          title="Split a bill"
           description="Create a shared bill from a receipt and let everyone claim their items."
-          reward="+40 XP"
+          status="Group spending"
           icon="🤝"
           tone="amber"
           to="/split-bill"
           action-label="Split"
         />
-        <QuestCard
-          title="Check weekly coach"
+        <FeatureActionCard
+          title="Check weekly insights"
           description="Generate your weekly insight and learn what changed in your spending."
-          reward="+60 XP"
+          status="Review"
           icon="🧠"
           tone="sky"
           to="/insights"
@@ -250,7 +252,7 @@ const chartOptions = {
             v-else
             title="No spending map yet"
             message="Scan a receipt or import spending to unlock your category ring."
-            action-label="Open quests"
+            action-label="Open import"
             tone="emerald"
             @action="$router.push('/inbox')"
           />
@@ -264,7 +266,7 @@ const chartOptions = {
               Activity feed
             </p>
             <h2 class="mt-1 text-2xl font-black text-slate-950">
-              Latest coins spent
+              Recent transactions
             </h2>
           </div>
           <RouterLink

@@ -2,7 +2,7 @@
 withDefaults(defineProps<{
   title: string
   description: string
-  reward: string
+  status: string
   icon: string
   tone?: 'mint' | 'amber' | 'coral' | 'sky'
   to?: string
@@ -30,6 +30,7 @@ const toneClasses = {
     :is="to ? 'RouterLink' : 'button'"
     :to="to"
     type="button"
+    :aria-label="`${title}: ${description}`"
     class="group flex min-h-40 w-full flex-col rounded-3xl border bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
     :class="toneClasses[tone]"
     @click="emit('click')"
@@ -39,7 +40,7 @@ const toneClasses = {
         {{ icon }}
       </span>
       <span class="rounded-full bg-white px-3 py-1 text-xs font-black shadow-sm">
-        {{ reward }}
+        {{ status }}
       </span>
     </div>
     <h3 class="mt-4 text-lg font-black text-slate-950">

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
-import QuestCard from '@/components/shared/QuestCard.vue'
+import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 
 const showUpload = ref(false)
 
@@ -14,9 +14,9 @@ function handleUploadSuccess() {
 <template>
   <div class="space-y-6 pb-20">
     <PageHeader
-      eyebrow="Quest board"
-      title="Earn XP from real money tasks"
-      description="Pick one small mission. Duit keeps every import reviewable before it becomes a transaction."
+      eyebrow="Import center"
+      title="Choose how to add spending"
+      description="All import options are visible here. Duit keeps every import reviewable before it becomes a transaction."
     >
       <template #actions>
         <button
@@ -30,28 +30,28 @@ function handleUploadSuccess() {
     </PageHeader>
 
     <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <QuestCard
-        title="Receipt scan"
+      <FeatureActionCard
+        title="Scan receipt"
         description="Upload a receipt photo and let Google Vision plus Gemini draft the transaction."
-        reward="+50 XP"
+        status="Image upload"
         icon="📸"
         tone="mint"
         action-label="Start scan"
         @click="showUpload = true"
       />
-      <QuestCard
-        title="Bill split"
+      <FeatureActionCard
+        title="Split bill"
         description="Turn one receipt into a guest-friendly bill claim flow for your group."
-        reward="+40 XP"
+        status="Shared expense"
         icon="🤝"
         tone="amber"
         to="/split-bill"
         action-label="Split"
       />
-      <QuestCard
-        title="Weekly coach"
+      <FeatureActionCard
+        title="Weekly insights"
         description="Review your seven-day spending signal and unlock one practical insight."
-        reward="+60 XP"
+        status="Review"
         icon="🧠"
         tone="sky"
         to="/insights"
@@ -61,13 +61,13 @@ function handleUploadSuccess() {
 
     <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
       <p class="text-xs font-black uppercase text-amber-600">
-        How rewards work today
+        Why this screen exists
       </p>
       <h2 class="mt-2 text-2xl font-black text-slate-950">
-        Progress is visual first, backend rewards next.
+        Import methods should be visible, predictable, and reversible.
       </h2>
       <p class="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
-        This redesign makes the product feel rewarding immediately. The next backend step is storing XP events, streaks, and achievement unlocks so these missions become real account progress.
+        HCI principle: users should not need to remember where features are. Receipt uploads, Gmail receipts, bank statements, bill splitting, and insight review are grouped by task.
       </p>
     </section>
 

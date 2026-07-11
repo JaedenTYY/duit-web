@@ -12,15 +12,15 @@ const logoutMutation = useLogoutMutation()
 const darkMode = ref(false)
 
 const hideNav = computed(() => route.meta.hideNav === true)
-const firstName = computed(() => authStore.user?.fullName?.split(' ')[0] ?? 'Player')
+const firstName = computed(() => authStore.user?.fullName?.split(' ')[0] ?? 'User')
 const userInitial = computed(() => firstName.value.charAt(0).toUpperCase())
 
 const navItems = [
-  { to: '/dashboard', label: 'Home', icon: '🏠', match: ['/dashboard'] },
-  { to: '/inbox', label: 'Quests', icon: '📸', match: ['/inbox', '/gmail', '/statements'] },
-  { to: '/transactions', label: 'Coins', icon: '💳', match: ['/transactions'] },
-  { to: '/insights', label: 'Coach', icon: '🧠', match: ['/insights', '/anomalies'] },
-  { to: '/split-bill', label: 'Party', icon: '🤝', match: ['/split-bill'] },
+  { to: '/dashboard', label: 'Dashboard', shortLabel: 'Home', icon: '🏠', match: ['/dashboard'] },
+  { to: '/inbox', label: 'Import spending', shortLabel: 'Import', icon: '📸', match: ['/inbox', '/gmail', '/statements'] },
+  { to: '/transactions', label: 'Transactions', shortLabel: 'Records', icon: '💳', match: ['/transactions'] },
+  { to: '/insights', label: 'Insights', shortLabel: 'Insights', icon: '🧠', match: ['/insights', '/anomalies'] },
+  { to: '/split-bill', label: 'Split bill', shortLabel: 'Split', icon: '🤝', match: ['/split-bill'] },
 ]
 
 const activeNav = (item: typeof navItems[number]) =>
@@ -85,7 +85,7 @@ onMounted(() => {
         </span>
         <span>
           <span class="block text-2xl font-black text-slate-950">duit</span>
-          <span class="block text-xs font-black uppercase text-emerald-600">money adventure</span>
+          <span class="block text-xs font-black uppercase text-emerald-600">personal finance</span>
         </span>
       </RouterLink>
 
@@ -99,7 +99,7 @@ onMounted(() => {
               {{ firstName }}
             </p>
             <p class="text-xs font-black uppercase text-amber-700">
-              Level 3 saver
+              Weekly progress
             </p>
           </div>
         </div>
@@ -113,6 +113,7 @@ onMounted(() => {
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
+          :aria-current="activeNav(item) ? 'page' : undefined"
           class="flex min-h-14 items-center gap-3 rounded-3xl px-4 text-sm font-black text-slate-500 transition hover:bg-white hover:text-slate-950"
           :class="activeNav(item) ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200' : ''"
         >
@@ -131,7 +132,7 @@ onMounted(() => {
           to="/inbox"
           class="flex min-h-12 items-center justify-center rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
         >
-          Scan for XP
+          Scan receipt
         </RouterLink>
         <div class="grid grid-cols-2 gap-3">
           <button
@@ -140,7 +141,7 @@ onMounted(() => {
             aria-label="Toggle dark mode"
             @click="toggleTheme"
           >
-            {{ darkMode ? '☀️' : '🌙' }}
+            <span aria-hidden="true">{{ darkMode ? '☀️' : '🌙' }}</span>
           </button>
           <button
             type="button"
@@ -168,11 +169,13 @@ onMounted(() => {
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
+          :aria-label="item.label"
+          :aria-current="activeNav(item) ? 'page' : undefined"
           class="flex flex-col items-center justify-center rounded-3xl text-xs font-black text-slate-400 transition"
           :class="activeNav(item) ? 'bg-emerald-100 text-emerald-800' : ''"
         >
           <span class="text-xl">{{ item.icon }}</span>
-          <span class="mt-1">{{ item.label }}</span>
+          <span class="mt-1">{{ item.shortLabel }}</span>
         </RouterLink>
       </div>
     </nav>

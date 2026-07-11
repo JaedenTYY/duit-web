@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useBillStore } from '@/stores/bill'
 import BillUploadCard from '@/components/bill/BillUploadCard.vue'
 import ErrorBanner from '@/components/bill/ErrorBanner.vue'
-import QuestCard from '@/components/shared/QuestCard.vue'
+import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
 
 const router = useRouter()
@@ -24,7 +24,7 @@ async function uploadReceipt(file: File) {
 <template>
   <div class="mx-auto max-w-5xl space-y-6 pb-28">
     <PageHeader
-      eyebrow="Party quest"
+      eyebrow="Split bill"
       title="Split the bill without the awkward math"
       description="Scan a receipt, share a guest link, and let everyone claim their items without creating an account."
     >
@@ -39,26 +39,26 @@ async function uploadReceipt(file: File) {
     </PageHeader>
 
     <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <QuestCard
+      <FeatureActionCard
         title="Upload bill"
         description="Use the receipt to create item choices for your group."
-        reward="+40 XP"
+        status="Step 1"
         icon="🧾"
         tone="amber"
         action-label="Upload below"
       />
-      <QuestCard
+      <FeatureActionCard
         title="Share link"
         description="Guests can claim items without installing anything."
-        reward="+20 XP"
+        status="Step 2"
         icon="🔗"
         tone="sky"
         action-label="After upload"
       />
-      <QuestCard
+      <FeatureActionCard
         title="Settle fairly"
         description="Show your own payment details; Duit does not process payments."
-        reward="+30 XP"
+        status="Step 3"
         icon="✅"
         tone="mint"
         action-label="Stay compliant"

@@ -8,7 +8,7 @@ import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorBanner from '@/components/shared/ErrorBanner.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
-import QuestCard from '@/components/shared/QuestCard.vue'
+import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 
 const store = useInsightStore()
 const listContainer = ref<HTMLElement | null>(null)
@@ -45,8 +45,8 @@ watch(() => store.insights.length, (newLen, oldLen) => {
   <div class="relative min-h-[85vh] pb-32">
     <PageHeader
       class="mb-6"
-      eyebrow="Weekly coach"
-      title="Beat this week’s money challenge"
+      eyebrow="Insights"
+      title="Understand this week’s spending"
       description="Generate an insight, inspect anomalies, and turn spending changes into one practical next move."
     >
       <template #actions>
@@ -56,33 +56,33 @@ watch(() => store.insights.length, (newLen, oldLen) => {
           :disabled="store.generating"
           @click="store.generateWeeklyInsight"
         >
-          {{ store.generating ? 'Thinking...' : 'Earn +60 XP' }}
+          {{ store.generating ? 'Generating...' : 'Generate insight' }}
         </button>
       </template>
     </PageHeader>
 
     <section class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-      <QuestCard
-        title="Find the pattern"
+      <FeatureActionCard
+        title="Generate weekly insight"
         description="Generate the weekly insight and learn what changed in your spending."
-        reward="+60 XP"
+        status="AI summary"
         icon="🧠"
         tone="mint"
         action-label="Generate"
         @click="store.generateWeeklyInsight"
       />
-      <QuestCard
+      <FeatureActionCard
         title="Resolve alerts"
         description="Check unusual spending and keep your financial feed clean."
-        reward="+30 XP"
+        status="Needs review"
         icon="🚦"
         tone="coral"
         action-label="Review"
       />
-      <QuestCard
-        title="Scan more proof"
+      <FeatureActionCard
+        title="Add more receipts"
         description="Add receipts so the coach has better evidence for next week."
-        reward="+50 XP"
+        status="Improve data"
         icon="📸"
         tone="sky"
         to="/inbox"
@@ -95,7 +95,7 @@ watch(() => store.insights.length, (newLen, oldLen) => {
       <div class="space-y-8">
         <div>
           <h2 class="text-xl font-black text-slate-950">
-            Coach notes
+            Weekly summaries
           </h2>
           <p class="mt-1 text-sm font-semibold text-slate-500">
             Weekly summaries and recommendation cards.
