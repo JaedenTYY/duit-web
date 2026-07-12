@@ -81,28 +81,28 @@ const chartOptions = {
 </script>
 
 <template>
-  <div class="space-y-6 pb-10">
-    <header class="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
-      <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+  <div class="space-y-4 pb-8 sm:space-y-6 sm:pb-10">
+    <header class="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-8">
         <p class="text-xs font-black uppercase text-emerald-600">
           {{ monthName }}
         </p>
-        <h1 class="mt-3 max-w-3xl text-4xl font-black text-slate-950 sm:text-5xl">
+        <h1 class="mt-3 max-w-3xl text-3xl font-black text-slate-950 sm:text-5xl">
           Your money, clearly organized.
         </h1>
-        <p class="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-500">
+        <p class="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-500 sm:mt-4 sm:text-base sm:leading-7">
           Start with the most common tasks: scan receipts, review transactions, split shared bills, and check weekly insights.
         </p>
-        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div class="mt-5 flex flex-col gap-2.5 sm:mt-6 sm:flex-row sm:gap-3">
           <RouterLink
             to="/inbox"
-            class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
+            class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
           >
             Import a receipt
           </RouterLink>
           <RouterLink
             to="/insights"
-            class="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
+            class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
           >
             View insights
           </RouterLink>
@@ -127,7 +127,7 @@ const chartOptions = {
     />
 
     <template v-else>
-      <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section class="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-4">
         <FeatureActionCard
           title="Scan a receipt"
           description="Upload a receipt image and let Duit turn it into structured spending."
@@ -157,12 +157,12 @@ const chartOptions = {
         />
       </section>
 
-      <section class="grid grid-cols-1 gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+      <section class="grid grid-cols-1 gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:gap-5">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
           <p class="text-xs font-black uppercase text-slate-400">
             Monthly spend
           </p>
-          <p class="mt-3 text-4xl font-black text-slate-950">
+          <p class="mt-2 text-3xl font-black text-slate-950 sm:mt-3 sm:text-4xl">
             {{ formatCurrency(store.monthlySummary?.totalSpend || '0', 'MYR') }}
           </p>
           <p class="mt-2 text-sm font-semibold text-slate-500">
@@ -188,7 +188,7 @@ const chartOptions = {
           </div>
         </div>
 
-        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
           <div class="mb-5 flex items-center justify-between gap-3">
             <div>
               <p class="text-xs font-black uppercase text-emerald-600">
@@ -208,9 +208,9 @@ const chartOptions = {
 
           <div
             v-if="categoriesToShow.length"
-            class="grid gap-6 md:grid-cols-[14rem_1fr] md:items-center"
+            class="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center md:gap-6"
           >
-            <div class="relative mx-auto h-56 w-56">
+            <div class="relative mx-auto h-48 w-48 sm:h-56 sm:w-56">
               <Doughnut
                 :data="chartData"
                 :options="chartOptions"
@@ -259,7 +259,7 @@ const chartOptions = {
         </div>
       </section>
 
-      <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
         <div class="mb-5 flex items-center justify-between gap-3">
           <div>
             <p class="text-xs font-black uppercase text-amber-600">

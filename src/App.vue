@@ -56,14 +56,14 @@ onMounted(() => {
           to="/dashboard"
           class="flex items-center gap-2"
         >
-          <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-lg font-black text-white shadow-sm">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-base font-black text-white shadow-sm">
             d
           </span>
           <span class="text-xl font-black text-slate-950">duit</span>
         </RouterLink>
         <button
           type="button"
-          class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg shadow-sm"
+          class="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-base shadow-sm"
           aria-label="Toggle dark mode"
           @click="toggleTheme"
         >
@@ -154,8 +154,8 @@ onMounted(() => {
       </div>
     </aside>
 
-    <main :class="hideNav ? '' : 'min-h-screen pb-28 pt-20 md:ml-72 md:pb-12 md:pt-0'">
-      <div :class="hideNav ? 'min-h-screen w-full' : 'mx-auto max-w-6xl px-4 py-6 sm:px-6 md:px-8 md:py-8 xl:px-10'">
+    <main :class="hideNav ? '' : 'min-h-screen pb-24 pt-16 md:ml-72 md:pb-12 md:pt-0'">
+      <div :class="hideNav ? 'min-h-screen w-full' : 'mx-auto max-w-6xl px-3 py-4 sm:px-6 md:px-8 md:py-8 xl:px-10'">
         <RouterView />
       </div>
     </main>
@@ -164,18 +164,18 @@ onMounted(() => {
       v-if="!hideNav"
       class="fixed bottom-3 left-0 right-0 z-50 px-3 md:hidden"
     >
-      <div class="grid h-20 grid-cols-5 rounded-[2rem] border border-slate-200 bg-white/95 p-2 shadow-xl shadow-slate-200/70 backdrop-blur-2xl">
+      <div class="grid h-16 grid-cols-5 rounded-3xl border border-slate-200 bg-white/95 p-1.5 shadow-lg shadow-slate-200/60 backdrop-blur-2xl">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           :aria-label="item.label"
           :aria-current="activeNav(item) ? 'page' : undefined"
-          class="flex flex-col items-center justify-center rounded-3xl text-xs font-black text-slate-400 transition"
+          class="flex flex-col items-center justify-center rounded-2xl text-[0.68rem] font-black text-slate-400 transition"
           :class="activeNav(item) ? 'bg-emerald-100 text-emerald-800' : ''"
         >
-          <span class="text-xl">{{ item.icon }}</span>
-          <span class="mt-1">{{ item.shortLabel }}</span>
+          <span class="text-base">{{ item.icon }}</span>
+          <span class="mt-0.5">{{ item.shortLabel }}</span>
         </RouterLink>
       </div>
     </nav>

@@ -7,8 +7,8 @@ defineProps<{
 </script>
 
 <template>
-  <header class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-    <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <header class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-7">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
       <div class="min-w-0">
         <p
           v-if="eyebrow"
@@ -16,7 +16,7 @@ defineProps<{
         >
           {{ eyebrow }}
         </p>
-        <h1 class="mt-1 text-3xl font-black text-slate-950 sm:text-4xl">
+        <h1 class="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
           {{ title }}
         </h1>
         <p
