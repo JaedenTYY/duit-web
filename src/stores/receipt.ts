@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ReceiptExtractionResponse, Transaction } from '@/types'
 import api from '@/lib/api'
+import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 
 export interface ConfirmExtractionPayload {
   extractionId: string
@@ -32,6 +33,11 @@ export const useReceiptStore = defineStore('receipt', () => {
     uploading.value = true
     error.value = null
     try {
+      const validationError = validateReceiptImageFile(file)
+      if (validationError) {
+        throw new Error(validationError)
+      }
+
       const formData = new FormData()
       formData.append('file', file)
 
@@ -73,9 +79,13 @@ export const useReceiptStore = defineStore('receipt', () => {
   }
 
   function _extractError(err: unknown): string {
+    if (err instanceof Error) {
+      return normalizeReceiptUploadError(err.message)
+    }
+
     if (err && typeof err === 'object' && 'response' in err) {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-      return axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred during scanning'
+      return normalizeReceiptUploadError(axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred during scanning')
     }
     return 'An unexpected error occurred'
   }

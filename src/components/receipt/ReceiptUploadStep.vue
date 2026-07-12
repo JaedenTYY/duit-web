@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import { gsap } from 'gsap'
+import { RECEIPT_IMAGE_ACCEPT, validateReceiptImageFile } from '@/utils/receiptFile'
 
 const emit = defineEmits<{
   (e: 'fileSelected', file: File): void
@@ -16,6 +17,7 @@ const isDragging = ref(false)
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
 const previewContainer = ref<HTMLElement | null>(null)
+const validationError = ref<string | null>(null)
 
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -27,12 +29,20 @@ function handleFileChange(event: Event) {
 function handleDrop(event: DragEvent) {
   isDragging.value = false
   const file = event.dataTransfer?.files[0]
-  if (file && file.type.startsWith('image/')) {
+  if (file) {
     selectFile(file)
   }
 }
 
 function selectFile(file: File) {
+  const error = validateReceiptImageFile(file)
+  if (error) {
+    removeFile()
+    validationError.value = error
+    return
+  }
+
+  validationError.value = null
   selectedFile.value = file
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = URL.createObjectURL(file)
@@ -51,6 +61,7 @@ function selectFile(file: File) {
 
 function removeFile() {
   selectedFile.value = null
+  validationError.value = null
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = null
 }
@@ -85,7 +96,7 @@ onUnmounted(() => {
     >
       <input
         type="file"
-        accept="image/*"
+        :accept="RECEIPT_IMAGE_ACCEPT"
         class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         @change="handleFileChange"
       >
@@ -124,7 +135,17 @@ onUnmounted(() => {
         <div class="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200">
           Choose image
         </div>
+        <p class="mx-auto mt-3 max-w-xs text-xs font-bold text-slate-500">
+          JPEG, PNG, or WebP only. Max 10 MB.
+        </p>
       </div>
+    </div>
+
+    <div
+      v-if="validationError"
+      class="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
+    >
+      {{ validationError }}
     </div>
 
     <div
@@ -162,10 +183,10 @@ onUnmounted(() => {
         <div class="flex min-w-0 items-center justify-between gap-4">
           <div class="min-w-0">
             <p class="truncate text-sm font-black text-slate-950">
-              {{ selectedFile.name }}
+              {{ selectedFile?.name }}
             </p>
             <p class="mt-1 text-xs font-semibold text-slate-500">
-              {{ formatSize(selectedFile.size) }}
+              {{ selectedFile ? formatSize(selectedFile.size) : '' }}
             </p>
           </div>
           <button

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { RECEIPT_IMAGE_ACCEPT, validateReceiptImageFile } from '@/utils/receiptFile'
 
 defineProps<{
   uploading: boolean
@@ -10,10 +11,27 @@ const emit = defineEmits<{
 }>()
 
 const selectedFile = ref<File | null>(null)
+const validationError = ref<string | null>(null)
 
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement
-  selectedFile.value = input.files?.[0] ?? null
+  const file = input.files?.[0] ?? null
+  if (!file) {
+    selectedFile.value = null
+    validationError.value = null
+    return
+  }
+
+  const error = validateReceiptImageFile(file)
+  if (error) {
+    selectedFile.value = null
+    validationError.value = error
+    input.value = ''
+    return
+  }
+
+  selectedFile.value = file
+  validationError.value = null
 }
 
 function submit() {
@@ -55,7 +73,7 @@ function submit() {
       </div>
       <input
         type="file"
-        accept="image/*"
+        :accept="RECEIPT_IMAGE_ACCEPT"
         class="sr-only"
         @change="selectFile"
       >
@@ -63,13 +81,20 @@ function submit() {
         {{ selectedFile ? selectedFile.name : 'Choose receipt image' }}
       </span>
       <span class="mt-1 text-xs font-semibold text-slate-500">
-        JPG, PNG, or camera capture
+        JPEG, PNG, or WebP. Max 10 MB.
       </span>
     </label>
 
+    <div
+      v-if="validationError"
+      class="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
+    >
+      {{ validationError }}
+    </div>
+
     <button
       type="submit"
-      :disabled="!selectedFile || uploading"
+      :disabled="!selectedFile || uploading || !!validationError"
       class="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
     >
       {{ uploading ? 'Reading receipt...' : 'Create split' }}

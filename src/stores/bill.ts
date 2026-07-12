@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import api from '@/lib/api'
 import type { Bill, GuestBill, GuestBillSummary, PaymentQrProfile } from '@/types'
+import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 
 interface ApiResponse<T> {
   data: T
@@ -44,6 +45,11 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
 
     try {
+      const validationError = validateReceiptImageFile(file)
+      if (validationError) {
+        throw new Error(validationError)
+      }
+
       const formData = new FormData()
       formData.append('file', file)
 
@@ -257,11 +263,15 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   function extractError(requestError: unknown, fallback: string): string {
+    if (requestError instanceof Error) {
+      return normalizeReceiptUploadError(requestError.message)
+    }
+
     if (requestError && typeof requestError === 'object' && 'response' in requestError) {
       const axiosError = requestError as {
         response?: { data?: { error?: { message?: string } } }
       }
-      return axiosError.response?.data?.error?.message ?? fallback
+      return normalizeReceiptUploadError(axiosError.response?.data?.error?.message ?? fallback)
     }
     return fallback
   }
