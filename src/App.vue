@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useLogoutMutation } from '@/composables/useAuthMutations'
 import OnboardingWalkthrough from '@/components/shared/OnboardingWalkthrough.vue'
 import AppIcon, { type AppIconName } from '@/components/shared/AppIcon.vue'
 import DuitLogo from '@/components/shared/DuitLogo.vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
-const logoutMutation = useLogoutMutation()
-const darkMode = ref(false)
 const showCaptureModal = ref(false)
 
 const hideNav = computed(() => route.meta.hideNav === true)
@@ -33,6 +29,7 @@ const navItems: NavItem[] = [
   { to: '/transactions', label: 'Transactions', shortLabel: 'Records', icon: 'card', match: ['/transactions'] },
   { to: '/insights', label: 'Insights', shortLabel: 'Insights', icon: 'insights', match: ['/insights', '/anomalies'] },
   { to: '/split-bill', label: 'Split bill', shortLabel: 'Split', icon: 'users', match: ['/split-bill'] },
+  { to: '/settings', label: 'Settings', shortLabel: 'Settings', icon: 'settings', match: ['/settings'] },
 ]
 
 const mobileNavItems = [
@@ -45,27 +42,9 @@ const mobileNavItems = [
 const activeNav = (item: typeof navItems[number]) =>
   item.match.some(path => route.path === path || route.path.startsWith(`${path}/`))
 
-async function handleLogout() {
-  await logoutMutation.mutateAsync()
-  router.push('/login')
-}
-
-function toggleTheme() {
-  darkMode.value = !darkMode.value
-}
-
 function openCaptureModal() {
   showCaptureModal.value = true
 }
-
-watch(darkMode, (enabled) => {
-  document.documentElement.classList.toggle('duit-dark', enabled)
-  localStorage.setItem('duit:theme', enabled ? 'dark' : 'light')
-})
-
-onMounted(() => {
-  darkMode.value = localStorage.getItem('duit:theme') === 'dark'
-})
 </script>
 
 <template>
@@ -84,14 +63,13 @@ onMounted(() => {
             aria-label="Duit"
           />
         </RouterLink>
-        <button
-          type="button"
+        <RouterLink
+          to="/settings"
           class="flex h-9 w-9 items-center justify-center rounded-xl bg-white p-2.5 text-slate-700 shadow-sm"
-          aria-label="Toggle dark mode"
-          @click="toggleTheme"
+          aria-label="Settings"
         >
-          <AppIcon :name="darkMode ? 'sun' : 'moon'" />
-        </button>
+          <AppIcon name="settings" />
+        </RouterLink>
       </div>
     </header>
 
@@ -106,7 +84,10 @@ onMounted(() => {
         <DuitLogo subtitle="personal finance" />
       </RouterLink>
 
-      <div class="mt-6 rounded-3xl border border-amber-100 bg-amber-50 p-4">
+      <RouterLink
+        to="/settings"
+        class="mt-6 block rounded-3xl border border-amber-100 bg-amber-50 p-4 transition hover:border-amber-200 hover:bg-amber-100/70"
+      >
         <div class="flex items-center gap-3">
           <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-black text-amber-600 shadow-sm">
             {{ userInitial }}
@@ -116,14 +97,15 @@ onMounted(() => {
               {{ firstName }}
             </p>
             <p class="text-xs font-black uppercase text-amber-700">
-              Weekly progress
+              Account settings
             </p>
           </div>
         </div>
-        <div class="mt-4 h-3 overflow-hidden rounded-full bg-white">
-          <div class="h-full w-[62%] rounded-full bg-gradient-to-r from-emerald-400 to-amber-300" />
+        <div class="mt-4 flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-500">
+          <span>Profile and logout</span>
+          <span class="h-4 w-4 text-amber-700"><AppIcon name="settings" /></span>
         </div>
-      </div>
+      </RouterLink>
 
       <nav class="mt-6 flex-1 space-y-2">
         <RouterLink
@@ -152,23 +134,13 @@ onMounted(() => {
         >
           Scan receipt
         </button>
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="flex min-h-11 items-center justify-center rounded-2xl bg-white p-3 text-slate-700 shadow-sm transition active:scale-[0.98]"
-            aria-label="Toggle dark mode"
-            @click="toggleTheme"
-          >
-            <AppIcon :name="darkMode ? 'sun' : 'moon'" />
-          </button>
-          <button
-            type="button"
-            class="min-h-11 rounded-2xl bg-white text-sm font-black text-rose-600 shadow-sm transition active:scale-[0.98]"
-            @click="handleLogout"
-          >
-            Log out
-          </button>
-        </div>
+        <RouterLink
+          to="/settings"
+          class="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition active:scale-[0.98]"
+        >
+          <span class="h-4 w-4"><AppIcon name="settings" /></span>
+          Settings
+        </RouterLink>
       </div>
     </aside>
 

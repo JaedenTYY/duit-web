@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'link' | 'check' | 'moon' | 'sun'
+export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'link' | 'check' | 'settings' | 'logout' | 'user'
 
 withDefaults(defineProps<{
   name: AppIconName
@@ -107,21 +107,40 @@ withDefaults(defineProps<{
       stroke-linejoin="round"
       d="m5 12 4.5 4.5L19 7"
     />
-    <path
-      v-else-if="name === 'moon'"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      d="M20 15.2A8 8 0 0 1 8.8 4a7 7 0 1 0 11.2 11.2Z"
-    />
-    <g v-else-if="name === 'sun'">
+    <g v-else-if="name === 'settings'">
       <circle
         cx="12"
         cy="12"
+        r="3"
+      />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.45.18.82.48 1 .86.17.32.37.52.6.54H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4 1.7 1.7 0 0 0-.41.2Z"
+      />
+    </g>
+    <g v-else-if="name === 'logout'">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"
+      />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M15 8l4 4-4 4M19 12H9"
+      />
+    </g>
+    <g v-else-if="name === 'user'">
+      <circle
+        cx="12"
+        cy="8"
         r="4"
       />
       <path
         stroke-linecap="round"
-        d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
+        stroke-linejoin="round"
+        d="M4 21a8 8 0 0 1 16 0"
       />
     </g>
   </svg>

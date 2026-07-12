@@ -18,47 +18,6 @@ body {
   overflow-x: hidden;
 }
 
-html.duit-dark {
-  color-scheme: dark;
-}
-
-html.duit-dark body {
-  @apply bg-slate-950;
-}
-
-html.duit-dark .bg-\[\#f7f8ef\] {
-  background-color: #0f172a;
-}
-
-html.duit-dark .text-slate-950,
-html.duit-dark .text-slate-900,
-html.duit-dark .text-slate-800 {
-  color: #f8fafc;
-}
-
-html.duit-dark .text-slate-700,
-html.duit-dark .text-slate-600,
-html.duit-dark .text-slate-500 {
-  color: #cbd5e1;
-}
-
-html.duit-dark .bg-white,
-html.duit-dark .bg-white\/95,
-html.duit-dark .bg-white\/90 {
-  background-color: #1e293b;
-}
-
-html.duit-dark .border-slate-200,
-html.duit-dark .border-white,
-html.duit-dark .border-white\/80 {
-  border-color: #334155;
-}
-
-html.duit-dark .bg-slate-50,
-html.duit-dark .bg-slate-100 {
-  background-color: #0f172a;
-}
-
 #app {
   width: 100%;
 }

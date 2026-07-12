@@ -78,6 +78,11 @@ const router = createRouter({
       component: () => import('../views/OwnerBillSplitView.vue')
     },
     {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/SettingsView.vue')
+    },
+    {
       path: '/guest/bills/:shareToken',
       name: 'guest-bill-split',
       component: () => import('../views/GuestBillSplitView.vue'),
