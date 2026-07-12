@@ -6,6 +6,12 @@ const emit = defineEmits<{
   (e: 'fileSelected', file: File): void
 }>()
 
+withDefaults(defineProps<{
+  actionLabel?: string
+}>(), {
+  actionLabel: 'Continue'
+})
+
 const isDragging = ref(false)
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
@@ -166,7 +172,7 @@ onUnmounted(() => {
             class="min-h-11 shrink-0 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
             @click="handleScan"
           >
-            Scan
+            {{ actionLabel }}
           </button>
         </div>
       </div>

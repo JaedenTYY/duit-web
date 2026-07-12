@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Transaction } from '@/types'
 import { formatCurrency } from '@/utils/currency'
+import AppIcon from '@/components/shared/AppIcon.vue'
 
 const props = defineProps<{
   transaction: Transaction
@@ -38,13 +39,13 @@ const sourceLabel = computed(() => {
     <div class="flex items-start justify-between gap-3">
       <div class="flex min-w-0 items-start gap-4">
         <div
-          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-inner sm:h-14 sm:w-14 sm:text-2xl"
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl p-3 shadow-inner sm:h-14 sm:w-14 sm:p-3.5"
           :style="{
             backgroundColor: transaction.categoryColor ? `${transaction.categoryColor}18` : '#f1f5f9',
             color: transaction.categoryColor || '#94a3b8'
           }"
         >
-          {{ transaction.categoryIcon || '📦' }}
+          <AppIcon name="card" />
         </div>
 
         <div class="min-w-0">

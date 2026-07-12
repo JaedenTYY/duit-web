@@ -43,7 +43,7 @@ async function uploadReceipt(file: File) {
         title="Upload bill"
         description="Use the receipt to create item choices for your group."
         status="Step 1"
-        icon="🧾"
+        icon="receipt"
         tone="amber"
         action-label="Upload below"
       />
@@ -51,7 +51,7 @@ async function uploadReceipt(file: File) {
         title="Share link"
         description="Guests can claim items without installing anything."
         status="Step 2"
-        icon="🔗"
+        icon="link"
         tone="sky"
         action-label="After upload"
       />
@@ -59,7 +59,7 @@ async function uploadReceipt(file: File) {
         title="Settle fairly"
         description="Show your own payment details; Duit does not process payments."
         status="Step 3"
-        icon="✅"
+        icon="check"
         tone="mint"
         action-label="Stay compliant"
       />

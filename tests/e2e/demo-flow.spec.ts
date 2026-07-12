@@ -155,8 +155,8 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
     await page.waitForURL(/.*\/dashboard/);
     
     // Dashboard assertions
-    await expect(page.locator('text=Total Monthly Spend').first()).toBeVisible();
-    await expect(page.locator('canvas, svg, .chart-container').first()).toBeVisible();
+    await expect(page.locator('text=Monthly spend').first()).toBeVisible();
+    await expect(page.locator('text=Category ring').first()).toBeVisible();
 
     // 2. Transactions
     await page.goto('/transactions');
@@ -169,12 +169,12 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
     await expect(page.locator('input[placeholder*="Amount"], input[name="amount"]').first()).toBeVisible();
     await page.keyboard.press('Escape'); // close modal
 
-    // 3. Magic Inbox
+    // 3. Import center
     await page.goto('/inbox');
     await expect(page).toHaveURL(/.*\/inbox/);
-    await expect(page.locator('text=Receipt Upload').first()).toBeVisible();
-    await expect(page.locator('text=Bank Statement').first()).toBeVisible();
-    await expect(page.locator('text=Gmail').first()).toBeVisible();
+    await expect(page.locator('text=Scan receipt').first()).toBeVisible();
+    await expect(page.locator('text=Split bill').first()).toBeVisible();
+    await expect(page.locator('text=Weekly insights').first()).toBeVisible();
 
     // 4. Gmail sync
     await page.goto('/gmail');

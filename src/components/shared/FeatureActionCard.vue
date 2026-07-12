@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import AppIcon, { type AppIconName } from '@/components/shared/AppIcon.vue'
+
 withDefaults(defineProps<{
   title: string
   description: string
   status: string
-  icon: string
+  icon: AppIconName
   tone?: 'mint' | 'amber' | 'coral' | 'sky'
   to?: string
   actionLabel?: string
@@ -36,8 +38,8 @@ const toneClasses = {
     @click="emit('click')"
   >
     <div class="flex items-start justify-between gap-3">
-      <span class="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-lg shadow-sm sm:h-12 sm:w-12 sm:text-2xl">
-        {{ icon }}
+      <span class="flex h-9 w-9 items-center justify-center rounded-2xl bg-white p-2 text-current shadow-sm sm:h-12 sm:w-12 sm:p-3">
+        <AppIcon :name="icon" />
       </span>
       <span class="rounded-full bg-white px-2.5 py-1 text-[0.68rem] font-black shadow-sm sm:px-3 sm:text-xs">
         {{ status }}

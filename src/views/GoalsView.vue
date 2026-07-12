@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useGoalStore } from '@/stores/goal'
 import { formatCurrency } from '@/utils/currency'
 import { gsap } from 'gsap'
+import AppIcon from '@/components/shared/AppIcon.vue'
 import CalendarDialog from '@/components/shared/CalendarDialog.vue'
 
 const goalStore = useGoalStore()
@@ -138,8 +139,8 @@ const formatDate = (isoString: string) => {
       v-else-if="!goalStore.loading && goalStore.goals.length === 0"
       class="text-center py-32 bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center shadow-sm"
     >
-      <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-4xl mb-6 text-blue-500">
-        🎯
+      <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 p-5 text-blue-500">
+        <AppIcon name="check" />
       </div>
       <h3 class="text-xl font-bold text-slate-900 tracking-tight mb-2">
         No Goals Set
