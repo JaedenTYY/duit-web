@@ -5,7 +5,7 @@ import { logger } from '@/utils/logger'
 import { CONFIG } from '@/config'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: CONFIG.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

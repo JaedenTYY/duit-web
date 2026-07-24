@@ -174,6 +174,17 @@ npm run dev
 Vite prints the local browser URL and proxies `/api` requests to
 `http://127.0.0.1:8080`.
 
+For a production build, set the public API origin explicitly:
+
+```bash
+VITE_API_BASE_URL=https://api.example.com npm run build
+```
+
+`VITE_API_BASE_URL` is public build-time configuration, not a secret. Production
+builds reject missing, invalid, or non-HTTPS API URLs. Development keeps the
+existing `/api` default and Vite proxy. The Azure Static Web Apps SPA fallback
+configuration is copied to `dist/staticwebapp.config.json` during the build.
+
 ## Useful Commands
 
 | Command | Purpose |
