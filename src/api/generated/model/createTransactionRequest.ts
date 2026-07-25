@@ -20,6 +20,8 @@ export interface CreateTransactionRequest {
    */
   description?: string
   fxRate?: number
+  /** @maxLength 255 */
   merchantName?: string
   occurredAt: string
+  rememberMerchantCategory?: boolean
 }

@@ -6,8 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ConfirmStatementRow {
-  categoryId?: string
-  rememberMerchantCategory?: boolean
-  rowId: string
+export interface UpsertMerchantCategoryPreferenceRequest {
+  categoryId: string
 }

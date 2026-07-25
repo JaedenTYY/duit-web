@@ -36,6 +36,7 @@ const showFxRate = computed(() => currency.value !== 'MYR')
 const fieldsNeedingReview = computed(() => props.extraction.extractedData.fieldsNeedingReview ?? [])
 
 const categorisation = ref<CategorisationResult | null>(null)
+const categorisationStatus = ref('')
 let debounceTimer: ReturnType<typeof setTimeout>
 
 async function fetchCategorisation(name: string) {
@@ -48,8 +49,20 @@ async function fetchCategorisation(name: string) {
       params: { name }
     })
     categorisation.value = res.data.data
+    categorisationStatus.value = ''
   } catch (err) {
     logger.error('Failed to fetch merchant categorisation', err)
+  }
+}
+
+async function forgetPreference(merchantId: string) {
+  try {
+    await api.delete(`/merchants/${merchantId}/category-preference`)
+    await fetchCategorisation(merchantName.value)
+    categorisationStatus.value = 'Saved merchant category forgotten. The category selected for this receipt was kept.'
+  } catch (err) {
+    categorisationStatus.value = 'Could not forget the saved merchant category. It is still unchanged.'
+    logger.error('Failed to forget merchant category preference', err)
   }
 }
 
@@ -247,7 +260,16 @@ function formatReviewField(field: string) {
           :categorisation="categorisation"
           :categories="categories"
           @apply="categoryId = $event"
+          @forget="forgetPreference"
         />
+        <p
+          v-if="categorisationStatus"
+          role="status"
+          aria-live="polite"
+          class="mt-2 text-xs text-slate-600"
+        >
+          {{ categorisationStatus }}
+        </p>
       </div>
 
       <div>

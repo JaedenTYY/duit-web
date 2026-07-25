@@ -12,9 +12,10 @@ export interface CreateTransactionPayload {
   description?: string
   occurredAt: string
   fxRate?: number
+  rememberMerchantCategory?: boolean
 }
 
-export type UpdateTransactionPayload = Partial<CreateTransactionPayload>
+export type UpdateTransactionPayload = Omit<Partial<CreateTransactionPayload>, 'merchantName'>
 
 interface TransactionResponse {
   data: Transaction

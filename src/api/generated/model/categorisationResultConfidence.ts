@@ -6,8 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * @nullable
+ */
 export type CategorisationResultConfidence =
-  (typeof CategorisationResultConfidence)[keyof typeof CategorisationResultConfidence]
+  | (typeof CategorisationResultConfidence)[keyof typeof CategorisationResultConfidence]
+  | null
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CategorisationResultConfidence = {

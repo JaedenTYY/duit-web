@@ -364,11 +364,18 @@ export interface GuestBillSummary {
 }
 
 export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
+export type CategorisationSource =
+  | 'USER_PREFERENCE'
+  | 'SYSTEM_MERCHANT'
+  | 'SEMANTIC_SIMILARITY'
+  | 'NONE'
 
 export interface CategorisationResult {
   merchantId: string | null
   merchantName: string
   categoryId: string | null
-  similarityScore: number
-  confidence: ConfidenceLevel
+  source: CategorisationSource
+  personalised: boolean
+  similarityScore: number | null
+  confidence: ConfidenceLevel | null
 }

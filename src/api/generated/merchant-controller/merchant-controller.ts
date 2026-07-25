@@ -5,10 +5,13 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from '@tanstack/vue-query'
+import { useMutation, useQuery } from '@tanstack/vue-query'
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationReturnType,
   UseQueryOptions,
   UseQueryReturnType,
 } from '@tanstack/vue-query'
@@ -18,8 +21,10 @@ import type {
   ApiError,
   ApiResponseCategorisationResult,
   ApiResponseListMerchantResponse,
+  ApiResponseMerchantCategoryPreferenceResponse,
   CategoriseParams,
   SearchParams,
+  UpsertMerchantCategoryPreferenceRequest,
 } from '.././model'
 import { orvalMutator } from '../../../lib/orvalMutator'
 
@@ -161,4 +166,144 @@ export const useCategorise = <
   query.queryKey = unref(queryOptions).queryKey as QueryKey
 
   return query
+}
+
+export const saveCategoryPreference = (
+  merchantId: MaybeRef<string>,
+  upsertMerchantCategoryPreferenceRequest: MaybeRef<UpsertMerchantCategoryPreferenceRequest>
+) => {
+  merchantId = unref(merchantId)
+  upsertMerchantCategoryPreferenceRequest = unref(
+    upsertMerchantCategoryPreferenceRequest
+  )
+
+  return orvalMutator<ApiResponseMerchantCategoryPreferenceResponse>({
+    url: `/merchants/${merchantId}/category-preference`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: upsertMerchantCategoryPreferenceRequest,
+  })
+}
+
+export const getSaveCategoryPreferenceMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveCategoryPreference>>,
+    TError,
+    { merchantId: string; data: UpsertMerchantCategoryPreferenceRequest },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveCategoryPreference>>,
+  TError,
+  { merchantId: string; data: UpsertMerchantCategoryPreferenceRequest },
+  TContext
+> => {
+  const { mutation: mutationOptions } = options ?? {}
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveCategoryPreference>>,
+    { merchantId: string; data: UpsertMerchantCategoryPreferenceRequest }
+  > = (props) => {
+    const { merchantId, data } = props ?? {}
+
+    return saveCategoryPreference(merchantId, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type SaveCategoryPreferenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveCategoryPreference>>
+>
+export type SaveCategoryPreferenceMutationBody =
+  UpsertMerchantCategoryPreferenceRequest
+export type SaveCategoryPreferenceMutationError = unknown
+
+export const useSaveCategoryPreference = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveCategoryPreference>>,
+    TError,
+    { merchantId: string; data: UpsertMerchantCategoryPreferenceRequest },
+    TContext
+  >
+}): UseMutationReturnType<
+  Awaited<ReturnType<typeof saveCategoryPreference>>,
+  TError,
+  { merchantId: string; data: UpsertMerchantCategoryPreferenceRequest },
+  TContext
+> => {
+  const mutationOptions = getSaveCategoryPreferenceMutationOptions(options)
+
+  return useMutation(mutationOptions)
+}
+export const deleteCategoryPreference = (merchantId: MaybeRef<string>) => {
+  merchantId = unref(merchantId)
+
+  return orvalMutator<void>({
+    url: `/merchants/${merchantId}/category-preference`,
+    method: 'DELETE',
+  })
+}
+
+export const getDeleteCategoryPreferenceMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCategoryPreference>>,
+    TError,
+    { merchantId: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCategoryPreference>>,
+  TError,
+  { merchantId: string },
+  TContext
+> => {
+  const { mutation: mutationOptions } = options ?? {}
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCategoryPreference>>,
+    { merchantId: string }
+  > = (props) => {
+    const { merchantId } = props ?? {}
+
+    return deleteCategoryPreference(merchantId)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type DeleteCategoryPreferenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCategoryPreference>>
+>
+
+export type DeleteCategoryPreferenceMutationError = unknown
+
+export const useDeleteCategoryPreference = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCategoryPreference>>,
+    TError,
+    { merchantId: string },
+    TContext
+  >
+}): UseMutationReturnType<
+  Awaited<ReturnType<typeof deleteCategoryPreference>>,
+  TError,
+  { merchantId: string },
+  TContext
+> => {
+  const mutationOptions = getDeleteCategoryPreferenceMutationOptions(options)
+
+  return useMutation(mutationOptions)
 }
