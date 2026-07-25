@@ -9,6 +9,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Production builds require an API base URL. This is a non-secret test value;
+    # deployment environments provide their own public endpoint at build time.
+    env:
+      VITE_API_BASE_URL: https://api.example.test
 
     steps:
     - uses: actions/checkout@v4
