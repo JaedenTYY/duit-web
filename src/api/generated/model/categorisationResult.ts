@@ -6,11 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CategorisationResultConfidence } from './categorisationResultConfidence'
+import type { CategorisationResultSource } from './categorisationResultSource'
 
 export interface CategorisationResult {
   categoryId?: string
-  confidence: CategorisationResultConfidence
+  /** @nullable */
+  confidence?: CategorisationResultConfidence
   merchantId?: string
   merchantName: string
-  similarityScore: number
+  personalised: boolean
+  /** @nullable */
+  similarityScore?: number | null
+  source: CategorisationResultSource
 }

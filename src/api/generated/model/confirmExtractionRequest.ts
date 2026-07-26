@@ -15,4 +15,5 @@ export interface ConfirmExtractionRequest {
   fxRate?: number
   merchantName?: string
   occurredAt: string
+  rememberMerchantCategory?: boolean
 }

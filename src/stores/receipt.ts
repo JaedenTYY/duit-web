@@ -13,6 +13,7 @@ export interface ConfirmExtractionPayload {
   occurredAt: string
   fxRate?: number
   merchantName?: string
+  rememberMerchantCategory?: boolean
 }
 
 interface ExtractionApiResponse {

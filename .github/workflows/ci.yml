@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "deploy-azure-production" ]
 
 jobs:
   build:
@@ -28,8 +28,15 @@ jobs:
     - name: Type check
       run: npm run type-check
 
+    - name: Run component tests
+      run: npm run test
+
     - name: Build project
       run: npm run build
+      # Production builds require an API base URL. This is a non-secret test
+      # value; deployment environments provide their own endpoint at build time.
+      env:
+        VITE_API_BASE_URL: https://api.example.test
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium

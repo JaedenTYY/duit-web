@@ -21,4 +21,5 @@ export interface UpdateTransactionRequest {
   description?: string
   fxRate?: number
   occurredAt?: string
+  rememberMerchantCategory?: boolean
 }

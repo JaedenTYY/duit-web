@@ -25,6 +25,7 @@ const currency = ref(props.extraction.extractedData.currency)
 const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
 const description = ref(props.extraction.extractedData.merchantName ?? '')
 const categoryId = ref('')
+const rememberMerchantCategory = ref(false)
 const fxRate = ref(1)
 const occurredAt = ref(
   props.extraction.extractedData.date
@@ -34,8 +35,12 @@ const occurredAt = ref(
 
 const showFxRate = computed(() => currency.value !== 'MYR')
 const fieldsNeedingReview = computed(() => props.extraction.extractedData.fieldsNeedingReview ?? [])
+const canRememberMerchantCategory = computed(() =>
+  merchantName.value.trim().length > 0 && categoryId.value.length > 0
+)
 
 const categorisation = ref<CategorisationResult | null>(null)
+const categorisationStatus = ref('')
 let debounceTimer: ReturnType<typeof setTimeout>
 
 async function fetchCategorisation(name: string) {
@@ -48,8 +53,20 @@ async function fetchCategorisation(name: string) {
       params: { name }
     })
     categorisation.value = res.data.data
+    categorisationStatus.value = ''
   } catch (err) {
     logger.error('Failed to fetch merchant categorisation', err)
+  }
+}
+
+async function forgetPreference(merchantId: string) {
+  try {
+    await api.delete(`/merchants/${merchantId}/category-preference`)
+    await fetchCategorisation(merchantName.value)
+    categorisationStatus.value = 'Saved merchant category forgotten. The category selected for this receipt was kept.'
+  } catch (err) {
+    categorisationStatus.value = 'Could not forget the saved merchant category. It is still unchanged.'
+    logger.error('Failed to forget merchant category preference', err)
   }
 }
 
@@ -61,6 +78,12 @@ watch(merchantName, (newVal) => {
     }, 500)
   } else {
     categorisation.value = null
+  }
+})
+
+watch(canRememberMerchantCategory, (canRemember) => {
+  if (!canRemember) {
+    rememberMerchantCategory.value = false
   }
 })
 
@@ -89,6 +112,7 @@ function handleConfirm() {
     description: description.value || undefined,
     occurredAt: new Date(occurredAt.value).toISOString(),
     fxRate: showFxRate.value ? fxRate.value : undefined,
+    rememberMerchantCategory: rememberMerchantCategory.value,
   })
 }
 
@@ -247,8 +271,29 @@ function formatReviewField(field: string) {
           :categorisation="categorisation"
           :categories="categories"
           @apply="categoryId = $event"
+          @forget="forgetPreference"
         />
+        <p
+          v-if="categorisationStatus"
+          role="status"
+          aria-live="polite"
+          class="mt-2 text-xs text-slate-600"
+        >
+          {{ categorisationStatus }}
+        </p>
       </div>
+
+      <label
+        v-if="canRememberMerchantCategory"
+        class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-700"
+      >
+        <input
+          v-model="rememberMerchantCategory"
+          type="checkbox"
+          class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        >
+        <span>Use this category for future transactions from this merchant</span>
+      </label>
 
       <div>
         <label class="receipt-label">Description</label>

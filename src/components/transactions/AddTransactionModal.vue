@@ -23,6 +23,8 @@ const fxRate = ref<number>(props.transaction ? Number(props.transaction.fxRate) 
 const merchantName = ref(props.transaction?.merchantName ?? '')
 const categoryId = ref(props.transaction?.categoryId ?? '')
 const description = ref(props.transaction?.description ?? '')
+const rememberMerchantCategory = ref(false)
+const categorisationStatus = ref('')
 const occurredAt = ref(
   props.transaction
     ? new Date(props.transaction.occurredAt).toISOString().slice(0, 16)
@@ -30,6 +32,10 @@ const occurredAt = ref(
 )
 
 const showFxRate = computed(() => currency.value !== 'MYR')
+const canRememberMerchantCategory = computed(() => {
+  if (!merchantName.value.trim() || !categoryId.value) return false
+  return !props.transaction || categoryId.value !== (props.transaction.categoryId ?? '')
+})
 
 const categorisation = ref<CategorisationResult | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout>
@@ -44,7 +50,9 @@ async function fetchCategorisation(name: string) {
       params: { name }
     })
     categorisation.value = res.data.data
+    categorisationStatus.value = ''
   } catch (err) {
+    categorisationStatus.value = 'Could not refresh the merchant category suggestion.'
     logger.error('Failed to fetch merchant categorisation', err)
   }
 }
@@ -56,6 +64,12 @@ watch(merchantName, (newVal) => {
   }, 500)
 })
 
+watch([merchantName, categoryId], () => {
+  if (!canRememberMerchantCategory.value) {
+    rememberMerchantCategory.value = false
+  }
+})
+
 onMounted(() => {
   store.fetchCategories()
   if (merchantName.value) {
@@ -63,24 +77,38 @@ onMounted(() => {
   }
 })
 
+async function forgetPreference(merchantId: string) {
+  try {
+    await api.delete(`/merchants/${merchantId}/category-preference`)
+    await fetchCategorisation(merchantName.value)
+    categorisationStatus.value = 'Saved merchant category forgotten. Your selected transaction category was kept.'
+  } catch (err) {
+    categorisationStatus.value = 'Could not forget the saved merchant category. It is still unchanged.'
+    logger.error('Failed to forget merchant category preference', err)
+  }
+}
+
 async function handleSubmit() {
   if (amount.value === null) return
 
   try {
-    const payload = {
+    const sharedPayload = {
       amount: amount.value,
       currency: currency.value,
-      merchantName: merchantName.value || undefined,
       categoryId: categoryId.value || undefined,
       description: description.value || undefined,
       occurredAt: new Date(occurredAt.value).toISOString(),
       fxRate: showFxRate.value ? fxRate.value : undefined,
+      rememberMerchantCategory: rememberMerchantCategory.value,
     }
 
     if (props.transaction) {
-      await store.updateTransaction(props.transaction.id, payload)
+      await store.updateTransaction(props.transaction.id, sharedPayload)
     } else {
-      await store.createTransaction(payload)
+      await store.createTransaction({
+        ...sharedPayload,
+        merchantName: merchantName.value || undefined,
+      })
     }
     emit('close')
   } catch {
@@ -237,8 +265,30 @@ async function handleSubmit() {
               :categorisation="categorisation"
               :categories="store.categories"
               @apply="categoryId = $event"
+              @forget="forgetPreference"
             />
+
+            <p
+              v-if="categorisationStatus"
+              role="status"
+              aria-live="polite"
+              class="mt-2 text-xs text-slate-600"
+            >
+              {{ categorisationStatus }}
+            </p>
           </div>
+
+          <label
+            v-if="canRememberMerchantCategory"
+            class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+          >
+            <input
+              v-model="rememberMerchantCategory"
+              type="checkbox"
+              class="mt-0.5 h-4 w-4"
+            >
+            <span>Use this category for future transactions from this merchant</span>
+          </label>
         </div>
 
         <!-- Metadata -->
