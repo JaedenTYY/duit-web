@@ -50,6 +50,15 @@ const description = computed(() => {
 const canForget = computed(() =>
   props.categorisation.source === 'USER_PREFERENCE' && Boolean(props.categorisation.merchantId)
 )
+
+const semanticSimilarity = computed(() => {
+  const score = props.categorisation.similarityScore
+  return props.categorisation.source === 'SEMANTIC_SIMILARITY' &&
+    typeof score === 'number' &&
+    Number.isFinite(score)
+    ? score
+    : null
+})
 </script>
 
 <template>
@@ -70,10 +79,10 @@ const canForget = computed(() =>
         </span>
       </div>
       <div
-        v-if="categorisation.source === 'SEMANTIC_SIMILARITY' && categorisation.similarityScore !== null"
+        v-if="semanticSimilarity !== null"
         class="text-[10px] font-bold text-slate-400 font-mono"
       >
-        Score: {{ (categorisation.similarityScore * 100).toFixed(1) }}%
+        Score: {{ (semanticSimilarity * 100).toFixed(1) }}%
       </div>
     </div>
 

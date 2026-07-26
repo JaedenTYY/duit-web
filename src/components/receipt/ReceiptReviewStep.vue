@@ -25,6 +25,7 @@ const currency = ref(props.extraction.extractedData.currency)
 const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
 const description = ref(props.extraction.extractedData.merchantName ?? '')
 const categoryId = ref('')
+const rememberMerchantCategory = ref(false)
 const fxRate = ref(1)
 const occurredAt = ref(
   props.extraction.extractedData.date
@@ -34,6 +35,9 @@ const occurredAt = ref(
 
 const showFxRate = computed(() => currency.value !== 'MYR')
 const fieldsNeedingReview = computed(() => props.extraction.extractedData.fieldsNeedingReview ?? [])
+const canRememberMerchantCategory = computed(() =>
+  merchantName.value.trim().length > 0 && categoryId.value.length > 0
+)
 
 const categorisation = ref<CategorisationResult | null>(null)
 const categorisationStatus = ref('')
@@ -77,6 +81,12 @@ watch(merchantName, (newVal) => {
   }
 })
 
+watch(canRememberMerchantCategory, (canRemember) => {
+  if (!canRemember) {
+    rememberMerchantCategory.value = false
+  }
+})
+
 onMounted(() => {
   if (formContainer.value) {
     gsap.from(formContainer.value, {
@@ -102,6 +112,7 @@ function handleConfirm() {
     description: description.value || undefined,
     occurredAt: new Date(occurredAt.value).toISOString(),
     fxRate: showFxRate.value ? fxRate.value : undefined,
+    rememberMerchantCategory: rememberMerchantCategory.value,
   })
 }
 
@@ -271,6 +282,18 @@ function formatReviewField(field: string) {
           {{ categorisationStatus }}
         </p>
       </div>
+
+      <label
+        v-if="canRememberMerchantCategory"
+        class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-700"
+      >
+        <input
+          v-model="rememberMerchantCategory"
+          type="checkbox"
+          class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        >
+        <span>Use this category for future transactions from this merchant</span>
+      </label>
 
       <div>
         <label class="receipt-label">Description</label>

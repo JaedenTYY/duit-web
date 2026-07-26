@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "deploy-azure-production" ]
 
 jobs:
   build:
@@ -27,6 +27,9 @@ jobs:
 
     - name: Type check
       run: npm run type-check
+
+    - name: Run component tests
+      run: npm run test
 
     - name: Build project
       run: npm run build

@@ -1,3 +1,5 @@
+import type { CategorisationResult as ApiCategorisationResult } from '@/api/generated/model/categorisationResult'
+
 export interface User {
   id: string
   email: string
@@ -363,19 +365,4 @@ export interface GuestBillSummary {
   selectedItems: BillParticipantItem[]
 }
 
-export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
-export type CategorisationSource =
-  | 'USER_PREFERENCE'
-  | 'SYSTEM_MERCHANT'
-  | 'SEMANTIC_SIMILARITY'
-  | 'NONE'
-
-export interface CategorisationResult {
-  merchantId: string | null
-  merchantName: string
-  categoryId: string | null
-  source: CategorisationSource
-  personalised: boolean
-  similarityScore: number | null
-  confidence: ConfidenceLevel | null
-}
+export type CategorisationResult = ApiCategorisationResult
