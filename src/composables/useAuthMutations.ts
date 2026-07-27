@@ -10,7 +10,7 @@ export function useLoginMutation() {
     mutationFn: (credentials: LoginRequest) => login(credentials),
     onSuccess: (response) => {
       if (response.data) {
-        authStore.setSession(response.data.token, response.data.user)
+        authStore.setSession(response.data.token, response.data.user, response.data.expiresAt)
       }
     },
   })
@@ -23,7 +23,7 @@ export function useRegisterMutation() {
     mutationFn: (credentials: RegisterRequest) => register(credentials),
     onSuccess: (response) => {
       if (response.data) {
-        authStore.setSession(response.data.token, response.data.user)
+        authStore.setSession(response.data.token, response.data.user, response.data.expiresAt)
       }
     },
   })

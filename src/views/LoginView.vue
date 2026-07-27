@@ -6,6 +6,8 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { useLoginMutation, useRegisterMutation } from '@/composables/useAuthMutations'
 import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import ApiErrorAlert from '@/components/shared/ApiErrorAlert.vue'
+import { extractApiFailure, type ApiFailureDetails } from '@/lib/apiError'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,7 +31,7 @@ const registerSchema = loginSchema.extend({
 })
 
 const mode = ref<Mode>(route.name === 'register' ? 'register' : 'login')
-const apiError = ref<string | null>(null)
+const apiError = ref<ApiFailureDetails | null>(sessionExpiryFailure())
 const loginMutation = useLoginMutation()
 const registerMutation = useRegisterMutation()
 
@@ -64,7 +66,7 @@ const onSubmit = handleSubmit(async (values) => {
     }
     router.push('/dashboard')
   } catch (err: unknown) {
-    apiError.value = extractApiError(err)
+    apiError.value = extractApiFailure(err)
   }
 })
 
@@ -75,19 +77,22 @@ function toggleMode() {
   router.replace({ name: nextMode })
 }
 
-function extractApiError(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-    return axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred'
+function sessionExpiryFailure(): ApiFailureDetails | null {
+  if (route.query.reason !== 'session-expired') return null
+  return {
+    message: 'Your session has expired. Please sign in again.',
+    requestId: null,
+    fields: null,
+    status: 401,
+    supportWorthy: false,
   }
-  return 'An unexpected error occurred'
 }
 
 watch(
   () => route.name,
   (name) => {
     mode.value = name === 'register' ? 'register' : 'login'
-    apiError.value = null
+    apiError.value = sessionExpiryFailure()
     resetForm()
   },
 )
@@ -167,13 +172,11 @@ watch(
         </div>
 
         <div class="rounded-[2rem] border border-white/80 bg-white/88 p-5 shadow-2xl shadow-blue-100/70 backdrop-blur-xl sm:p-7">
-          <div
+          <ApiErrorAlert
             v-if="apiError"
-            class="mb-6 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
-          >
-            <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" />
-            {{ apiError }}
-          </div>
+            :message="apiError.message"
+            :reference-id="apiError.supportWorthy ? apiError.requestId : null"
+          />
 
           <form
             class="space-y-5"

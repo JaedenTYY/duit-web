@@ -1,4 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type NavigationGuard,
+} from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -91,16 +95,21 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+export const authenticationGuard: NavigationGuard = (to, from, next) => {
   const authStore = useAuthStore()
-  
-  if (!to.meta.hideNav && !authStore.isAuthenticated) {
-    next({ name: 'landing' })
-  } else if ((to.name === 'landing' || to.name === 'login' || to.name === 'register') && authStore.isAuthenticated) {
+  const authenticated = authStore.ensureValidSession()
+
+  if (!to.meta.hideNav && !authenticated) {
+    next(authStore.sessionExpired
+      ? { name: 'login', query: { reason: 'session-expired', redirect: to.fullPath } }
+      : { name: 'landing' })
+  } else if ((to.name === 'landing' || to.name === 'login' || to.name === 'register') && authenticated) {
     next({ name: 'dashboard' })
   } else {
     next()
   }
-})
+}
+
+router.beforeEach(authenticationGuard)
 
 export default router

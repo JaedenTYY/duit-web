@@ -20,6 +20,12 @@ const queryClient = new QueryClient({
 })
 
 app.use(pinia)
+
+// Restore and validate the server-issued expiry before the router starts its
+// initial navigation, so guards never observe a transient unauthenticated state.
+const authStore = useAuthStore(pinia)
+authStore.restoreSession()
+
 app.use(VueQueryPlugin, { queryClient })
 app.use(PrimeVue, {
   theme: {
@@ -27,9 +33,5 @@ app.use(PrimeVue, {
   },
 })
 app.use(router)
-
-// Restore session from localStorage before router navigation begins
-const authStore = useAuthStore()
-authStore.restoreSession()
 
 app.mount('#app')
