@@ -46,7 +46,7 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
             preferredCurrency: 'MYR',
             createdAt: '2026-07-10T00:00:00Z',
           },
-          expiresAt: '2026-07-11T00:00:00Z',
+          expiresAt: '2099-07-11T00:00:00Z',
         }));
       }
 

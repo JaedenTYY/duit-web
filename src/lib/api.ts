@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import { logger } from '@/utils/logger'
 import { CONFIG } from '@/config'
+import { extractApiFailure } from '@/lib/apiError'
 
 const api = axios.create({
   baseURL: CONFIG.API_BASE_URL,
@@ -23,29 +24,50 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+export function processApiFailure(error: unknown): void {
+  const authStore = useAuthStore()
+  const failure = extractApiFailure(error)
+  const request = isRecord(error) && isRecord(error.config) ? error.config : null
+  const method = typeof request?.method === 'string' ? request.method.toUpperCase() : 'UNKNOWN'
+
+  logger.error(
+    `[API ERROR] ${method} request | Status: ${failure.status ?? 'unavailable'} | Reference ID: ${failure.requestId ?? 'unavailable'}`
+  )
+
+  if (failure.status === 401) {
+    const hadSession = Boolean(
+      authStore.token || localStorage.getItem(CONFIG.TOKEN_KEY)
+    )
+    authStore.clearSession(hadSession ? 'expired' : 'invalid')
+
+    const currentRoute = router.currentRoute.value
+    const isPublicRoute = Boolean(currentRoute.meta.hideNav) ||
+      currentRoute.name === 'landing' ||
+      currentRoute.name === 'login' ||
+      currentRoute.name === 'register' ||
+      currentRoute.name === 'guest-bill-split'
+    if (hadSession && !isPublicRoute) {
+      void router.replace({
+        name: 'login',
+        query: {
+          reason: 'session-expired',
+          redirect: currentRoute.fullPath,
+        },
+      })
+    }
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const authStore = useAuthStore()
-    
-    if (error.response) {
-      const { status, data } = error.response
-      const { method, url } = error.config
-      
-      logger.error(`[API ERROR] ${method?.toUpperCase()} ${url} | Status: ${status}`, data)
-
-      if (status === 401) {
-        authStore.clearSession()
-        router.push('/login')
-      }
-    } else if (error.request) {
-      logger.error('[API ERROR] No response received:', error.request)
-    } else {
-      logger.error('[API ERROR] Request setup failed:', error.message)
-    }
-
+    processApiFailure(error)
     return Promise.reject(error)
   }
 )
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
 
 export default api
