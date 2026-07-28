@@ -60,7 +60,9 @@ function readHeader(headers: unknown, name: string): unknown {
 function validRequestId(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const normalized = value.trim().toLowerCase()
-  return UUID_PATTERN.test(normalized) ? normalized : null
+  return UUID_PATTERN.test(normalized) && normalized !== NIL_UUID
+    ? normalized
+    : null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> & {
@@ -70,4 +72,5 @@ function isRecord(value: unknown): value is Record<string, unknown> & {
 }
 
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+const NIL_UUID = '00000000-0000-0000-0000-000000000000'
