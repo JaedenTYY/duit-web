@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { ReceiptExtractionResponse, Transaction } from '@/types'
 import api from '@/lib/api'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
+import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 export interface ConfirmExtractionPayload {
   extractionId: string
@@ -80,13 +81,14 @@ export const useReceiptStore = defineStore('receipt', () => {
   }
 
   function _extractError(err: unknown): string {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const failure = extractApiFailure(err)
+      return apiFailureMessage(
+        { ...failure, message: normalizeReceiptUploadError(failure.message) }
+      )
+    }
     if (err instanceof Error) {
       return normalizeReceiptUploadError(err.message)
-    }
-
-    if (err && typeof err === 'object' && 'response' in err) {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-      return normalizeReceiptUploadError(axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred during scanning')
     }
     return 'An unexpected error occurred'
   }

@@ -208,3 +208,37 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
   });
 
 });
+
+test('login 429 preserves input and does not automatically retry', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/api/auth/login', async (route) => {
+    attempts += 1;
+    await route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      headers: {
+        'Retry-After': '3',
+        'X-Request-ID': '018f86a7-4b3c-7d2a-8b20-4fb94f77c921',
+      },
+      body: JSON.stringify({
+        error: {
+          code: 'ERR_RATE_LIMIT_429',
+          message: 'Too many requests. Please try again later.',
+          requestId: '018f86a7-4b3c-7d2a-8b20-4fb94f77c921',
+        },
+      }),
+    });
+  });
+
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'demo@duit.app');
+  await page.fill('input[type="password"]', ['test', 'password'].join('-'));
+  await page.click('[data-testid="auth-submit"]');
+
+  await expect(page.getByText('Too many requests. Please try again later.')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Please wait');
+  await expect(page.locator('input[type="email"]')).toHaveValue('demo@duit.app');
+  await expect(page.locator('[data-testid="auth-submit"]')).toBeDisabled();
+  await page.waitForTimeout(500);
+  expect(attempts).toBe(1);
+});

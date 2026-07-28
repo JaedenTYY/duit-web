@@ -1,8 +1,11 @@
 export interface ApiFailureDetails {
   message: string
+  code: string | null
   requestId: string | null
   fields: Record<string, string> | null
   status: number | null
+  retryAfterSeconds: number | null
+  rateLimitResetAt: string | null
   supportWorthy: boolean
 }
 
@@ -24,14 +27,58 @@ export function extractApiFailure(error: unknown): ApiFailureDetails {
       )
     )
     : null
+  const code = typeof errorBody?.code === 'string' && errorBody.code.trim()
+    ? errorBody.code
+    : null
+  const retryAfterSeconds = parseRetryAfter(
+    readHeader(response?.headers, 'retry-after')
+  )
+  const rateLimitResetAt = parseRateLimitReset(
+    readHeader(response?.headers, 'ratelimit-reset')
+  )
 
   return {
     message,
+    code,
     requestId: bodyRequestId ?? headerRequestId,
     fields,
     status,
+    retryAfterSeconds,
+    rateLimitResetAt,
     supportWorthy: status === null || status >= 500,
   }
+}
+
+export function parseRetryAfter(value: unknown, nowMs = Date.now()): number | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null
+  const text = String(value).trim()
+  if (!text) return null
+  if (/^\d+$/.test(text)) {
+    const seconds = Number(text)
+    return Number.isSafeInteger(seconds) && seconds >= 0 ? seconds : null
+  }
+  if (/^[+-]?\d+$/.test(text)) return null
+  const timestamp = Date.parse(text)
+  if (!Number.isFinite(timestamp)) return null
+  return Math.max(0, Math.ceil((timestamp - nowMs) / 1000))
+}
+
+export function apiFailureMessage(
+  failure: ApiFailureDetails,
+  fallback = 'An unexpected error occurred'
+): string {
+  const message = failure.message || fallback
+  return failure.retryAfterSeconds !== null && failure.retryAfterSeconds > 0
+    ? `${message} Try again in ${failure.retryAfterSeconds} seconds.`
+    : message
+}
+
+function parseRateLimitReset(value: unknown): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null
+  const epochSeconds = Number(String(value).trim())
+  if (!Number.isSafeInteger(epochSeconds) || epochSeconds < 0) return null
+  const timestamp = epochSeconds * 1000
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null
 }
 
 function getResponse(error: unknown): {

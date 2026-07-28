@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { EmailExtraction, GmailStatus, GmailSyncResult } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
+import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 export const useGmailStore = defineStore('gmail', () => {
   const status = ref<GmailStatus | null>(null)
@@ -112,8 +113,7 @@ export const useGmailStore = defineStore('gmail', () => {
 
   function handleError(message: string, err: unknown) {
     if (err && typeof err === 'object' && 'response' in err) {
-      const axiosError = err as { response?: { data?: { error?: { message?: string } } } }
-      error.value = axiosError.response?.data?.error?.message ?? message
+      error.value = apiFailureMessage(extractApiFailure(err), message)
     } else {
       error.value = message
     }

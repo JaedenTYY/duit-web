@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { StatementImportResult, StatementUpload } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
+import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 interface ConfirmRow {
   rowId: string
@@ -75,8 +76,7 @@ export const useStatementStore = defineStore('statement', () => {
 
   function extractError(err: unknown): string {
     if (err && typeof err === 'object' && 'response' in err) {
-      const axiosError = err as { response?: { data?: { error?: { message?: string } } } }
-      return axiosError.response?.data?.error?.message ?? 'Statement import failed'
+      return apiFailureMessage(extractApiFailure(err), 'Statement import failed')
     }
     return 'Statement import failed'
   }

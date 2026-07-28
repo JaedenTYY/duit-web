@@ -8,6 +8,7 @@ import { useLoginMutation, useRegisterMutation } from '@/composables/useAuthMuta
 import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 import ApiErrorAlert from '@/components/shared/ApiErrorAlert.vue'
 import { extractApiFailure, type ApiFailureDetails } from '@/lib/apiError'
+import { useRetryAfterCooldown } from '@/composables/useRetryAfterCooldown'
 
 const router = useRouter()
 const route = useRoute()
@@ -34,9 +35,11 @@ const mode = ref<Mode>(route.name === 'register' ? 'register' : 'login')
 const apiError = ref<ApiFailureDetails | null>(sessionExpiryFailure())
 const loginMutation = useLoginMutation()
 const registerMutation = useRegisterMutation()
+const cooldown = useRetryAfterCooldown()
 
 const isLogin = computed(() => mode.value === 'login')
 const isSubmitting = computed(() => loginMutation.isPending.value || registerMutation.isPending.value)
+const submitDisabled = computed(() => isSubmitting.value || cooldown.active.value)
 const validationSchema = computed(() => toTypedSchema(isLogin.value ? loginSchema : registerSchema))
 
 const { defineField, errors, handleSubmit, resetForm } = useForm<AuthFormValues>({
@@ -66,7 +69,9 @@ const onSubmit = handleSubmit(async (values) => {
     }
     router.push('/dashboard')
   } catch (err: unknown) {
-    apiError.value = extractApiFailure(err)
+    const failure = extractApiFailure(err)
+    apiError.value = failure
+    if (failure.status === 429) cooldown.start(failure.retryAfterSeconds)
   }
 })
 
@@ -74,6 +79,7 @@ function toggleMode() {
   const nextMode = isLogin.value ? 'register' : 'login'
   mode.value = nextMode
   apiError.value = null
+  cooldown.clear()
   router.replace({ name: nextMode })
 }
 
@@ -82,8 +88,11 @@ function sessionExpiryFailure(): ApiFailureDetails | null {
   return {
     message: 'Your session has expired. Please sign in again.',
     requestId: null,
+    code: null,
     fields: null,
     status: 401,
+    retryAfterSeconds: null,
+    rateLimitResetAt: null,
     supportWorthy: false,
   }
 }
@@ -240,12 +249,21 @@ watch(
             </div>
 
             <button
+              data-testid="auth-submit"
               type="submit"
-              :disabled="isSubmitting"
+              :disabled="submitDisabled"
               class="mt-7 flex min-h-13 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {{ isSubmitting ? 'Please wait...' : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
+              {{ isSubmitting ? 'Please wait...' : cooldown.active.value ? `Try again in ${cooldown.remainingSeconds.value}s` : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
             </button>
+            <p
+              v-if="cooldown.active.value"
+              class="text-center text-sm font-semibold text-amber-700"
+              role="status"
+              aria-live="polite"
+            >
+              {{ cooldown.accessibleMessage.value }}
+            </p>
           </form>
 
           <div class="mt-7 border-t border-slate-100 pt-5 text-center">

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import api from '@/lib/api'
 import type { Bill, GuestBill, GuestBillSummary, PaymentQrProfile } from '@/types'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
+import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 interface ApiResponse<T> {
   data: T
@@ -263,15 +264,15 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   function extractError(requestError: unknown, fallback: string): string {
+    if (requestError && typeof requestError === 'object' && 'response' in requestError) {
+      const failure = extractApiFailure(requestError)
+      return apiFailureMessage(
+        { ...failure, message: normalizeReceiptUploadError(failure.message) },
+        fallback
+      )
+    }
     if (requestError instanceof Error) {
       return normalizeReceiptUploadError(requestError.message)
-    }
-
-    if (requestError && typeof requestError === 'object' && 'response' in requestError) {
-      const axiosError = requestError as {
-        response?: { data?: { error?: { message?: string } } }
-      }
-      return normalizeReceiptUploadError(axiosError.response?.data?.error?.message ?? fallback)
     }
     return fallback
   }
