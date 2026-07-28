@@ -66,6 +66,29 @@ describe('API authentication failure handling', () => {
       expect.not.stringContaining('cursor=sensitive')
     )
   })
+
+  it('does not clear an authenticated session after a 429', () => {
+    const store = useAuthStore()
+    store.setSession('access-token', USER, '2026-07-27T01:00:00.000Z')
+
+    processApiFailure({
+      config: { method: 'post' },
+      response: {
+        status: 429,
+        data: {
+          error: {
+            code: 'ERR_RATE_LIMIT_429',
+            message: 'Too many requests. Please try again later.',
+          },
+        },
+        headers: { 'retry-after': '10' },
+      },
+    })
+
+    expect(store.token).toBe('access-token')
+    expect(store.user).toEqual(USER)
+    expect(store.expiresAt).toBe('2026-07-27T01:00:00.000Z')
+  })
 })
 
 function createMemoryStorage(): Storage {

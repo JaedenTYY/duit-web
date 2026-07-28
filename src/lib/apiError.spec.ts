@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractApiFailure } from './apiError'
+import { apiFailureMessage, extractApiFailure, parseRetryAfter } from './apiError'
 
 const BODY_ID = 'f64651f2-c852-4dd7-869a-c20a5a434534'
 const HEADER_ID = 'a9020667-e22e-447c-9ca2-e11fca20e13c'
@@ -105,5 +105,51 @@ describe('extractApiFailure', () => {
     })
 
     expect(failure.requestId).toBe(HEADER_ID)
+  })
+
+  it('extracts stable code retry window and rate reset headers', () => {
+    const failure = extractApiFailure({
+      response: {
+        status: 429,
+        data: {
+          error: {
+            code: 'ERR_RATE_LIMIT_429',
+            message: 'Too many requests. Please try again later.',
+            requestId: BODY_ID,
+          },
+        },
+        headers: {
+          'retry-after': '17',
+          'ratelimit-reset': '1785225600',
+        },
+      },
+    })
+
+    expect(failure.code).toBe('ERR_RATE_LIMIT_429')
+    expect(failure.retryAfterSeconds).toBe(17)
+    expect(failure.rateLimitResetAt).toBe('2026-07-28T08:00:00.000Z')
+    expect(failure.supportWorthy).toBe(false)
+  })
+
+  it('parses integer and HTTP-date Retry-After without accepting invalid values', () => {
+    const now = Date.parse('2026-07-28T08:00:00.000Z')
+    expect(parseRetryAfter('5', now)).toBe(5)
+    expect(parseRetryAfter('Tue, 28 Jul 2026 08:00:09 GMT', now)).toBe(9)
+    expect(parseRetryAfter('-1', now)).toBeNull()
+    expect(parseRetryAfter('not-a-date', now)).toBeNull()
+    expect(parseRetryAfter(Number.POSITIVE_INFINITY, now)).toBeNull()
+  })
+
+  it('adds actionable retry timing without replacing the safe server message', () => {
+    const failure = extractApiFailure({
+      response: {
+        status: 429,
+        data: { error: { message: 'This operation is already in progress.' } },
+        headers: { 'retry-after': '8' },
+      },
+    })
+    expect(apiFailureMessage(failure)).toBe(
+      'This operation is already in progress. Try again in 8 seconds.'
+    )
   })
 })

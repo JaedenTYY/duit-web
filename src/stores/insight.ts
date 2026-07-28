@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Insight } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
+import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 export const useInsightStore = defineStore('insight', () => {
   const insights = ref<Insight[]>([])
@@ -48,8 +49,7 @@ export const useInsightStore = defineStore('insight', () => {
 
   function _extractError(err: unknown): string {
     if (err && typeof err === 'object' && 'response' in err) {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
-      return axiosErr.response?.data?.error?.message ?? 'An unexpected error occurred'
+      return apiFailureMessage(extractApiFailure(err))
     }
     return 'An unexpected error occurred'
   }
