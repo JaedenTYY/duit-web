@@ -9,6 +9,9 @@ The frontend is intentionally thin around financial truth: it renders and
 validates user interactions, but `duit-api` remains the authoritative system of
 record.
 
+Dependency integrity, SBOMs, scanning, and update policy are documented in
+[`docs/SUPPLY_CHAIN_SECURITY.md`](docs/SUPPLY_CHAIN_SECURITY.md).
+
 ## Tech Stack
 
 - Vue 3 Composition API with TypeScript
@@ -22,6 +25,7 @@ record.
 - PrimeVue and Tailwind CSS for UI implementation
 - Playwright for browser smoke tests
 - Capacitor for Android and iOS native shells
+- Node 22.23.0 and npm 10.9.8 as the reproducible build toolchain
 
 ## Architecture
 
@@ -194,11 +198,14 @@ configuration is copied to `dist/staticwebapp.config.json` during the build.
 | `npm run type-check` | Run `vue-tsc` without emitting files |
 | `npm run build` | Type-check and build production assets |
 | `npm run test:e2e` | Run Playwright browser smoke tests |
-| `npm run lint` | Run ESLint with `--fix` |
+| `npm run lint` | Run the non-fixing ESLint gate |
+| `npm run test` | Run Vitest component/unit tests |
+| `npm run sbom:prod` | Generate the production CycloneDX SBOM |
+| `npm run sbom:all` | Generate the full production/development CycloneDX SBOM |
 | `npm run preview` | Preview the production bundle |
 
-`npm run lint` modifies files because it includes `--fix`; review the diff
-before committing.
+Use the Node/npm versions declared in `.nvmrc` and `packageManager`. CI verifies
+those exact versions before `npm ci`.
 
 ## Capacitor
 

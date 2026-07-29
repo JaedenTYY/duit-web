@@ -8,6 +8,7 @@ export default defineConfig({
       target: 'src/api/generated/duit-api.ts',
       schemas: 'src/api/generated/model',
       client: 'vue-query',
+      httpClient: 'axios',
       prettier: true,
       override: {
         mutator: {

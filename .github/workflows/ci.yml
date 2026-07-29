@@ -1,45 +1,58 @@
-name: Duit Web CI/CD
+name: Duit Web CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, deploy-azure-production]
   pull_request:
-    branches: [ "main", "deploy-azure-production" ]
+    branches: [main, deploy-azure-production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  quality-and-test:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 25
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Run Linter
-      run: npm run lint
-
-    - name: Type check
-      run: npm run type-check
-
-    - name: Run component tests
-      run: npm run test
-
-    - name: Build project
-      run: npm run build
-      # Production builds require an API base URL. This is a non-secret test
-      # value; deployment environments provide their own endpoint at build time.
-      env:
-        VITE_API_BASE_URL: https://api.example.test
-
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
-
-    - name: Run E2E tests
-      run: npm run test:e2e
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Verify toolchain
+        run: |
+          test "$(node --version)" = "v22.23.0"
+          test "$(npm --version)" = "10.9.8"
+      - name: Install dependencies from lockfile
+        run: npm ci
+      - name: Run linter
+        run: npm run lint
+      - name: Type check
+        run: npm run type-check
+      - name: Run component tests
+        run: npm run test
+      - name: Verify generated API client
+        run: |
+          npm run generate:api
+          git diff --exit-code -- src/api/generated
+      - name: Build project
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.example.test
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: duit-web-playwright-${{ github.sha }}
+          path: playwright-report
+          if-no-files-found: error
+          retention-days: 14

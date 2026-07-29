@@ -16,7 +16,7 @@ const userInitial = computed(() => firstName.value.charAt(0).toUpperCase())
 const logoutPending = computed(() => logoutMutation.isPending.value)
 
 async function handleLogout() {
-  await logoutMutation.mutateAsync()
+  await logoutMutation.mutateAsync(undefined)
   router.push('/login')
 }
 </script>
