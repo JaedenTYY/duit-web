@@ -12,7 +12,7 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "generate:api": "orval --config orval.config.ts",
+    "generate:api": "orval --config orval.config.ts && node scripts/normalize-generated-api.mjs",
     "lint": "eslint .",
     "format": "prettier --write src/",
     "type-check": "vue-tsc --noEmit",

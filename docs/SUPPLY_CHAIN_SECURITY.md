@@ -27,6 +27,15 @@ integrity diff, run `npm ci` from a clean tree, then run all gates. Integrity
 fields are never edited manually. Dynamic non-lockfile installs are not part of
 CI.
 
+Orval's `tags-split` output is committed for reviewed API-contract changes.
+`output.clean` removes only `src/api/generated` before generation; handwritten
+mutators remain in `src/lib`. A narrow post-generation script normalizes only
+trailing whitespace in generated TypeScript files because Orval 8.23.0 emits a
+variable blank footer for some tag controllers. CI runs generation twice under
+Node 22.23.0 and npm 10.9.8 and requires both passes to leave the committed
+output unchanged. This prevents stale controller files and
+append-on-regeneration drift.
+
 ## Vulnerability policy
 
 - Critical production findings block.
