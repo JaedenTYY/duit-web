@@ -1,0 +1,42 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: deploy-azure-production
+    schedule:
+      interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: Asia/Kuala_Lumpur
+    open-pull-requests-limit: 7
+    labels: [dependencies, frontend]
+    groups:
+      development-tool-patches:
+        dependency-type: development
+        update-types: [patch, minor]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: deploy-azure-production
+    schedule:
+      interval: weekly
+      day: monday
+      time: "02:30"
+      timezone: Asia/Kuala_Lumpur
+    open-pull-requests-limit: 5
+    labels: [dependencies, github-actions]
+    groups:
+      actions-patches:
+        patterns: ["*"]
+        update-types: [patch, minor]
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: deploy-azure-production
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Kuala_Lumpur
+    open-pull-requests-limit: 3
+    labels: [dependencies, docker]

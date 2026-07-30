@@ -1,0 +1,97 @@
+name: Frontend Supply Chain
+
+on:
+  push:
+    branches: [main, deploy-azure-production]
+  pull_request:
+    branches: [main, deploy-azure-production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-supply-chain-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-scan-and-sbom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci
+      - name: Verify action pinning
+        run: ./scripts/verify-action-pins.sh
+      - name: Enforce npm advisory policy
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
+      - name: Generate CycloneDX SBOMs
+        run: |
+          mkdir -p build/reports/security
+          npm run sbom:prod
+          npm run sbom:all
+          ./scripts/summarize-sbom-licenses.sh \
+            build/reports/sbom/duit-web-all.cdx.json \
+            build/reports/security/all-dependency-licenses.csv
+      - name: Scan production dependency SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: sbom
+          scan-ref: build/reports/sbom/duit-web-production.cdx.json
+          format: table
+          output: build/reports/security/production-dependency-scan.txt
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Scan complete dependency SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: sbom
+          scan-ref: build/reports/sbom/duit-web-all.cdx.json
+          format: table
+          output: build/reports/security/all-dependency-scan.txt
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Upload SBOMs and dependency reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: duit-web-sbom-and-dependency-scan-${{ github.sha }}
+          path: |
+            build/reports/sbom
+            build/reports/security
+          if-no-files-found: error
+          retention-days: 30
+
+  filesystem-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan repository secrets and configuration
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret,misconfig
+          format: table
+          output: trivy-filesystem-report.txt
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: Upload filesystem scan report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: duit-web-filesystem-scan-${{ github.sha }}
+          path: trivy-filesystem-report.txt
+          if-no-files-found: error
+          retention-days: 30

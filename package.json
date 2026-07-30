@@ -3,23 +3,31 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.18 <23",
+    "npm": ">=10.9 <11"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "generate:api": "orval --config orval.config.ts",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx --ignore-path .gitignore",
+    "generate:api": "orval --config orval.config.ts && node scripts/normalize-generated-api.mjs",
+    "lint": "eslint .",
     "format": "prettier --write src/",
     "type-check": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "sbom:prepare": "node -e \"require('node:fs').mkdirSync('build/reports/sbom', { recursive: true })\"",
+    "sbom:prod": "npm run sbom:prepare && npm sbom --omit=dev --sbom-format=cyclonedx > build/reports/sbom/duit-web-production.cdx.json",
+    "sbom:all": "npm run sbom:prepare && npm sbom --sbom-format=cyclonedx > build/reports/sbom/duit-web-all.cdx.json"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1",
-    "@primevue/themes": "^4.0.0",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@primeuix/themes": "2.0.3",
     "@tanstack/vue-query": "^5.0.0",
     "@vee-validate/zod": "^4.12.5",
     "@vueuse/core": "^10.0.0",
@@ -36,30 +44,35 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.1",
-    "@iconify/json": "^2.2.490",
-    "@playwright/test": "^1.61.1",
+    "@capacitor/cli": "^8.4.2",
+    "@eslint/js": "10.0.1",
+    "@iconify/json": "^2.2.507",
+    "@playwright/test": "^1.62.0",
     "@types/qrcode": "^1.5.6",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "@vitejs/plugin-vue": "^6.0.7",
-    "@vue/eslint-config-typescript": "^13.0.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.4.4",
-    "@vue/tsconfig": "^0.5.0",
+    "@vue/tsconfig": "^0.9.1",
     "ajv": "^8.20.0",
     "autoprefixer": "^10.4.0",
-    "eslint": "^8.56.0",
-    "eslint-plugin-vue": "^9.22.0",
+    "eslint": "10.8.0",
+    "eslint-plugin-vue": "^10.10.0",
+    "globals": "17.8.0",
     "jsdom": "^24.1.3",
-    "orval": "^6.25.0",
-    "postcss": "^8.4.0",
+    "orval": "8.23.0",
+    "postcss": "^8.5.24",
     "prettier": "^3.2.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.4.0",
+    "typescript": "^5.9.3",
     "unplugin-icons": "^23.0.1",
-    "vite": "^8.1.3",
-    "vite-tsconfig-paths": "^4.3.0",
-    "vitest": "^1.3.1",
-    "vue-tsc": "^2.0.0"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.8"
+  },
+  "overrides": {
+    "js-beautify": {
+      "editorconfig": "3.0.2",
+      "glob": "13.0.6"
+    }
   }
 }
