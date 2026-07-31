@@ -18,4 +18,5 @@ export interface CategorisationResult {
   similarityScore?: number | null;
   /** @nullable */
   confidence?: CategorisationResultConfidence;
+  isAutomaticCategory: boolean;
 }

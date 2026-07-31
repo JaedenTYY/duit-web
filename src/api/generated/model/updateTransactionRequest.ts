@@ -19,5 +19,5 @@ export interface UpdateTransactionRequest {
   description?: string;
   occurredAt?: string;
   fxRate?: number;
-  rememberMerchantCategory?: boolean;
+  rememberMerchantCategory: boolean;
 }

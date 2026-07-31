@@ -8,5 +8,5 @@
 
 export interface ConfirmEmailExtractionRequest {
   categoryId?: string;
-  rememberMerchantCategory?: boolean;
+  rememberMerchantCategory: boolean;
 }

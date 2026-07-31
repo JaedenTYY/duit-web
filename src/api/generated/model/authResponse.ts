@@ -8,7 +8,9 @@
 import type { UserResponse } from './userResponse.ts';
 
 export interface AuthResponse {
+  /** Short-lived JWT access token. Clients must keep it in memory only. */
   token: string;
   user: UserResponse;
+  /** Nominal JWT expiry. This does not include validation clock skew. */
   expiresAt: string;
 }

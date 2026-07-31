@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ConfirmStatementRow {
-  rowId: string;
-  categoryId?: string;
-  rememberMerchantCategory: boolean;
+export interface CsrfBootstrapResponse {
+  headerName: string;
+  token: string;
 }

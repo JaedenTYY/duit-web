@@ -7,6 +7,8 @@
  */
 
 export interface SelectBillItemsRequest {
+  /** @minLength 1 */
   participantToken: string;
+  /** @minItems 1 */
   itemIds: string[];
 }

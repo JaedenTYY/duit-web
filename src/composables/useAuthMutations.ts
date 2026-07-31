@@ -1,42 +1,39 @@
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
-import { login, logout, register } from '@/api/generated/auth-controller/auth-controller'
+import { login, register } from '@/api/generated/auth-controller/auth-controller'
 import type { LoginRequest, RegisterRequest } from '@/api/generated/model'
-import { useAuthStore } from '@/stores/auth'
+import {
+  establishSession,
+  logoutSession,
+} from '@/lib/sessionCoordinator'
 
 export function useLoginMutation() {
-  const authStore = useAuthStore()
-
   return useMutation({
     mutationFn: (credentials: LoginRequest) => login(credentials),
     onSuccess: (response) => {
       if (response.data) {
-        authStore.setSession(response.data.token, response.data.user, response.data.expiresAt)
+        establishSession(response.data)
       }
     },
   })
 }
 
 export function useRegisterMutation() {
-  const authStore = useAuthStore()
-
   return useMutation({
     mutationFn: (credentials: RegisterRequest) => register(credentials),
     onSuccess: (response) => {
       if (response.data) {
-        authStore.setSession(response.data.token, response.data.user, response.data.expiresAt)
+        establishSession(response.data)
       }
     },
   })
 }
 
 export function useLogoutMutation() {
-  const authStore = useAuthStore()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: logout,
+    mutationFn: logoutSession,
     onSettled: () => {
-      authStore.clearSession()
       queryClient.clear()
     },
   })

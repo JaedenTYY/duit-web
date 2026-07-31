@@ -2,11 +2,23 @@ import { test, expect } from '@playwright/test';
 
 test.describe('FYP Demo Flow Smoke Tests', () => {
   test.beforeEach(async ({ page }) => {
+    let refreshFamilyActive = false;
     const ok = (data: unknown) => ({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ data }),
     });
+    const authResponse = {
+      token: 'e2e-token',
+      user: {
+        id: 'user-1',
+        email: 'demo@duit.app',
+        fullName: 'Demo User',
+        preferredCurrency: 'MYR',
+        createdAt: '2026-07-10T00:00:00Z',
+      },
+      expiresAt: '2099-07-11T00:00:00Z',
+    };
 
     const transaction = {
       id: 'tx-1',
@@ -36,18 +48,37 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
 
       const path = url.pathname.replace(/^\/api/, '');
 
-      if (path === '/auth/login') {
+      if (path === '/auth/csrf') {
         return route.fulfill(ok({
-          token: 'e2e-token',
-          user: {
-            id: 'user-1',
-            email: 'demo@duit.app',
-            fullName: 'Demo User',
-            preferredCurrency: 'MYR',
-            createdAt: '2026-07-10T00:00:00Z',
-          },
-          expiresAt: '2099-07-11T00:00:00Z',
+          headerName: 'X-XSRF-TOKEN',
+          token: 'masked-e2e-csrf',
         }));
+      }
+
+      if (path === '/auth/login') {
+        refreshFamilyActive = true;
+        return route.fulfill({
+          ...ok(authResponse),
+          headers: {
+            'Set-Cookie': 'duit-refresh=e2e-refresh; HttpOnly; Path=/; SameSite=Lax',
+          },
+        });
+      }
+
+      if (path === '/auth/refresh') {
+        if (!refreshFamilyActive) {
+          return route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              error: {
+                code: 'ERR_AUTH_REFRESH_401',
+                message: 'Session unavailable. Please sign in again.',
+              },
+            }),
+          });
+        }
+        return route.fulfill(ok(authResponse));
       }
 
       if (path === '/categories') {
@@ -211,6 +242,30 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
 
 test('login 429 preserves input and does not automatically retry', async ({ page }) => {
   let attempts = 0;
+  await page.route('**/api/auth/csrf', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          headerName: 'X-XSRF-TOKEN',
+          token: 'masked-e2e-csrf',
+        },
+      }),
+    });
+  });
+  await page.route('**/api/auth/refresh', async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: {
+          code: 'ERR_AUTH_REFRESH_401',
+          message: 'Session unavailable. Please sign in again.',
+        },
+      }),
+    });
+  });
   await page.route('**/api/auth/login', async (route) => {
     attempts += 1;
     await route.fulfill({
@@ -241,4 +296,154 @@ test('login 429 preserves input and does not automatically retry', async ({ page
   await expect(page.locator('[data-testid="auth-submit"]')).toBeDisabled();
   await page.waitForTimeout(500);
   expect(attempts).toBe(1);
+});
+
+test('browser session restores by refresh without persistent access-token storage', async ({ page }) => {
+  let refreshFamilyActive = false;
+  let refreshCalls = 0;
+  let rejectNextSummary = false;
+  let summaryCalls = 0;
+  const user = {
+    id: 'user-1',
+    email: 'demo@duit.app',
+    fullName: 'Demo User',
+    preferredCurrency: 'MYR',
+    createdAt: '2026-07-10T00:00:00Z',
+  };
+  const auth = () => ({
+    token: `memory-access-${refreshCalls}`,
+    user,
+    expiresAt: '2099-07-11T00:00:00Z',
+  });
+  const ok = (data: unknown, headers: Record<string, string> = {}) => ({
+    status: 200,
+    contentType: 'application/json',
+    headers,
+    body: JSON.stringify({ data }),
+  });
+
+  await page.route('**/api/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (!pathname.startsWith('/api/')) {
+      return route.continue();
+    }
+    const path = pathname.replace(/^\/api/, '');
+    if (path === '/auth/csrf') {
+      return route.fulfill(ok(
+        { headerName: 'X-XSRF-TOKEN', token: 'masked-e2e-csrf' },
+        { 'Set-Cookie': 'XSRF-TOKEN=e2e-csrf-cookie; HttpOnly; Path=/; SameSite=Lax' }
+      ));
+    }
+    if (path === '/auth/login') {
+      refreshFamilyActive = true;
+      return route.fulfill(ok(
+        auth(),
+        { 'Set-Cookie': 'duit-refresh=opaque-e2e-refresh; HttpOnly; Path=/; SameSite=Lax' }
+      ));
+    }
+    if (path === '/auth/refresh') {
+      refreshCalls += 1;
+      if (!refreshFamilyActive) {
+        return route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: {
+              code: 'ERR_AUTH_REFRESH_401',
+              message: 'Session unavailable. Please sign in again.',
+              requestId: '018f86a7-4b3c-7d2a-8b20-4fb94f77c921',
+            },
+          }),
+        });
+      }
+      return route.fulfill(ok(
+        auth(),
+        { 'Set-Cookie': 'duit-refresh=rotated-e2e-refresh; HttpOnly; Path=/; SameSite=Lax' }
+      ));
+    }
+    if (path === '/auth/logout') {
+      refreshFamilyActive = false;
+      return route.fulfill(ok(
+        { message: 'Logged out successfully' },
+        { 'Set-Cookie': 'duit-refresh=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0' }
+      ));
+    }
+    if (path === '/categories') {
+      return route.fulfill(ok([
+        { id: 'food', name: 'Food & Dining', icon: '🍜', color: '#2563eb' },
+      ]));
+    }
+    if (path === '/transactions/summary/monthly') {
+      summaryCalls += 1;
+      if (rejectNextSummary) {
+        rejectNextSummary = false;
+        return route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: {
+              code: 'ERR_AUTH_001',
+              message: 'Authentication required',
+              requestId: '018f86a7-4b3c-7d2a-8b20-4fb94f77c921',
+            },
+          }),
+        });
+      }
+      return route.fulfill(ok({
+        totalSpend: '0.0000',
+        currency: 'MYR',
+        transactionCount: 0,
+        byCategory: [],
+      }));
+    }
+    if (path === '/transactions') {
+      return route.fulfill(ok({
+        transactions: [],
+        nextCursor: null,
+        nextCursorId: null,
+        hasMore: false,
+      }));
+    }
+    if (path === '/anomalies' || path === '/insights') {
+      return route.fulfill(ok([]));
+    }
+    if (path.startsWith('/payment-qr-profiles')) {
+      return route.fulfill(ok([]));
+    }
+    return route.fulfill(ok([]));
+  });
+
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'demo@duit.app');
+  await page.fill('input[type="password"]', 'demo-password');
+  await page.click('[data-testid="auth-submit"]');
+  await page.waitForURL(/\/dashboard/);
+
+  await expect.poll(() => page.evaluate(() => ({
+    localToken: localStorage.getItem('duit_token'),
+    localUser: localStorage.getItem('duit_user'),
+    sessionToken: sessionStorage.getItem('duit_token'),
+    visibleCookies: document.cookie,
+  }))).toEqual({
+    localToken: null,
+    localUser: null,
+    sessionToken: null,
+    visibleCookies: '',
+  });
+
+  const refreshesBeforeReload = refreshCalls;
+  rejectNextSummary = true;
+  summaryCalls = 0;
+  await page.reload();
+  await page.waitForURL(/\/dashboard/);
+  await expect(page.locator('text=Monthly spend').first()).toBeVisible();
+  await expect.poll(() => summaryCalls).toBeGreaterThanOrEqual(2);
+  expect(refreshCalls - refreshesBeforeReload).toBe(2);
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await page.waitForURL(/\/login|\/$/);
+  await page.reload();
+  await expect(page).not.toHaveURL(/\/dashboard/);
+  expect(refreshFamilyActive).toBe(false);
 });

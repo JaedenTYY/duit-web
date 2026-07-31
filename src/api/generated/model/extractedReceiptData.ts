@@ -20,4 +20,5 @@ export interface ExtractedReceiptData {
   total: number;
   paymentMethod: string;
   confidence: string;
+  fieldsNeedingReview: string[];
 }

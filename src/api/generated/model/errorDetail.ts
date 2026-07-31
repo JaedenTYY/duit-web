@@ -5,10 +5,11 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
+import type { ErrorDetailCode } from './errorDetailCode.ts';
 import type { ErrorDetailFields } from './errorDetailFields.ts';
 
 export interface ErrorDetail {
-  code: string;
+  code: ErrorDetailCode;
   message: string;
   requestId: string;
   fields?: ErrorDetailFields;

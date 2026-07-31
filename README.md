@@ -18,7 +18,7 @@ Dependency integrity, SBOMs, scanning, and update policy are documented in
 - Vite for development and production builds
 - Vue Router for route-level navigation
 - TanStack Vue Query for server state, caching, retries, and mutations
-- Pinia for client/session state such as the JWT and authenticated user
+- Pinia for in-memory access-token and authenticated-user state
 - Orval-generated API clients from the backend OpenAPI contract
 - Axios with a shared bearer-token interceptor
 - vee-validate and zod for form validation
@@ -71,10 +71,16 @@ flowchart LR
 | --- | --- | --- |
 | Vue views/components | Rendering, interaction flow, local UI state | Persisted financial truth |
 | vee-validate/zod | Client-side input constraints before API calls | Authorization or final business validation |
-| Vue Query | Server state reads, mutations, cache invalidation | Long-lived session identity |
-| Pinia | Token, authenticated user, client-only flags | Transactions, bills, receipts as independent truth |
+| Vue Query | Server state reads, mutations, cache invalidation | Browser-session authority |
+| Pinia | In-memory access token, authenticated user, client-only flags | Transactions, bills, receipts as independent truth |
 | Orval generated client | Typed endpoint functions from OpenAPI | Hand-written business rules |
 | `duit-api` | Authoritative validation, persistence, authorization | Browser-only presentation state |
+
+Access tokens are held in memory only. Reload recovery uses the API's rotating
+HttpOnly refresh cookie plus CSRF bootstrap; no access or refresh token is
+written to localStorage, sessionStorage, IndexedDB, URLs, or generated client
+state. The API and frontend origins must match the exact credentialed CORS and
+cookie topology documented by the backend in `docs/SESSION_SECURITY.md`.
 
 This split matters because server state is concurrent and shared. Vue Query
 keeps network state explicit, while Pinia avoids becoming a second database in

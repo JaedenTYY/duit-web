@@ -9,7 +9,10 @@
 export interface CreateTransactionRequest {
   /** @minimum 0.0001 */
   amount: number;
-  /** @pattern ^(MYR|SGD|IDR|USD|THB)$ */
+  /**
+     * @minLength 1
+     * @pattern ^(MYR|SGD|IDR|USD|THB)$
+     */
   currency: string;
   categoryId?: string;
   /**
@@ -19,7 +22,10 @@ export interface CreateTransactionRequest {
   description?: string;
   occurredAt: string;
   fxRate?: number;
-  /** @maxLength 255 */
+  /**
+     * @minLength 0
+     * @maxLength 255
+     */
   merchantName?: string;
-  rememberMerchantCategory?: boolean;
+  rememberMerchantCategory: boolean;
 }

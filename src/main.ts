@@ -7,6 +7,10 @@ import App from './App.vue'
 import router from './router'
 import './assets/styles/main.css'
 import { useAuthStore } from '@/stores/auth'
+import {
+  configureSessionLifecycle,
+  initializeSession,
+} from '@/lib/sessionCoordinator'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -21,10 +25,9 @@ const queryClient = new QueryClient({
 
 app.use(pinia)
 
-// Restore and validate the server-issued expiry before the router starts its
-// initial navigation, so guards never observe a transient unauthenticated state.
-const authStore = useAuthStore(pinia)
-authStore.restoreSession()
+useAuthStore(pinia)
+configureSessionLifecycle()
+const sessionBootstrap = initializeSession()
 
 app.use(VueQueryPlugin, { queryClient })
 app.use(PrimeVue, {
@@ -32,6 +35,7 @@ app.use(PrimeVue, {
     preset: Aura,
   },
 })
-app.use(router)
-
-app.mount('#app')
+void sessionBootstrap.finally(() => {
+  app.use(router)
+  app.mount('#app')
+})
