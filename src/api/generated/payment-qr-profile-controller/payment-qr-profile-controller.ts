@@ -170,7 +170,7 @@ const {mutation: mutationOptions} = options ?
 ) => {
       id = toValue(id);
 
-      return orvalMutator<void>(
+      return orvalMutator<unknown>(
       {url: `/payment-qr-profiles/${id}`, method: 'DELETE', signal
     },
       );

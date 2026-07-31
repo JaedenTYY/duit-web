@@ -4,6 +4,10 @@ import {
   type NavigationGuard,
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import {
+  ensureSessionBootstrapped,
+  refreshSessionSingleFlight,
+} from '@/lib/sessionCoordinator'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -95,9 +99,18 @@ const router = createRouter({
   ],
 })
 
-export const authenticationGuard: NavigationGuard = (to, from, next) => {
+export const authenticationGuard: NavigationGuard = async (to, from, next) => {
+  await ensureSessionBootstrapped()
   const authStore = useAuthStore()
-  const authenticated = authStore.ensureValidSession()
+  let authenticated = authStore.ensureValidSession()
+  if (!authenticated && authStore.bootstrapStatus === 'authenticated') {
+    try {
+      await refreshSessionSingleFlight()
+      authenticated = authStore.ensureValidSession()
+    } catch {
+      authenticated = false
+    }
+  }
 
   if (!to.meta.hideNav && !authenticated) {
     next(authStore.sessionExpired

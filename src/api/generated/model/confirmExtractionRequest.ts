@@ -9,11 +9,16 @@
 export interface ConfirmExtractionRequest {
   extractionId: string;
   amount: number;
+  /** @minLength 1 */
   currency: string;
   categoryId?: string;
-  rememberMerchantCategory?: boolean;
   description?: string;
   occurredAt: string;
   fxRate?: number;
+  /**
+     * @minLength 0
+     * @maxLength 255
+     */
   merchantName?: string;
+  rememberMerchantCategory: boolean;
 }

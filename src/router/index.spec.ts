@@ -5,6 +5,13 @@ import type { User } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { authenticationGuard } from './index'
 
+vi.mock('@/lib/sessionCoordinator', () => ({
+  ensureSessionBootstrapped: vi.fn(async () => undefined),
+  refreshSessionSingleFlight: vi.fn(async () => {
+    throw new Error('Refresh unavailable')
+  }),
+}))
+
 const USER: User = {
   id: '5e51fe8c-306d-463c-9c76-dd5368bfa5ab',
   email: 'user@example.test',
@@ -27,7 +34,7 @@ describe('authenticationGuard', () => {
     vi.unstubAllGlobals()
   })
 
-  it('does not treat an expired in-memory token as authenticated', () => {
+  it('does not treat an expired in-memory token as authenticated', async () => {
     const store = useAuthStore()
     store.setSession(
       'access-token',
@@ -37,7 +44,7 @@ describe('authenticationGuard', () => {
     vi.setSystemTime(new Date('2026-07-27T00:01:01.000Z'))
     const next = vi.fn()
 
-    authenticationGuard(
+    await authenticationGuard(
       route('/dashboard', 'dashboard', {}),
       route('/', 'landing', { hideNav: true }),
       next

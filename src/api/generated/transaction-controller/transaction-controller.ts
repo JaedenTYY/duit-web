@@ -239,7 +239,7 @@ export const deleteTransaction = (
 ) => {
       id = toValue(id);
 
-      return orvalMutator<void>(
+      return orvalMutator<unknown>(
       {url: `/transactions/${id}`, method: 'DELETE', signal
     },
       );

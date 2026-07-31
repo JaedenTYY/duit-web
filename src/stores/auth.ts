@@ -7,14 +7,23 @@ import { CONFIG } from '@/config'
 export const SESSION_EXPIRY_SAFETY_SKEW_MS = 5_000
 export const MAX_TIMER_DELAY_MS = 2_147_483_647
 
-export type SessionClearReason = 'manual' | 'expired' | 'invalid'
+export type SessionClearReason = 'manual' | 'expired' | 'invalid' | 'revoked'
+export type SessionBootstrapStatus = 'unknown' | 'loading' | 'authenticated' | 'anonymous'
+
+type RefreshHandler = () => Promise<void>
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const user = ref<User | null>(null)
   const expiresAt = ref<string | null>(null)
   const sessionExpired = ref(false)
+  const bootstrapStatus = ref<SessionBootstrapStatus>('unknown')
+  const sessionVersion = ref(0)
   let expiryTimer: ReturnType<typeof setTimeout> | null = null
+  let refreshHandler: RefreshHandler | null = null
+  let expiryRefresh: Promise<void> | null = null
+
+  removeLegacyPersistedSession()
 
   const isAuthenticated = computed(() => {
     const expiryMs = parseExpiry(expiresAt.value)
@@ -26,48 +35,33 @@ export const useAuthStore = defineStore('auth', () => {
     )
   })
 
-  function logout(): void {
-    clearSession('manual')
+  function configureRefresh(handler: RefreshHandler): void {
+    refreshHandler = handler
   }
 
-  function restoreSession(): void {
-    const storedToken = localStorage.getItem(CONFIG.TOKEN_KEY)
-    const storedUser = localStorage.getItem(CONFIG.USER_KEY)
-    const storedExpiry = localStorage.getItem(CONFIG.EXPIRY_KEY)
-    const expiryMs = parseExpiry(storedExpiry)
+  function beginBootstrap(): void {
+    bootstrapStatus.value = 'loading'
+  }
 
-    if (!storedToken || !storedUser || expiryMs === null || isExpired(expiryMs)) {
-      clearSession(expiryMs !== null && isExpired(expiryMs) ? 'expired' : 'invalid')
-      return
-    }
-
-    try {
-      token.value = storedToken
-      user.value = JSON.parse(storedUser) as User
-      expiresAt.value = new Date(expiryMs).toISOString()
-      sessionExpired.value = false
-      scheduleExpiry(expiryMs)
-    } catch {
-      clearSession('invalid')
-    }
+  function finishAnonymous(reason: SessionClearReason = 'invalid'): void {
+    clearSession(reason)
+    bootstrapStatus.value = 'anonymous'
   }
 
   function setSession(newToken: string, newUser: User, serverExpiresAt: string): void {
     const expiryMs = parseExpiry(serverExpiresAt)
     if (!newToken || expiryMs === null || isExpired(expiryMs)) {
-      clearSession(expiryMs !== null ? 'expired' : 'invalid')
+      finishAnonymous(expiryMs !== null ? 'expired' : 'invalid')
       throw new Error('Server returned an invalid session expiry')
     }
 
     clearExpiryTimer()
-    const normalizedExpiry = new Date(expiryMs).toISOString()
     token.value = newToken
     user.value = newUser
-    expiresAt.value = normalizedExpiry
+    expiresAt.value = new Date(expiryMs).toISOString()
     sessionExpired.value = false
-    localStorage.setItem(CONFIG.TOKEN_KEY, newToken)
-    localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(newUser))
-    localStorage.setItem(CONFIG.EXPIRY_KEY, normalizedExpiry)
+    bootstrapStatus.value = 'authenticated'
+    sessionVersion.value += 1
     scheduleExpiry(expiryMs)
   }
 
@@ -78,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
       return false
     }
     if (isExpired(expiryMs)) {
-      clearSession('expired')
+      triggerExpiryRefresh()
       return false
     }
     return true
@@ -89,10 +83,8 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     expiresAt.value = null
-    sessionExpired.value = reason === 'expired'
-    localStorage.removeItem(CONFIG.TOKEN_KEY)
-    localStorage.removeItem(CONFIG.USER_KEY)
-    localStorage.removeItem(CONFIG.EXPIRY_KEY)
+    sessionExpired.value = reason === 'expired' || reason === 'revoked'
+    sessionVersion.value += 1
     useTransactionStore().reset()
   }
 
@@ -100,18 +92,32 @@ export const useAuthStore = defineStore('auth', () => {
     clearExpiryTimer()
     const remainingMs = expiryMs - Date.now() - SESSION_EXPIRY_SAFETY_SKEW_MS
     if (remainingMs <= 0) {
-      clearSession('expired')
+      triggerExpiryRefresh()
       return
     }
 
     expiryTimer = setTimeout(() => {
       expiryTimer = null
       if (isExpired(expiryMs)) {
-        clearSession('expired')
+        triggerExpiryRefresh()
       } else {
         scheduleExpiry(expiryMs)
       }
     }, Math.min(remainingMs, MAX_TIMER_DELAY_MS))
+  }
+
+  function triggerExpiryRefresh(): void {
+    if (expiryRefresh || !refreshHandler) {
+      if (!refreshHandler) finishAnonymous('expired')
+      return
+    }
+    expiryRefresh = refreshHandler()
+      .catch(() => {
+        finishAnonymous('expired')
+      })
+      .finally(() => {
+        expiryRefresh = null
+      })
   }
 
   function clearExpiryTimer(): void {
@@ -142,9 +148,12 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     expiresAt,
     sessionExpired,
+    bootstrapStatus,
+    sessionVersion,
     isAuthenticated,
-    logout,
-    restoreSession,
+    configureRefresh,
+    beginBootstrap,
+    finishAnonymous,
     setSession,
     ensureValidSession,
     clearSession,
@@ -159,4 +168,11 @@ function parseExpiry(value: string | null): number | null {
 
 function isExpired(expiryMs: number): boolean {
   return expiryMs <= Date.now() + SESSION_EXPIRY_SAFETY_SKEW_MS
+}
+
+function removeLegacyPersistedSession(): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.removeItem(CONFIG.TOKEN_KEY)
+  localStorage.removeItem(CONFIG.USER_KEY)
+  localStorage.removeItem(CONFIG.EXPIRY_KEY)
 }

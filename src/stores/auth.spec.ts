@@ -16,12 +16,11 @@ const USER: User = {
   createdAt: NOW.toISOString(),
 }
 
-describe('auth session expiry', () => {
+describe('memory-only authentication state', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(NOW)
     vi.stubGlobal('localStorage', createMemoryStorage())
-    localStorage.clear()
     setActivePinia(createPinia())
   })
 
@@ -32,83 +31,83 @@ describe('auth session expiry', () => {
     vi.unstubAllGlobals()
   })
 
-  it('stores the server-issued expiresAt with the session', () => {
+  it('removes legacy persisted credentials without restoring them', () => {
+    localStorage.setItem(CONFIG.TOKEN_KEY, 'legacy-token')
+    localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(USER))
+    localStorage.setItem(CONFIG.EXPIRY_KEY, '2099-07-27T00:00:00.000Z')
+
+    const store = useAuthStore()
+
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+    expect(store.expiresAt).toBeNull()
+    expectLegacyStorageCleared()
+  })
+
+  it('stores token user and server expiry in memory only', () => {
     const store = useAuthStore()
     const expiresAt = new Date(NOW.getTime() + 60_000).toISOString()
 
     store.setSession('access-token', USER, expiresAt)
-
-    expect(store.expiresAt).toBe(expiresAt)
-    expect(localStorage.getItem(CONFIG.EXPIRY_KEY)).toBe(expiresAt)
-    expect(store.isAuthenticated).toBe(true)
-  })
-
-  it('does not restore an already expired session', () => {
-    persistSession(new Date(NOW.getTime() - 1).toISOString())
-
-    const store = useAuthStore()
-    store.restoreSession()
-
-    expect(store.isAuthenticated).toBe(false)
-    expect(store.sessionExpired).toBe(true)
-    expectSessionStorageCleared()
-  })
-
-  it('restores a session with a valid future server expiry', () => {
-    const expiresAt = new Date(NOW.getTime() + 60_000).toISOString()
-    persistSession(expiresAt)
-
-    const store = useAuthStore()
-    store.restoreSession()
 
     expect(store.token).toBe('access-token')
     expect(store.user).toEqual(USER)
     expect(store.expiresAt).toBe(expiresAt)
     expect(store.isAuthenticated).toBe(true)
+    expectLegacyStorageCleared()
   })
 
-  it('clears a session whose expiry is malformed', () => {
-    persistSession('not-an-instant')
-
+  it('rejects malformed or already expired server expiry', () => {
     const store = useAuthStore()
-    store.restoreSession()
 
+    expect(() => store.setSession('token', USER, 'not-an-instant')).toThrow()
+    expect(store.bootstrapStatus).toBe('anonymous')
+    expect(() => {
+      store.setSession('token', USER, new Date(NOW.getTime() - 1).toISOString())
+    }).toThrow()
     expect(store.isAuthenticated).toBe(false)
-    expect(store.sessionExpired).toBe(false)
-    expectSessionStorageCleared()
   })
 
-  it('automatically clears the session at the safety-adjusted expiry', () => {
+  it('requests refresh at the safety-adjusted access expiry', async () => {
     const store = useAuthStore()
-    const expiresAt = new Date(NOW.getTime() + 60_000).toISOString()
-    store.setSession('access-token', USER, expiresAt)
+    const refresh = vi.fn(async () => {
+      store.setSession(
+        'successor',
+        USER,
+        new Date(NOW.getTime() + 120_000).toISOString()
+      )
+    })
+    store.configureRefresh(refresh)
+    store.setSession(
+      'access-token',
+      USER,
+      new Date(NOW.getTime() + 60_000).toISOString()
+    )
 
-    vi.advanceTimersByTime(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
+    await vi.advanceTimersByTimeAsync(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
 
-    expect(store.isAuthenticated).toBe(false)
-    expect(store.sessionExpired).toBe(true)
-    expectSessionStorageCleared()
-  })
-
-  it('replaces the previous expiry timer when a new session is set', () => {
-    const store = useAuthStore()
-    const firstExpiry = new Date(NOW.getTime() + 60_000).toISOString()
-    const secondExpiry = new Date(NOW.getTime() + 120_000).toISOString()
-
-    store.setSession('first-token', USER, firstExpiry)
-    store.setSession('second-token', USER, secondExpiry)
-    vi.advanceTimersByTime(60_000)
-
-    expect(store.token).toBe('second-token')
-    expect(store.expiresAt).toBe(secondExpiry)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(store.token).toBe('successor')
     expect(store.isAuthenticated).toBe(true)
-
-    vi.advanceTimersByTime(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
-    expect(store.isAuthenticated).toBe(false)
   })
 
-  it('re-checks expiry when the tab becomes visible', () => {
+  it('setting a new session replaces the old expiry timer', async () => {
     const store = useAuthStore()
+    const refresh = vi.fn(async () => undefined)
+    store.configureRefresh(refresh)
+    store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    store.setSession('second', USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(refresh).not.toHaveBeenCalled()
+    expect(store.token).toBe('second')
+  })
+
+  it('rechecks expiry when the tab becomes visible', () => {
+    const store = useAuthStore()
+    const refresh = vi.fn(async () => undefined)
+    store.configureRefresh(refresh)
     store.setSession(
       'access-token',
       USER,
@@ -122,18 +121,11 @@ describe('auth session expiry', () => {
 
     document.dispatchEvent(new Event('visibilitychange'))
 
-    expect(store.isAuthenticated).toBe(false)
-    expect(store.sessionExpired).toBe(true)
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 })
 
-function persistSession(expiresAt: string): void {
-  localStorage.setItem(CONFIG.TOKEN_KEY, 'access-token')
-  localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(USER))
-  localStorage.setItem(CONFIG.EXPIRY_KEY, expiresAt)
-}
-
-function expectSessionStorageCleared(): void {
+function expectLegacyStorageCleared(): void {
   expect(localStorage.getItem(CONFIG.TOKEN_KEY)).toBeNull()
   expect(localStorage.getItem(CONFIG.USER_KEY)).toBeNull()
   expect(localStorage.getItem(CONFIG.EXPIRY_KEY)).toBeNull()
