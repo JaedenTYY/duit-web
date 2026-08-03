@@ -33,12 +33,14 @@ import type {
   ApiError,
   ApiResponseEmailExtractionResponse,
   ApiResponseGmailConnectResponse,
+  ApiResponseGmailDisconnectResponse,
   ApiResponseGmailStatusResponse,
   ApiResponseGmailSyncResponse,
   ApiResponseListEmailExtractionResponse,
   CallbackParams,
   ConfirmEmailExtractionRequest,
-  ExtractionsParams
+  ExtractionsParams,
+  GmailDisconnectRequest
 } from '../model';
 
 import { orvalMutator } from '../../../lib/orvalMutator.ts';
@@ -469,13 +471,15 @@ export function useCallback<TData = Awaited<ReturnType<typeof callback>>, TError
 
 
 export const disconnect = (
-
+    gmailDisconnectRequest?: MaybeRefOrGetter<GmailDisconnectRequest>,
  signal?: AbortSignal
 ) => {
+      gmailDisconnectRequest = toValue(gmailDisconnectRequest);
 
-
-      return orvalMutator<void>(
-      {url: `/gmail/disconnect`, method: 'DELETE', signal
+      return orvalMutator<ApiResponseGmailDisconnectResponse>(
+      {url: `/gmail/disconnect`, method: 'DELETE',
+      headers: {'Content-Type': 'application/json', },
+      data: gmailDisconnectRequest, signal
     },
       );
     }
@@ -484,8 +488,8 @@ export const disconnect = (
 
 
 export const getDisconnectMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext> => {
 
 const mutationKey = ['disconnect'];
 const {mutation: mutationOptions} = options ?
@@ -497,10 +501,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnect>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnect>>, {data?: GmailDisconnectRequest}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  disconnect()
+          return  disconnect(data,)
         }
 
 
@@ -511,15 +515,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type DisconnectMutationResult = NonNullable<Awaited<ReturnType<typeof disconnect>>>
-
+    export type DisconnectMutationBody = GmailDisconnectRequest | undefined
     export type DisconnectMutationError = ApiError
 
     export const useDisconnect = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,void, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof disconnect>>,
         TError,
-        void,
+        {data?: GmailDisconnectRequest},
         TContext
       > => {
       return useMutation(getDisconnectMutationOptions(options), queryClient);

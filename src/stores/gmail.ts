@@ -4,6 +4,7 @@ import type { EmailExtraction, GmailStatus, GmailSyncResult } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
+import { disconnectGmail } from '@/lib/privacyTransport'
 
 export const useGmailStore = defineStore('gmail', () => {
   const status = ref<GmailStatus | null>(null)
@@ -12,8 +13,10 @@ export const useGmailStore = defineStore('gmail', () => {
   const loading = ref(false)
   const connecting = ref(false)
   const syncing = ref(false)
+  const disconnecting = ref(false)
   const actionIds = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
+  const errorRequestId = ref<string | null>(null)
 
   async function initialise() {
     loading.value = true
@@ -48,17 +51,23 @@ export const useGmailStore = defineStore('gmail', () => {
     }
   }
 
-  async function disconnect() {
+  async function disconnect(deleteExtractions = false) {
+    if (disconnecting.value) return false
+    disconnecting.value = true
     error.value = null
     try {
-      await api.delete('/gmail/disconnect')
+      await disconnectGmail(deleteExtractions)
       status.value = status.value
         ? { ...status.value, connected: false, providerEmail: null, connectedAt: null, scopes: [] }
         : null
       extractions.value = []
       lastSync.value = null
+      return true
     } catch (err: unknown) {
       handleError('Failed to disconnect Gmail', err)
+      return false
+    } finally {
+      disconnecting.value = false
     }
   }
 
@@ -113,11 +122,19 @@ export const useGmailStore = defineStore('gmail', () => {
 
   function handleError(message: string, err: unknown) {
     if (err && typeof err === 'object' && 'response' in err) {
-      error.value = apiFailureMessage(extractApiFailure(err), message)
+      const failure = extractApiFailure(err)
+      error.value = apiFailureMessage(failure, message)
+      errorRequestId.value = failure.requestId
+      logger.error(message, {
+        status: failure.status,
+        code: failure.code,
+        requestId: failure.requestId,
+      })
     } else {
       error.value = message
+      errorRequestId.value = null
+      logger.error(message)
     }
-    logger.error(message, err)
   }
 
   return {
@@ -127,8 +144,10 @@ export const useGmailStore = defineStore('gmail', () => {
     loading,
     connecting,
     syncing,
+    disconnecting,
     actionIds,
     error,
+    errorRequestId,
     initialise,
     connect,
     disconnect,

@@ -117,9 +117,10 @@ async function sync() {
               <button
                 type="button"
                 class="min-h-11 rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-600 hover:border-red-200 hover:text-red-600"
-                @click="store.disconnect"
+                :disabled="store.disconnecting"
+                @click="store.disconnect()"
               >
-                Disconnect
+                {{ store.disconnecting ? 'Disconnecting…' : 'Disconnect' }}
               </button>
             </template>
           </div>

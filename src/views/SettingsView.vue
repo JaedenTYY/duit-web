@@ -113,6 +113,19 @@ async function handleLogout() {
       </div>
     </section>
 
+    <RouterLink
+      to="/settings/privacy"
+      class="block rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm transition hover:border-emerald-300 sm:p-6"
+    >
+      <h2 class="text-lg font-black text-slate-950">
+        Privacy and data
+      </h2>
+      <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+        Download your data, manage Gmail retention, or delete your account.
+      </p>
+      <span class="mt-4 inline-flex text-sm font-black text-emerald-800">Open privacy settings →</span>
+    </RouterLink>
+
     <section class="rounded-[2rem] border border-rose-100 bg-rose-50 p-5 shadow-sm">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

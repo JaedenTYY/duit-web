@@ -91,6 +91,11 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue')
     },
     {
+      path: '/settings/privacy',
+      name: 'privacy-settings',
+      component: () => import('../views/PrivacySettingsView.vue')
+    },
+    {
       path: '/guest/bills/:shareToken',
       name: 'guest-bill-split',
       component: () => import('../views/GuestBillSplitView.vue'),
