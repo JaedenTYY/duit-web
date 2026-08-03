@@ -186,6 +186,31 @@ describe('API authentication failure handling', () => {
     expect(store.token).toBe('successor-access')
   })
 
+  it.each([
+    ['/privacy/export', { currentPassword: 'password' }],
+    ['/privacy/delete-account', { currentPassword: 'password', confirmationPhrase: 'DELETE MY ACCOUNT' }],
+    ['/gmail/disconnect', { deleteExtractions: true }],
+  ])('never refreshes or replays non-replayable privacy request %s', async (path, body) => {
+    const store = useAuthStore()
+    store.setSession('expired-access', USER, '2026-07-27T01:00:00.000Z')
+    let attempts = 0
+
+    await expect(
+      api.request({
+        url: path,
+        method: path === '/gmail/disconnect' ? 'DELETE' : 'POST',
+        data: body,
+        adapter: async (config) => {
+          attempts += 1
+          return Promise.reject(controlledUnauthorized(config))
+        },
+      })
+    ).rejects.toBeTruthy()
+
+    expect(attempts).toBe(1)
+    expect(coordinatorMock.refreshSessionSingleFlight).not.toHaveBeenCalled()
+  })
+
   it('does not refresh public guest requests', async () => {
     await expect(
       api.get('/guest/bills/opaque-share-token', {

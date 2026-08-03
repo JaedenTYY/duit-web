@@ -59,6 +59,25 @@ describe('authenticationGuard', () => {
     })
     expect(store.isAuthenticated).toBe(false)
   })
+
+  it('protects privacy settings while allowing a valid in-memory session', async () => {
+    const anonymousNext = vi.fn()
+    await authenticationGuard(
+      route('/settings/privacy', 'privacy-settings', {}),
+      route('/', 'landing', { hideNav: true }),
+      anonymousNext
+    )
+    expect(anonymousNext).toHaveBeenCalledWith({ name: 'landing' })
+
+    useAuthStore().setSession('access-token', USER, '2026-07-27T00:15:00.000Z')
+    const authenticatedNext = vi.fn()
+    await authenticationGuard(
+      route('/settings/privacy', 'privacy-settings', {}),
+      route('/settings', 'settings', {}),
+      authenticatedNext
+    )
+    expect(authenticatedNext).toHaveBeenCalledWith()
+  })
 })
 
 function route(
