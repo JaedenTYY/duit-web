@@ -32,6 +32,7 @@ describe('session refresh coordination', () => {
     vi.stubGlobal('localStorage', createMemoryStorage())
     vi.stubGlobal('sessionStorage', createMemoryStorage())
     vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel)
+    vi.stubGlobal('location', { replace: vi.fn() })
     vi.stubGlobal('navigator', {
       locks: {
         request: (_name: string, callback: () => Promise<AuthResponse>) => callback(),
@@ -135,6 +136,66 @@ describe('session refresh coordination', () => {
     expect(store.token).toBeNull()
     expect(store.sessionExpired).toBe(true)
     expect(transportMock.clearCsrfToken).toHaveBeenCalled()
+  })
+
+  it('broadcasts account deletion without password token or request data', async () => {
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+    store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
+
+    coordinator.propagateAccountDeletion()
+
+    expect(store.token).toBeNull()
+    expect(transportMock.clearCsrfToken).toHaveBeenCalled()
+    const message = FakeBroadcastChannel.messages.at(-1)
+    expect(message).toEqual(expect.objectContaining({ type: 'anonymous', reason: 'deleted' }))
+    expect(JSON.stringify(message)).not.toContain(SESSION.token)
+    expect(JSON.stringify(message)).not.toContain('password')
+  })
+
+  it('does not let a stale tab restore a deleted account from session messages', async () => {
+    await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+    store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
+
+    FakeBroadcastChannel.emitExternal({
+      type: 'anonymous',
+      tabId: 'deleting-tab',
+      reason: 'deleted',
+    })
+    FakeBroadcastChannel.emitExternal({
+      type: 'session',
+      tabId: 'stale-refresh-tab',
+      session: SESSION,
+    })
+
+    expect(store.token).toBeNull()
+    expect(transportMock.clearCsrfToken).toHaveBeenCalled()
+    expect(location.replace).toHaveBeenCalledWith('/')
+  })
+
+  it('discards a refresh response that completes after account deletion', async () => {
+    let resolveRefresh!: (session: AuthResponse) => void
+    transportMock.refreshAccessToken.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRefresh = resolve
+      })
+    )
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const refresh = coordinator.refreshSessionSingleFlight()
+
+    FakeBroadcastChannel.emitExternal({
+      type: 'anonymous',
+      tabId: 'deleting-tab',
+      reason: 'deleted',
+    })
+    resolveRefresh(SESSION)
+
+    await expect(refresh).rejects.toThrow('Session changed while refresh was in progress')
+    expect(useAuthStore().token).toBeNull()
   })
 })
 

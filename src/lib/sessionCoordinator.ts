@@ -10,7 +10,7 @@ type SessionMessage =
   | { type: 'refresh-intent'; tabId: string }
   | { type: 'refresh-start'; tabId: string }
   | { type: 'session'; tabId: string; session: AuthResponse }
-  | { type: 'anonymous'; tabId: string; reason: 'logout' | 'revoked' | 'refresh-failed' }
+  | { type: 'anonymous'; tabId: string; reason: 'logout' | 'revoked' | 'refresh-failed' | 'deleted' }
 
 const CHANNEL_NAME = 'duit-auth-session'
 const REFRESH_LOCK_NAME = 'duit-auth-refresh'
@@ -24,6 +24,8 @@ const candidates = new Set<string>()
 
 let refreshPromise: Promise<AuthResponse> | null = null
 let bootstrapPromise: Promise<void> | null = null
+let sessionLifecycleVersion = 0
+let accountDeletionObserved = false
 let remoteRefresh: {
   promise: Promise<AuthResponse>
   resolve: (session: AuthResponse) => void
@@ -39,14 +41,21 @@ channel?.addEventListener('message', (event: MessageEvent<SessionMessage>) => {
   } else if (message.type === 'refresh-start') {
     ensureRemoteRefresh()
   } else if (message.type === 'session') {
+    if (accountDeletionObserved) return
     store.setSession(message.session.token, message.session.user, message.session.expiresAt)
     remoteRefresh?.resolve(message.session)
     remoteRefresh = null
   } else if (message.type === 'anonymous') {
+    const accountDeleted = message.reason === 'deleted'
+    if (accountDeleted) {
+      accountDeletionObserved = true
+      sessionLifecycleVersion += 1
+    }
     clearCsrfToken()
     store.finishAnonymous(message.reason === 'logout' ? 'manual' : 'revoked')
     remoteRefresh?.reject(new Error('Refresh session is unavailable'))
     remoteRefresh = null
+    if (accountDeleted) redirectToPublicEntry()
   }
 })
 
@@ -74,6 +83,8 @@ export async function ensureSessionBootstrapped(): Promise<void> {
 }
 
 export function establishSession(session: AuthResponse): void {
+  accountDeletionObserved = false
+  sessionLifecycleVersion += 1
   applySession(session, true)
 }
 
@@ -100,6 +111,19 @@ export function propagateRevocation(): void {
   clearCsrfToken()
   useAuthStore().finishAnonymous('revoked')
   channel?.postMessage({ type: 'anonymous', tabId, reason: 'revoked' } satisfies SessionMessage)
+}
+
+export function propagateAccountDeletion(): void {
+  accountDeletionObserved = true
+  sessionLifecycleVersion += 1
+  clearCsrfToken()
+  useAuthStore().finishAnonymous('revoked')
+  channel?.postMessage({ type: 'anonymous', tabId, reason: 'deleted' } satisfies SessionMessage)
+}
+
+export function completeAccountDeletion(): void {
+  propagateAccountDeletion()
+  redirectToPublicEntry()
 }
 
 export function closeSessionCoordination(): void {
@@ -144,9 +168,16 @@ async function electAndRefresh(): Promise<AuthResponse> {
 }
 
 async function performRefresh(): Promise<AuthResponse> {
+  if (accountDeletionObserved) {
+    throw new Error('Account deletion was observed')
+  }
+  const lifecycleVersion = sessionLifecycleVersion
   channel?.postMessage({ type: 'refresh-start', tabId } satisfies SessionMessage)
   try {
     const session = await refreshAccessToken(crypto.randomUUID())
+    if (accountDeletionObserved || lifecycleVersion !== sessionLifecycleVersion) {
+      throw new Error('Session changed while refresh was in progress')
+    }
     applySession(session, true)
     return session
   } catch (error) {
@@ -204,4 +235,8 @@ async function withTimeout(promise: Promise<AuthResponse>): Promise<AuthResponse
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
+}
+
+function redirectToPublicEntry(): void {
+  location.replace('/')
 }

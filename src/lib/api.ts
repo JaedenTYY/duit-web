@@ -116,6 +116,8 @@ function isRefreshExcluded(path: string): boolean {
     '/auth/refresh',
     '/auth/logout',
     '/auth/csrf',
+    '/privacy/',
+    '/gmail/disconnect',
     '/actuator/health',
     '/guest/bills/',
   ].some((excluded) => path === excluded || path.startsWith(excluded))

@@ -55,6 +55,11 @@ export async function revokeRefreshSession(): Promise<void> {
   clearCsrfToken()
 }
 
+export async function csrfRequestHeaders(): Promise<Record<string, string>> {
+  const token = await ensureCsrfToken()
+  return { [csrfHeaderName]: token }
+}
+
 export function clearCsrfToken(): void {
   csrfToken = null
   csrfHeaderName = 'X-XSRF-TOKEN'
