@@ -1,28 +1,13 @@
+import { CURRENCY_CATALOGUE, isSupportedCurrency, roundDecimalForDisplay } from './financialDecimal'
+
 export function formatCurrency(amount: string, currency: string): string {
-  const value = parseFloat(amount)
-  
-  const locales: Record<string, string> = {
-    MYR: 'ms-MY',
-    SGD: 'en-SG',
-    IDR: 'id-ID',
-    USD: 'en-US',
-  }
-
-  const currencySymbols: Record<string, string> = {
-    MYR: 'RM',
-    SGD: 'S$',
-    IDR: 'Rp',
-    USD: 'US$',
-  }
-
-  const formatter = new Intl.NumberFormat(locales[currency] || 'en-US', {
-    style: 'decimal',
-    minimumFractionDigits: currency === 'IDR' ? 0 : 2,
-    maximumFractionDigits: currency === 'IDR' ? 0 : 2,
-  })
-
-  const formattedValue = formatter.format(value)
-  const symbol = currencySymbols[currency] || currency
-
-  return `${symbol} ${formattedValue}`
+  if (!isSupportedCurrency(currency)) return `${currency} ${amount}`
+  const policy = CURRENCY_CATALOGUE[currency]
+  const rounded = roundDecimalForDisplay(amount, policy.displayScale)
+  const negative = rounded.startsWith('-')
+  const unsigned = negative ? rounded.slice(1) : rounded
+  const [integer, fraction] = unsigned.split('.')
+  const groupedInteger = BigInt(integer).toLocaleString(policy.locale)
+  const formatted = fraction === undefined ? groupedInteger : `${groupedInteger}.${fraction}`
+  return `${negative ? '-' : ''}${policy.symbol} ${formatted}`
 }

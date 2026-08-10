@@ -5,12 +5,12 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateTransactionRequestCurrency } from './updateTransactionRequestCurrency.ts';
 
 export interface UpdateTransactionRequest {
-  /** @minimum 0.0001 */
-  amount?: number;
-  /** @pattern ^(MYR|SGD|IDR|USD|THB)$ */
-  currency?: string;
+  /** Positive plain decimal string with maximum scale 4. */
+  amount?: string;
+  currency?: UpdateTransactionRequestCurrency;
   categoryId?: string;
   /**
      * @minLength 0
@@ -18,6 +18,7 @@ export interface UpdateTransactionRequest {
      */
   description?: string;
   occurredAt?: string;
-  fxRate?: number;
+  /** Positive plain decimal string with maximum scale 6. */
+  fxRate?: string;
   rememberMerchantCategory: boolean;
 }

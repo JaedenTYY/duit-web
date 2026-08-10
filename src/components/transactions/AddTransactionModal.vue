@@ -5,6 +5,8 @@ import type { Transaction, CategorisationResult } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import CategorySuggestion from './CategorySuggestion.vue'
+import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
+import { instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -17,18 +19,19 @@ const props = defineProps<{
 const store = useTransactionStore()
 
 const isEditing = computed(() => Boolean(props.transaction))
-const amount = ref<number | null>(props.transaction ? Number(props.transaction.amount) : null)
+const amount = ref(props.transaction?.amount ?? '')
 const currency = ref(props.transaction?.currency ?? 'MYR')
-const fxRate = ref<number>(props.transaction ? Number(props.transaction.fxRate) : 1)
+const fxRate = ref(props.transaction?.fxRate ?? '1.000000')
 const merchantName = ref(props.transaction?.merchantName ?? '')
 const categoryId = ref(props.transaction?.categoryId ?? '')
 const description = ref(props.transaction?.description ?? '')
 const rememberMerchantCategory = ref(false)
 const categorisationStatus = ref('')
+const financialError = ref('')
 const occurredAt = ref(
   props.transaction
-    ? new Date(props.transaction.occurredAt).toISOString().slice(0, 16)
-    : new Date().toISOString().slice(0, 16)
+    ? instantToLocalDateTimeInput(props.transaction.occurredAt)
+    : instantToLocalDateTimeInput(new Date().toISOString())
 )
 
 const showFxRate = computed(() => currency.value !== 'MYR')
@@ -70,6 +73,14 @@ watch([merchantName, categoryId], () => {
   }
 })
 
+watch(currency, (next, previous) => {
+  if (next === 'MYR') {
+    fxRate.value = '1.000000'
+  } else if (next !== previous) {
+    fxRate.value = ''
+  }
+})
+
 onMounted(() => {
   store.fetchCategories()
   if (merchantName.value) {
@@ -89,16 +100,19 @@ async function forgetPreference(merchantId: string) {
 }
 
 async function handleSubmit() {
-  if (amount.value === null) return
+  const amountError = validateAmountInput(amount.value)
+  const rateError = showFxRate.value ? validateFxRateInput(fxRate.value) : null
+  financialError.value = amountError ?? rateError ?? ''
+  if (financialError.value) return
 
   try {
     const sharedPayload = {
-      amount: amount.value,
+      amount: normalizeDecimalInput(amount.value),
       currency: currency.value,
       categoryId: categoryId.value || undefined,
       description: description.value || undefined,
-      occurredAt: new Date(occurredAt.value).toISOString(),
-      fxRate: showFxRate.value ? fxRate.value : undefined,
+      occurredAt: localDateTimeInputToInstant(occurredAt.value),
+      fxRate: showFxRate.value ? normalizeDecimalInput(fxRate.value) : undefined,
       rememberMerchantCategory: rememberMerchantCategory.value,
     }
 
@@ -158,6 +172,13 @@ async function handleSubmit() {
         class="space-y-8"
         @submit.prevent="handleSubmit"
       >
+        <p
+          v-if="financialError"
+          role="alert"
+          class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+        >
+          {{ financialError }}
+        </p>
         <!-- Value & Unit -->
         <div class="grid grid-cols-3 gap-5">
           <div class="col-span-2 space-y-2">
@@ -165,8 +186,9 @@ async function handleSubmit() {
             <input 
               v-model="amount" 
               name="amount"
-              type="number" 
-              step="0.01" 
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
               required
               placeholder="0.00"
               class="premium-input text-2xl py-5"
@@ -206,8 +228,9 @@ async function handleSubmit() {
           <label class="premium-label text-blue-400 uppercase tracking-widest text-[10px]">Exchange Multiplier (1 {{ currency }} to MYR)</label>
           <input
             v-model="fxRate"
-            type="number"
-            step="0.0001"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
             required
             class="premium-input border-blue-500/20 bg-blue-500/5"
           >

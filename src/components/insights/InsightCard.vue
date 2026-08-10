@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Insight, InsightFinding } from '@/types'
+import { formatCurrency } from '@/utils/currency'
+import { formatCalendarDate } from '@/utils/localDateTime'
 
 defineProps<{
   insight: Insight
@@ -25,15 +27,12 @@ function getDirectionIcon(direction: InsightFinding['direction']) {
 }
 
 function formatMoney(amount: string, currency: string) {
-  return new Intl.NumberFormat('en-MY', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(Number(amount))
+  return formatCurrency(amount, currency)
 }
 
-function comparisonLabel(percentage: number, direction: Insight['content']['spendingTrend']['direction']) {
-  if (direction === 'NEW') return 'New baseline'
+function comparisonLabel(percentage: number | null, direction: Insight['content']['spendingTrend']['direction']) {
+  if (direction === 'NEW') return 'New spending'
+  if (percentage === null) return 'No comparable baseline'
   if (percentage === 0) return 'No change'
   return `${Math.abs(percentage).toFixed(1)}% ${percentage > 0 ? 'higher' : 'lower'}`
 }
@@ -50,7 +49,7 @@ function recommendations(insight: Insight) {
     <div class="flex items-start justify-between mb-6">
       <div>
         <span class="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2 block">
-          {{ new Date(insight.periodStart).toLocaleDateString() }} - {{ new Date(insight.periodEnd).toLocaleDateString() }}
+          {{ formatCalendarDate(insight.periodStart) }} - {{ formatCalendarDate(insight.periodEnd) }}
         </span>
         <h2 class="text-2xl font-bold text-slate-900 tracking-tight">
           {{ insight.content.headline }}

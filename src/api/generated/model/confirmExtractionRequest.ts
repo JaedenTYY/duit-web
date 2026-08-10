@@ -5,16 +5,22 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
+import type { ConfirmExtractionRequestCurrency } from './confirmExtractionRequestCurrency.ts';
 
 export interface ConfirmExtractionRequest {
   extractionId: string;
-  amount: number;
+  /**
+     * User-confirmed positive receipt total as a plain decimal string; maximum scale 4.
+     * @minLength 1
+     */
+  amount: string;
   /** @minLength 1 */
-  currency: string;
+  currency: ConfirmExtractionRequestCurrency;
   categoryId?: string;
   description?: string;
   occurredAt: string;
-  fxRate?: number;
+  /** Positive plain decimal string in MYR per source-currency unit; maximum scale 6. */
+  fxRate?: string;
   /**
      * @minLength 0
      * @maxLength 255

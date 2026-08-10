@@ -58,6 +58,25 @@ test('privacy export, Gmail disconnect, account deletion, and guest access lifec
         }),
       })
     }
+    if (path === '/categories') return route.fulfill(ok([]))
+    if (path === '/transactions') {
+      return route.fulfill(ok({
+        transactions: [],
+        nextCursor: null,
+        nextCursorId: null,
+        hasMore: false,
+      }))
+    }
+    if (path === '/transactions/summary/monthly') {
+      return route.fulfill(ok({
+        totalSpend: '0.0000',
+        transactionCount: 0,
+        byCategory: [],
+      }))
+    }
+    if (path === '/anomalies' || path === '/insights' || path.startsWith('/payment-qr-profiles')) {
+      return route.fulfill(ok([]))
+    }
     if (path === '/gmail/status') {
       return route.fulfill(ok({
         connected: gmailConnected,

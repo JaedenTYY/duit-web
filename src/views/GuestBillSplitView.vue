@@ -11,6 +11,7 @@ import LoadingSkeleton from '@/components/bill/LoadingSkeleton.vue'
 import PaymentQrCard from '@/components/bill/PaymentQrCard.vue'
 import SplitTotalBar from '@/components/bill/SplitTotalBar.vue'
 import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import { addDecimalStrings } from '@/utils/financialDecimal'
 
 const route = useRoute()
 const billStore = useBillStore()
@@ -21,10 +22,9 @@ const selectedItemIds = ref<Set<string>>(new Set())
 const shareToken = computed(() => String(route.params.shareToken))
 const selectedSubtotal = computed(() => {
   if (!guestBill.value) return '0.00'
-  const total = guestBill.value.items
+  return addDecimalStrings(guestBill.value.items
     .filter(item => selectedItemIds.value.has(item.id))
-    .reduce((sum, item) => sum + Number(item.lineTotal), 0)
-  return total.toFixed(2)
+    .map(item => item.lineTotal))
 })
 
 const totalBarValues = computed(() => ({

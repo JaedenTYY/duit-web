@@ -29,11 +29,11 @@ const extraction = {
     date: '2026-07-25T10:00:00Z',
     currency: 'MYR',
     lineItems: [],
-    subtotal: 12.5,
+    subtotal: '12.5000',
     serviceCharge: null,
-    tax: 0,
+    tax: '0.0000',
     discountAmount: null,
-    total: 12.5,
+    total: '12.5000',
     paymentMethod: 'card',
     confidence: 'high',
     fieldsNeedingReview: [],
@@ -76,10 +76,56 @@ describe('ReceiptReviewStep', () => {
 
     expect(wrapper.emitted('confirm')?.[1]?.[0]).toMatchObject({
       extractionId: 'receipt-1',
+      amount: '12.5000',
       categoryId: 'food',
       merchantName: 'Coffee House',
       rememberMerchantCategory: true,
     })
+  })
+
+  it('preserves exact receipt money and Instant in the confirmation payload', async () => {
+    const wrapper = mount(ReceiptReviewStep, { props: { extraction, categories } })
+    await wrapper.findAll('select')[1].setValue('food')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('confirm')?.[0]?.[0]).toMatchObject({
+      amount: '12.5000',
+      occurredAt: '2026-07-25T10:00:00.000Z',
+      fxRate: undefined,
+    })
+  })
+
+  it('does not emit confirmation for exponent comma zero or excess precision input', async () => {
+    const wrapper = mount(ReceiptReviewStep, { props: { extraction, categories } })
+    await wrapper.findAll('select')[1].setValue('food')
+    const amount = wrapper.get('input[inputmode="decimal"]')
+
+    for (const invalid of ['1e2', '1,000', '0', '-1', '1.00000', '100000000']) {
+      await amount.setValue(invalid)
+      await wrapper.get('form').trigger('submit')
+    }
+
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Amount')
+  })
+
+  it('requires an explicit rate for an extracted foreign-currency receipt', async () => {
+    const wrapper = mount(ReceiptReviewStep, {
+      props: {
+        extraction: {
+          ...extraction,
+          extractedData: { ...extraction.extractedData, currency: 'SGD' },
+        },
+        categories,
+      },
+    })
+
+    const decimalInputs = wrapper.findAll('input[inputmode="decimal"]')
+    expect((decimalInputs[1].element as HTMLInputElement).value).toBe('')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Exchange rate')
   })
 
   it('resets the remember choice when merchant or category becomes unavailable', async () => {

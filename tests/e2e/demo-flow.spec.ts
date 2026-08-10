@@ -99,7 +99,7 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
               categoryColor: '#2563eb',
               total: '18.4000',
               count: 1,
-              percentage: 100,
+              percentage: '100.0',
             },
           ],
         }));

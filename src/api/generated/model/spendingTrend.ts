@@ -11,5 +11,6 @@ export interface SpendingTrend {
   direction: SpendingTrendDirection;
   currentTotal: string;
   previousTotal: string;
-  changePercentage: number;
+  /** @nullable */
+  changePercentage: number | null;
 }
