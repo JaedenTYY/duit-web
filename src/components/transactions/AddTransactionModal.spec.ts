@@ -45,10 +45,71 @@ describe('AddTransactionModal', () => {
     await wrapper.get('form').trigger('submit')
 
     expect(store.createTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      amount: '12.50',
       merchantName: 'Coffee House',
       categoryId: 'food',
       rememberMerchantCategory: true,
     }))
+  })
+
+  it('preserves exact strings during editing and submission', async () => {
+    const wrapper = mount(AddTransactionModal, {
+      props: {
+        transaction: {
+          id: 'transaction-1', userId: 'user-1', amount: '12.5000', currency: 'SGD',
+          amountMyr: '40.0000', fxRate: '3.200000', merchantId: null,
+          merchantName: null, categoryId: 'food', categoryName: 'Food & Dining',
+          categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
+          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+        },
+      },
+    })
+
+    expect((wrapper.get('input[name="amount"]').element as HTMLInputElement).value).toBe('12.5000')
+    const decimalInputs = wrapper.findAll('input[inputmode="decimal"]')
+    expect((decimalInputs[1].element as HTMLInputElement).value).toBe('3.200000')
+    await wrapper.get('form').trigger('submit')
+
+    expect(store.updateTransaction).toHaveBeenCalledWith('transaction-1', expect.objectContaining({
+      amount: '12.5000',
+      fxRate: '3.200000',
+      occurredAt: '2026-07-01T00:00:00.000Z',
+    }))
+  })
+
+  it('requires re-entry of a foreign rate after any currency round trip', async () => {
+    const wrapper = mount(AddTransactionModal, {
+      props: {
+        transaction: {
+          id: 'transaction-1', userId: 'user-1', amount: '12.5000', currency: 'SGD',
+          amountMyr: '40.0000', fxRate: '3.200000', merchantId: null,
+          merchantName: null, categoryId: 'food', categoryName: 'Food & Dining',
+          categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
+          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+        },
+      },
+    })
+
+    const currencySelect = wrapper.findAll('select')[0]
+    await currencySelect.setValue('MYR')
+    await currencySelect.setValue('SGD')
+
+    const decimalInputs = wrapper.findAll('input[inputmode="decimal"]')
+    expect((decimalInputs[1].element as HTMLInputElement).value).toBe('')
+    await wrapper.get('form').trigger('submit')
+    expect(store.updateTransaction).not.toHaveBeenCalled()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Exchange rate')
+  })
+
+  it('rejects invalid exact-decimal input without submitting', async () => {
+    const wrapper = mount(AddTransactionModal)
+    const input = wrapper.get('input[name="amount"]')
+    for (const invalid of ['', '0', '-1', '1e2', '1,000', '1.00000', '100000000']) {
+      await input.setValue(invalid)
+      await wrapper.get('form').trigger('submit')
+    }
+    expect(store.createTransaction).not.toHaveBeenCalled()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Amount')
   })
 
   it('does not send merchantName during an edit and only offers remember after a category change', async () => {

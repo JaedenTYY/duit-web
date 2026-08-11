@@ -60,7 +60,7 @@ export interface InsightContent {
   summary: string
   totalSpent: string
   currency: string
-  comparisonPercentage: number
+  comparisonPercentage: number | null
   topCategories: InsightCategory[]
   topMerchants: InsightMerchant[]
   largestTransactions: InsightTransactionSummary[]
@@ -111,7 +111,7 @@ export interface InsightSpendingTrend {
   direction: 'UP' | 'DOWN' | 'STABLE' | 'NEW'
   currentTotal: string
   previousTotal: string
-  changePercentage: number
+  changePercentage: number | null
 }
 
 export interface InsightBillSplitSettlement {
@@ -243,12 +243,13 @@ export interface CategorySummary {
   categoryColor: string | null
   total: string
   count: number
-  percentage: number
+  percentage: string
 }
 
 export interface ReceiptLineItem {
-  qty: number
-  unitPrice: number
+  qty: string
+  unitPrice: string
+  lineTotal: string
   name: string
 }
 
@@ -258,11 +259,11 @@ export interface ParsedReceipt {
   date: string | null
   currency: string
   lineItems: ReceiptLineItem[]
-  subtotal: number | null
-  serviceCharge: number | null
-  tax: number | null
-  discountAmount: number | null
-  total: number
+  subtotal: string | null
+  serviceCharge: string | null
+  tax: string | null
+  discountAmount: string | null
+  total: string
   paymentMethod: string
   confidence: 'high' | 'medium' | 'low'
   fieldsNeedingReview: string[]

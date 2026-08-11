@@ -5,15 +5,16 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateTransactionRequestCurrency } from './createTransactionRequestCurrency.ts';
 
 export interface CreateTransactionRequest {
-  /** @minimum 0.0001 */
-  amount: number;
   /**
+     * Positive plain decimal string. Surrounding whitespace is normalized; maximum scale 4 and maximum 99999999.9999.
      * @minLength 1
-     * @pattern ^(MYR|SGD|IDR|USD|THB)$
      */
-  currency: string;
+  amount: string;
+  /** @minLength 1 */
+  currency: CreateTransactionRequestCurrency;
   categoryId?: string;
   /**
      * @minLength 0
@@ -21,7 +22,8 @@ export interface CreateTransactionRequest {
      */
   description?: string;
   occurredAt: string;
-  fxRate?: number;
+  /** Positive plain decimal string in MYR per source-currency unit; maximum scale 6 and maximum 9999.999999. */
+  fxRate?: string;
   /**
      * @minLength 0
      * @maxLength 255

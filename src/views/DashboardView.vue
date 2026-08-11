@@ -10,14 +10,15 @@ import ErrorBanner from '@/components/shared/ErrorBanner.vue'
 import HabitSummaryCard from '@/components/shared/HabitSummaryCard.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
+import { toPresentationNumber } from '@/utils/financialDecimal'
+import { currentReportingYearMonth } from '@/utils/localDateTime'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 const store = useTransactionStore()
 
 const now = new Date()
-const month = now.getMonth() + 1
-const year = now.getFullYear()
+const { month, year } = currentReportingYearMonth(now)
 
 onMounted(async () => {
   await Promise.all([
@@ -51,7 +52,7 @@ const chartData = computed(() => {
     datasets: [
       {
         backgroundColor: categoriesToShow.value.map(category => category.categoryColor || '#10b981'),
-        data: categoriesToShow.value.map(category => parseFloat(category.total)),
+        data: categoriesToShow.value.map(category => toPresentationNumber(category.total)),
         borderWidth: 0,
         hoverOffset: 8,
         borderRadius: 6
@@ -239,7 +240,7 @@ const chartOptions = {
                       {{ category.categoryName }}
                     </p>
                     <p class="text-xs font-semibold text-slate-500">
-                      {{ category.percentage.toFixed(1) }}%
+                      {{ toPresentationNumber(category.percentage).toFixed(1) }}%
                     </p>
                   </div>
                 </div>

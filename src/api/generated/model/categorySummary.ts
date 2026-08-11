@@ -13,5 +13,5 @@ export interface CategorySummary {
   categoryColor?: string;
   total: string;
   count: number;
-  percentage: number;
+  percentage: string;
 }

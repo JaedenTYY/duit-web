@@ -6,8 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LineItem {
+export interface LineItemResponse {
   name: string;
-  qty: number;
-  unitPrice: number;
+  qty: string;
+  unitPrice: string;
+  lineTotal: string;
 }

@@ -7,6 +7,7 @@ import ErrorBanner from '@/components/shared/ErrorBanner.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
 import type { EmailExtraction } from '@/types'
+import { formatCurrency } from '@/utils/currency'
 
 const store = useGmailStore()
 const transactionStore = useTransactionStore()
@@ -20,10 +21,7 @@ onMounted(async () => {
 })
 
 function money(extraction: EmailExtraction) {
-  return new Intl.NumberFormat('en-MY', {
-    style: 'currency',
-    currency: extraction.currency,
-  }).format(Number(extraction.amount))
+  return formatCurrency(extraction.amount, extraction.currency)
 }
 
 async function sync() {

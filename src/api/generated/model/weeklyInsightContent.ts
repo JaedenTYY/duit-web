@@ -19,7 +19,8 @@ export interface WeeklyInsightContent {
   summary: string;
   totalSpent: string;
   currency: string;
-  comparisonPercentage: number;
+  /** @nullable */
+  comparisonPercentage: number | null;
   topCategories: InsightCategory[];
   topMerchants: InsightMerchant[];
   largestTransactions: InsightTransaction[];

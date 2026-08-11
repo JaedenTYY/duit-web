@@ -7,6 +7,8 @@ import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
 import { logger } from '@/utils/logger'
 import CategorySuggestion from '../transactions/CategorySuggestion.vue'
+import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
+import { dateOnlyToLocalDateTimeInput, instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
 
 const props = defineProps<{
   extraction: ReceiptExtractionResponse
@@ -20,17 +22,20 @@ const emit = defineEmits<{
 
 const formContainer = ref<HTMLElement | null>(null)
 
-const amount = ref(props.extraction.extractedData.total.toString())
+const amount = ref(props.extraction.extractedData.total)
 const currency = ref(props.extraction.extractedData.currency)
 const merchantName = ref(props.extraction.extractedData.merchantName ?? '')
 const description = ref(props.extraction.extractedData.merchantName ?? '')
 const categoryId = ref('')
 const rememberMerchantCategory = ref(false)
-const fxRate = ref(1)
+const fxRate = ref(currency.value === 'MYR' ? '1.000000' : '')
+const financialError = ref('')
 const occurredAt = ref(
   props.extraction.extractedData.date
-    ? new Date(props.extraction.extractedData.date).toISOString().slice(0, 16)
-    : new Date().toISOString().slice(0, 16)
+    ? props.extraction.extractedData.date.includes('T')
+      ? instantToLocalDateTimeInput(props.extraction.extractedData.date)
+      : dateOnlyToLocalDateTimeInput(props.extraction.extractedData.date)
+    : instantToLocalDateTimeInput(new Date().toISOString())
 )
 
 const showFxRate = computed(() => currency.value !== 'MYR')
@@ -87,6 +92,14 @@ watch(canRememberMerchantCategory, (canRemember) => {
   }
 })
 
+watch(currency, (next, previous) => {
+  if (next === 'MYR') {
+    fxRate.value = '1.000000'
+  } else if (next !== previous) {
+    fxRate.value = ''
+  }
+})
+
 onMounted(() => {
   if (formContainer.value) {
     gsap.from(formContainer.value, {
@@ -103,21 +116,21 @@ onMounted(() => {
 })
 
 function handleConfirm() {
+  const amountError = validateAmountInput(amount.value)
+  const rateError = showFxRate.value ? validateFxRateInput(fxRate.value) : null
+  financialError.value = amountError ?? rateError ?? ''
+  if (financialError.value) return
   emit('confirm', {
     extractionId: props.extraction.extractionId,
-    amount: parseFloat(amount.value),
+    amount: normalizeDecimalInput(amount.value),
     currency: currency.value,
     merchantName: merchantName.value || undefined,
     categoryId: categoryId.value || undefined,
     description: description.value || undefined,
-    occurredAt: new Date(occurredAt.value).toISOString(),
-    fxRate: showFxRate.value ? fxRate.value : undefined,
+    occurredAt: localDateTimeInputToInstant(occurredAt.value),
+    fxRate: showFxRate.value ? normalizeDecimalInput(fxRate.value) : undefined,
     rememberMerchantCategory: rememberMerchantCategory.value,
   })
-}
-
-function lineTotal(item: { qty: number; unitPrice: number }) {
-  return Number(item.qty) * Number(item.unitPrice)
 }
 
 function formatReviewField(field: string) {
@@ -188,10 +201,10 @@ function formatReviewField(field: string) {
               {{ item.name }}
             </p>
             <p class="text-xs font-medium text-slate-500">
-              {{ item.qty }} x {{ formatCurrency(item.unitPrice.toString(), currency) }}
+              {{ item.qty }} x {{ formatCurrency(item.unitPrice, currency) }}
             </p>
           </div>
-          <span class="shrink-0 text-sm font-black tabular-nums text-slate-950">{{ formatCurrency(lineTotal(item).toString(), currency) }}</span>
+          <span class="shrink-0 text-sm font-black tabular-nums text-slate-950">{{ formatCurrency(item.lineTotal, currency) }}</span>
         </div>
       </div>
     </div>
@@ -200,13 +213,21 @@ function formatReviewField(field: string) {
       class="space-y-4"
       @submit.prevent="handleConfirm"
     >
+      <p
+        v-if="financialError"
+        role="alert"
+        class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+      >
+        {{ financialError }}
+      </p>
       <div class="grid grid-cols-[1fr_6rem] gap-3">
         <div>
           <label class="receipt-label">Amount</label>
           <input
             v-model="amount"
-            type="number"
-            step="0.01"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
             required
             class="receipt-input"
           >
@@ -230,8 +251,9 @@ function formatReviewField(field: string) {
         <label class="receipt-label">Exchange Rate (to MYR)</label>
         <input
           v-model="fxRate"
-          type="number"
-          step="0.0001"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
           required
           class="receipt-input"
         >

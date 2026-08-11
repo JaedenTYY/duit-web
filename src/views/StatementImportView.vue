@@ -5,6 +5,8 @@ import { useTransactionStore } from '@/stores/transaction'
 import ErrorBanner from '@/components/shared/ErrorBanner.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
 import type { StatementRow } from '@/types'
+import { addDecimalStrings } from '@/utils/financialDecimal'
+import { formatCurrency } from '@/utils/currency'
 
 const store = useStatementStore()
 const transactionStore = useTransactionStore()
@@ -19,7 +21,7 @@ watch(
   (upload) => {
     selectedIds.value = new Set(
       upload?.rows
-        .filter((row) => row.status === 'pending' && row.direction === 'debit')
+        .filter(isImportableExpense)
         .map((row) => row.id) ?? [],
     )
     for (const row of upload?.rows ?? []) {
@@ -29,11 +31,13 @@ watch(
 )
 
 const pendingRows = computed(() => store.upload?.rows.filter((row) => row.status === 'pending') ?? [])
-const selectedTotal = computed(() =>
-  pendingRows.value
-    .filter((row) => selectedIds.value.has(row.id) && row.direction === 'debit')
-    .reduce((total, row) => total + Number(row.amount), 0),
-)
+const selectedTotal = computed(() => addDecimalStrings(
+  pendingRows.value.filter(row => selectedIds.value.has(row.id)).map(row => row.amount),
+))
+
+function isImportableExpense(row: StatementRow) {
+  return row.status === 'pending' && row.direction === 'debit' && row.currency === 'MYR'
+}
 
 async function handleFile(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -46,15 +50,16 @@ async function handleFile(event: Event) {
   }
 }
 
-function toggle(rowId: string) {
+function toggle(row: StatementRow) {
+  if (!isImportableExpense(row)) return
   const next = new Set(selectedIds.value)
-  next.has(rowId) ? next.delete(rowId) : next.add(rowId)
+  next.has(row.id) ? next.delete(row.id) : next.add(row.id)
   selectedIds.value = next
 }
 
 async function confirmImport() {
   const rows = pendingRows.value
-    .filter((row) => selectedIds.value.has(row.id))
+    .filter((row) => selectedIds.value.has(row.id) && isImportableExpense(row))
     .map((row) => ({
       rowId: row.id,
       categoryId: categoryOverrides[row.id] || undefined,
@@ -67,10 +72,7 @@ async function confirmImport() {
 }
 
 function money(row: StatementRow) {
-  return new Intl.NumberFormat('en-MY', {
-    style: 'currency',
-    currency: row.currency,
-  }).format(Number(row.amount))
+  return formatCurrency(row.amount, row.currency)
 }
 </script>
 
@@ -189,8 +191,8 @@ function money(row: StatementRow) {
                   type="checkbox"
                   class="h-5 w-5 rounded border-slate-300"
                   :checked="selectedIds.has(row.id)"
-                  :disabled="row.status !== 'pending'"
-                  @change="toggle(row.id)"
+                  :disabled="!isImportableExpense(row)"
+                  @change="toggle(row)"
                 >
               </td>
               <td class="p-4">
@@ -202,6 +204,18 @@ function money(row: StatementRow) {
                 </p>
                 <p class="mt-1 text-xs text-slate-400">
                   {{ new Date(row.occurredAt).toLocaleDateString() }}
+                </p>
+                <p
+                  v-if="row.direction === 'credit'"
+                  class="mt-1 text-xs font-bold text-amber-700"
+                >
+                  Credit — visible for review, not importable
+                </p>
+                <p
+                  v-else-if="row.currency !== 'MYR'"
+                  class="mt-1 text-xs font-bold text-amber-700"
+                >
+                  Foreign-currency statement import is not supported
                 </p>
               </td>
               <td class="p-4">
@@ -254,8 +268,8 @@ function money(row: StatementRow) {
               type="checkbox"
               class="mt-1 h-5 w-5 rounded border-slate-300"
               :checked="selectedIds.has(row.id)"
-              :disabled="row.status !== 'pending'"
-              @change="toggle(row.id)"
+              :disabled="!isImportableExpense(row)"
+              @change="toggle(row)"
             >
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-3">
@@ -274,6 +288,18 @@ function money(row: StatementRow) {
               </p>
               <p class="mt-1 text-xs text-slate-400">
                 {{ new Date(row.occurredAt).toLocaleDateString() }}
+              </p>
+              <p
+                v-if="row.direction === 'credit'"
+                class="mt-1 text-xs font-bold text-amber-700"
+              >
+                Credit — visible for review, not importable
+              </p>
+              <p
+                v-else-if="row.currency !== 'MYR'"
+                class="mt-1 text-xs font-bold text-amber-700"
+              >
+                Foreign-currency statement import is not supported
               </p>
               <select
                 v-model="categoryOverrides[row.id]"
@@ -311,7 +337,7 @@ function money(row: StatementRow) {
             Selected debit total
           </p>
           <p class="text-xl font-bold text-slate-900">
-            RM {{ selectedTotal.toFixed(2) }}
+            {{ formatCurrency(selectedTotal, 'MYR') }}
           </p>
         </div>
         <button

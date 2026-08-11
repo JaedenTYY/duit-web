@@ -13,11 +13,6 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-const isIncome = computed(() => {
-  const catName = props.transaction.categoryName || ''
-  return catName.includes('Salary') || catName.includes('Investment')
-})
-
 const formattedDate = computed(() => {
   return new Date(props.transaction.occurredAt).toLocaleDateString('en-MY', {
     day: 'numeric',
@@ -71,10 +66,9 @@ const sourceLabel = computed(() => {
 
       <div class="shrink-0 text-right">
         <p 
-          class="whitespace-nowrap text-base font-black tracking-tight tabular-nums sm:text-lg"
-          :class="isIncome ? 'text-blue-400' : 'text-slate-900'"
+          class="whitespace-nowrap text-base font-black tracking-tight tabular-nums text-slate-900 sm:text-lg"
         >
-          {{ isIncome ? '+' : '' }}{{ formatCurrency(transaction.amount, transaction.currency) }}
+          {{ formatCurrency(transaction.amount, transaction.currency) }}
         </p>
       </div>
     </div>

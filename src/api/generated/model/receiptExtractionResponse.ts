@@ -5,11 +5,11 @@
  * Backend API for Duit, an AI-powered personal finance and receipt-based bill splitting app.
  * OpenAPI spec version: 0.1.0
  */
-import type { ExtractedReceiptData } from './extractedReceiptData.ts';
+import type { ExtractedReceiptDataResponse } from './extractedReceiptDataResponse.ts';
 
 export interface ReceiptExtractionResponse {
   extractionId: string;
-  extractedData: ExtractedReceiptData;
+  extractedData: ExtractedReceiptDataResponse;
   rawOcrText: string;
   confidence: string;
   suggestedCategoryId?: string;

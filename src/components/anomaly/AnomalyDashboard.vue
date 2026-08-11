@@ -6,6 +6,7 @@ import gsap from 'gsap'
 import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorBanner from '@/components/shared/ErrorBanner.vue'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
+import { formatCurrency } from '@/utils/currency'
 
 const anomalyStore = useAnomalyStore()
 const { anomalies, loading, resolvingIds, error } = storeToRefs(anomalyStore)
@@ -32,11 +33,7 @@ const handleResolve = async (id: string, action: 'confirm' | 'dismiss') => {
 }
 
 function formatMoney(amount: string, currency: string) {
-  return new Intl.NumberFormat('en-MY', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(Number(amount))
+  return formatCurrency(amount, currency)
 }
 
 function formatScore(score: number) {

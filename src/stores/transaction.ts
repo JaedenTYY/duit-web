@@ -1,17 +1,17 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { Transaction, Category, MonthlySummary } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 
 export interface CreateTransactionPayload {
-  amount: number
+  amount: string
   currency: string
   merchantName?: string
   categoryId?: string
   description?: string
   occurredAt: string
-  fxRate?: number
+  fxRate?: string
   rememberMerchantCategory?: boolean
 }
 
@@ -49,8 +49,6 @@ export const useTransactionStore = defineStore('transaction', () => {
   const nextCursorId = ref<string | null>(null)
   const hasMore = ref(false)
   const selectedCategoryId = ref<string>('')
-
-  const totalSpend = computed(() => parseFloat(monthlySummary.value?.totalSpend ?? '0'))
 
   async function fetchTransactions(reset = false) {
     if (loading.value) return
@@ -213,7 +211,6 @@ export const useTransactionStore = defineStore('transaction', () => {
     nextCursorId,
     hasMore,
     selectedCategoryId,
-    totalSpend,
     fetchTransactions,
     fetchCategories,
     fetchMonthlySummary,

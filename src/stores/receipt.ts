@@ -7,12 +7,12 @@ import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 export interface ConfirmExtractionPayload {
   extractionId: string
-  amount: number
+  amount: string
   currency: string
   categoryId?: string
   description?: string
   occurredAt: string
-  fxRate?: number
+  fxRate?: string
   merchantName?: string
   rememberMerchantCategory?: boolean
 }
