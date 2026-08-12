@@ -22,6 +22,7 @@ export interface TransactionResponse {
   description?: string;
   source: string;
   occurredAt: string;
+  version: number;
   createdAt: string;
   suggestedCategoryId?: string;
   suggestedCategoryName?: string;

@@ -10,6 +10,7 @@ import type { StatementRowResponseStatus } from './statementRowResponseStatus.ts
 
 export interface StatementRowResponse {
   id: string;
+  sourceRowIndex: number;
   occurredAt: string;
   description: string;
   merchantName: string;
@@ -21,4 +22,5 @@ export interface StatementRowResponse {
   categorisationConfidence?: string;
   status: StatementRowResponseStatus;
   transactionId?: string;
+  transactionOccurredAt?: string;
 }

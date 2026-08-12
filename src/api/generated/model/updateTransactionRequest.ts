@@ -8,6 +8,7 @@
 import type { UpdateTransactionRequestCurrency } from './updateTransactionRequestCurrency.ts';
 
 export interface UpdateTransactionRequest {
+  expectedVersion: number;
   /** Positive plain decimal string with maximum scale 4. */
   amount?: string;
   currency?: UpdateTransactionRequestCurrency;

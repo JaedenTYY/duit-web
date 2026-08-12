@@ -44,12 +44,15 @@ describe('AddTransactionModal', () => {
     await checkbox.setValue(true)
     await wrapper.get('form').trigger('submit')
 
-    expect(store.createTransaction).toHaveBeenCalledWith(expect.objectContaining({
-      amount: '12.50',
-      merchantName: 'Coffee House',
-      categoryId: 'food',
-      rememberMerchantCategory: true,
-    }))
+    expect(store.createTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: '12.50',
+        merchantName: 'Coffee House',
+        categoryId: 'food',
+        rememberMerchantCategory: true,
+      }),
+      expect.stringMatching(/^[0-9a-f-]{36}$/),
+    )
   })
 
   it('preserves exact strings during editing and submission', async () => {
@@ -60,7 +63,7 @@ describe('AddTransactionModal', () => {
           amountMyr: '40.0000', fxRate: '3.200000', merchantId: null,
           merchantName: null, categoryId: 'food', categoryName: 'Food & Dining',
           categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
-          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+          occurredAt: '2026-07-01T00:00:00Z', version: 7, createdAt: '2026-07-01T00:00:00Z',
         },
       },
     })
@@ -74,6 +77,7 @@ describe('AddTransactionModal', () => {
       amount: '12.5000',
       fxRate: '3.200000',
       occurredAt: '2026-07-01T00:00:00.000Z',
+      expectedVersion: 7,
     }))
   })
 
@@ -85,7 +89,7 @@ describe('AddTransactionModal', () => {
           amountMyr: '40.0000', fxRate: '3.200000', merchantId: null,
           merchantName: null, categoryId: 'food', categoryName: 'Food & Dining',
           categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
-          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+          occurredAt: '2026-07-01T00:00:00Z', version: 7, createdAt: '2026-07-01T00:00:00Z',
         },
       },
     })
@@ -120,7 +124,7 @@ describe('AddTransactionModal', () => {
           amountMyr: '12.5000', fxRate: '1.000000', merchantId: 'merchant-1',
           merchantName: 'Coffee House', categoryId: 'food', categoryName: 'Food & Dining',
           categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
-          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+          occurredAt: '2026-07-01T00:00:00Z', version: 7, createdAt: '2026-07-01T00:00:00Z',
         },
       },
     })
@@ -146,7 +150,7 @@ describe('AddTransactionModal', () => {
           amountMyr: '12.5000', fxRate: '1.000000', merchantId: 'merchant-1',
           merchantName: 'Coffee House', categoryId: 'food', categoryName: 'Food & Dining',
           categoryIcon: '🍔', categoryColor: '#FF5733', description: null, source: 'manual',
-          occurredAt: '2026-07-01T00:00:00Z', createdAt: '2026-07-01T00:00:00Z',
+          occurredAt: '2026-07-01T00:00:00Z', version: 7, createdAt: '2026-07-01T00:00:00Z',
         },
       },
     })

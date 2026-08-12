@@ -9,6 +9,7 @@ export default defineConfig({
       schemas: 'src/api/generated/model',
       client: 'vue-query',
       httpClient: 'axios',
+      headers: true,
       // Orval 8 tags-split appends to existing controller files unless the
       // generated directory is cleaned first. The mutator lives outside this
       // directory, so this cannot delete handwritten source.

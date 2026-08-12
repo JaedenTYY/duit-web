@@ -35,6 +35,7 @@ import type {
   ApiResponseCsrfBootstrapResponse,
   ApiResponseLogoutResponse,
   LoginRequest,
+  RefreshHeaders,
   RegisterRequest
 } from '../model';
 
@@ -113,13 +114,14 @@ export const useRegister = <TError = ApiError,
  * @summary Rotate the browser refresh session
  */
 export const refresh = (
-
+    headers: MaybeRefOrGetter<RefreshHeaders>,
  signal?: AbortSignal
 ) => {
-
+      headers = toValue(headers);
 
       return orvalMutator<ApiResponseAuthResponse>(
-      {url: `/auth/refresh`, method: 'POST', signal
+      {url: `/auth/refresh`, method: 'POST',
+      headers, signal
     },
       );
     }
@@ -128,8 +130,8 @@ export const refresh = (
 
 
 export const getRefreshMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,{headers: RefreshHeaders}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,{headers: RefreshHeaders}, TContext> => {
 
 const mutationKey = ['refresh'];
 const {mutation: mutationOptions} = options ?
@@ -141,10 +143,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refresh>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refresh>>, {headers: RefreshHeaders}> = (props) => {
+          const {headers} = props ?? {};
 
-
-          return  refresh()
+          return  refresh(headers,)
         }
 
 
@@ -162,11 +164,11 @@ const {mutation: mutationOptions} = options ?
  * @summary Rotate the browser refresh session
  */
 export const useRefresh = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,void, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError,{headers: RefreshHeaders}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof refresh>>,
         TError,
-        void,
+        {headers: RefreshHeaders},
         TContext
       > => {
       return useMutation(getRefreshMutationOptions(options), queryClient);

@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'edit', transaction: Transaction): void
-  (e: 'delete', id: string): void
+  (e: 'delete', transaction: Transaction): void
 }>()
 
 const formattedDate = computed(() => {
@@ -23,7 +23,9 @@ const formattedDate = computed(() => {
 const sourceLabel = computed(() => {
   switch (props.transaction.source) {
     case 'receipt': return 'Receipt'
-    case 'import': return 'Import'
+    case 'statement': return 'Statement'
+    case 'gmail': return 'Gmail'
+    case 'import': return 'Legacy import'
     default: return 'Manual'
   }
 })
@@ -94,7 +96,7 @@ const sourceLabel = computed(() => {
       <button 
         class="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-500 transition hover:bg-red-600 hover:text-white active:scale-90"
         aria-label="Delete transaction"
-        @click.stop="emit('delete', transaction.id)"
+        @click.stop="emit('delete', transaction)"
       >
         <svg
           class="w-5 h-5"

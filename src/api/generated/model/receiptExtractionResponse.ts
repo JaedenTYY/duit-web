@@ -12,6 +12,7 @@ export interface ReceiptExtractionResponse {
   extractedData: ExtractedReceiptDataResponse;
   rawOcrText: string;
   confidence: string;
+  duplicateImageWarning: boolean;
   suggestedCategoryId?: string;
   suggestedCategoryName?: string;
   similarityScore?: number;
