@@ -86,24 +86,35 @@ export const useBillStore = defineStore('bill', () => {
     const response = await api.get<ApiResponse<Bill['participants']>>(`/bills/${id}/participants`)
     if (bill.value && bill.value.id === id) {
       bill.value.participants = response.data.data
+      const latestVersion = response.data.data[0]?.allocationVersion
+      if (latestVersion !== undefined) {
+        bill.value.allocationVersion = latestVersion
+      }
     }
   }
 
   async function markPaid(billId: string, participantId: string, isPaid: boolean): Promise<void> {
+    const expectedAllocationVersion = bill.value?.allocationVersion
+    if (expectedAllocationVersion === undefined) {
+      throw new Error('Load the latest bill before updating paid status')
+    }
     saving.value = true
     error.value = null
     try {
       const response = await api.post<ApiResponse<Bill['participants'][number]>>(`/bills/${billId}/mark-paid`, {
         participantId,
-        isPaid
+        isPaid,
+        expectedAllocationVersion
       })
       if (bill.value?.id === billId) {
+        bill.value.allocationVersion = response.data.data.allocationVersion
         const index = bill.value.participants.findIndex(p => p.id === participantId)
         if (index >= 0) {
           bill.value.participants[index] = response.data.data
         }
       }
     } catch (requestError: unknown) {
+      await refetchOnStaleBill(billId, requestError)
       error.value = extractError(requestError, 'Failed to update paid status')
       throw requestError
     } finally {
@@ -112,14 +123,20 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function setBillPaymentProfile(billId: string, paymentQrProfileId: string | null): Promise<void> {
+    const expectedAllocationVersion = bill.value?.allocationVersion
+    if (expectedAllocationVersion === undefined) {
+      throw new Error('Load the latest bill before updating payment QR')
+    }
     saving.value = true
     error.value = null
     try {
       const response = await api.patch<ApiResponse<Bill>>(`/bills/${billId}/payment-qr-profile`, {
-        paymentQrProfileId
+        paymentQrProfileId,
+        expectedAllocationVersion
       })
       bill.value = response.data.data
     } catch (requestError: unknown) {
+      await refetchOnStaleBill(billId, requestError)
       error.value = extractError(requestError, 'Failed to update payment QR')
       throw requestError
     } finally {
@@ -182,12 +199,11 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
     participantToken.value = loadParticipantToken(shareToken)
     try {
-      const response = await api.get<ApiResponse<GuestBill>>(`/guest/bills/${shareToken}`)
-      guestBill.value = response.data.data
+      const refreshedBill = await refreshGuestBillSnapshot(shareToken)
       if (participantToken.value) {
         await fetchGuestSummary(shareToken)
       }
-      return guestBill.value
+      return refreshedBill
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'This bill split is unavailable')
       throw requestError
@@ -199,14 +215,17 @@ export const useBillStore = defineStore('bill', () => {
   async function joinGuestBill(shareToken: string, displayName: string): Promise<void> {
     saving.value = true
     error.value = null
+    const operationKey = ensureJoinOperationKey(shareToken)
     try {
       const response = await api.post<ApiResponse<{ participantToken: string; summary: GuestBillSummary }>>(
         `/guest/bills/${shareToken}/join`,
-        { displayName }
+        { displayName },
+        { headers: { 'Idempotency-Key': operationKey } }
       )
       participantToken.value = response.data.data.participantToken
       guestSummary.value = response.data.data.summary
       localStorage.setItem(participantTokenKey(shareToken), response.data.data.participantToken)
+      localStorage.removeItem(joinOperationKey(shareToken))
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to join bill')
       throw requestError
@@ -219,20 +238,33 @@ export const useBillStore = defineStore('bill', () => {
     if (!participantToken.value) {
       throw new Error('Join the bill before selecting items')
     }
+    const expectedAllocationVersion = guestSummary.value?.allocationVersion ?? guestBill.value?.allocationVersion
+    if (expectedAllocationVersion === undefined) {
+      throw new Error('Load the latest bill before selecting items')
+    }
     saving.value = true
     error.value = null
     try {
       const response = await api.post<ApiResponse<GuestBillSummary>>(`/guest/bills/${shareToken}/items`, {
         participantToken: participantToken.value,
-        itemIds
+        itemIds,
+        expectedAllocationVersion
       })
       guestSummary.value = response.data.data
+      await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
+      await refetchGuestOnStaleBill(shareToken, requestError)
       error.value = extractError(requestError, 'Failed to update selected items')
       throw requestError
     } finally {
       saving.value = false
     }
+  }
+
+  async function refreshGuestBillSnapshot(shareToken: string): Promise<GuestBill> {
+    const response = await api.get<ApiResponse<GuestBill>>(`/guest/bills/${shareToken}`)
+    guestBill.value = response.data.data
+    return guestBill.value
   }
 
   async function fetchGuestSummary(shareToken: string): Promise<void> {
@@ -259,8 +291,34 @@ export const useBillStore = defineStore('bill', () => {
     return `duit_guest_participant_${shareToken}`
   }
 
+  function joinOperationKey(shareToken: string) {
+    return `duit_guest_join_operation_${shareToken}`
+  }
+
   function loadParticipantToken(shareToken: string): string | null {
     return localStorage.getItem(participantTokenKey(shareToken))
+  }
+
+  function ensureJoinOperationKey(shareToken: string): string {
+    const existing = localStorage.getItem(joinOperationKey(shareToken))
+    if (existing) return existing
+    const generated = crypto.randomUUID()
+    localStorage.setItem(joinOperationKey(shareToken), generated)
+    return generated
+  }
+
+  async function refetchOnStaleBill(billId: string, requestError: unknown): Promise<void> {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_STALE_409') {
+      await fetchBill(billId).catch(() => undefined)
+    }
+  }
+
+  async function refetchGuestOnStaleBill(shareToken: string, requestError: unknown): Promise<void> {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_STALE_409') {
+      await fetchGuestBill(shareToken).catch(() => undefined)
+    }
   }
 
   function extractError(requestError: unknown, fallback: string): string {

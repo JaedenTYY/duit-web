@@ -9,4 +9,5 @@
 export interface MarkPaidRequest {
   participantId: string;
   isPaid: boolean;
+  expectedAllocationVersion: number;
 }

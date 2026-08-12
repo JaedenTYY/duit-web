@@ -27,6 +27,10 @@ let refreshTimer: number | undefined
 
 const billId = computed(() => String(route.params.id))
 const selectedProfile = computed(() => bill.value?.paymentQrProfile ?? null)
+const hasReconciliation = computed(() => {
+  if (!bill.value) return false
+  return bill.value.lineAdjustment !== '0.0000' || bill.value.totalAdjustment !== '0.0000'
+})
 
 onMounted(async () => {
   await Promise.all([
@@ -109,6 +113,48 @@ async function applyPaymentProfile() {
             {{ formatCurrency(bill.totalAmount, bill.currency) }}
           </p>
         </div>
+      </section>
+
+      <section class="grid gap-4 md:grid-cols-3">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+            Allocation revision
+          </p>
+          <p class="mt-2 text-2xl font-black text-slate-950">
+            #{{ bill.allocationVersion }}
+          </p>
+        </div>
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+            Remaining / unallocated
+          </p>
+          <p class="mt-2 text-2xl font-black text-slate-950">
+            {{ formatCurrency(bill.unallocatedTotal, bill.currency) }}
+          </p>
+        </div>
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+            Fully allocated
+          </p>
+          <p class="mt-2 text-2xl font-black text-slate-950">
+            {{ bill.unallocatedTotal === '0.0000' ? 'Yes' : 'No' }}
+          </p>
+        </div>
+      </section>
+
+      <section
+        v-if="hasReconciliation"
+        class="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900"
+      >
+        <p class="text-xs font-black uppercase tracking-widest text-amber-700">
+          Receipt reconciliation
+        </p>
+        <p class="mt-2">
+          Line subtotal reconciliation:
+          <span class="font-black">{{ formatCurrency(bill.lineAdjustment, bill.currency) }}</span>.
+          Grand-total reconciliation:
+          <span class="font-black">{{ formatCurrency(bill.totalAdjustment, bill.currency) }}</span>.
+        </p>
       </section>
 
       <QRShareCard :share-url="shareUrl" />

@@ -31,6 +31,13 @@ const emit = defineEmits<{
       >
         {{ item.quantity }} x {{ formatCurrency(item.unitPrice, currency) }}
       </span>
+      <span
+        v-if="item.claimantCount > 0"
+        class="mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
+        :class="selected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
+      >
+        Shared by {{ item.claimantCount }}
+      </span>
     </span>
     <span class="flex shrink-0 items-center gap-3">
       <span

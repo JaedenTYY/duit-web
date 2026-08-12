@@ -99,6 +99,7 @@ export * from './insightMerchant.ts';
 export * from './insightTransaction.ts';
 export * from './joinBillRequest.ts';
 export * from './joinBillResponse.ts';
+export * from './joinHeaders.ts';
 export * from './lineItemResponse.ts';
 export * from './listTransactionsParams.ts';
 export * from './loginRequest.ts';

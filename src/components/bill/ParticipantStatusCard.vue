@@ -43,6 +43,23 @@ const emit = defineEmits<{
       </div>
     </div>
 
+    <div
+      v-if="participant.lineAdjustmentShare !== '0.0000' || participant.totalAdjustmentShare !== '0.0000'"
+      class="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800"
+    >
+      Receipt reconciliation share:
+      {{ formatCurrency(participant.lineAdjustmentShare, currency) }} line,
+      {{ formatCurrency(participant.totalAdjustmentShare, currency) }} total.
+    </div>
+
+    <div
+      v-if="participant.isPaid && participant.paidAmount"
+      class="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-800"
+    >
+      Settled externally at {{ formatCurrency(participant.paidAmount, currency) }}
+      on revision #{{ participant.paidAllocationVersion }}.
+    </div>
+
     <div class="mt-6 flex items-end justify-between gap-4 border-t border-slate-100 pt-5">
       <div>
         <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">
