@@ -35,7 +35,9 @@ import type {
   ApiResponseMonthlySummaryResponse,
   ApiResponseTransactionPageResponse,
   ApiResponseTransactionResponse,
+  CreateTransactionHeaders,
   CreateTransactionRequest,
+  DeleteTransactionParams,
   GetMonthlySummaryParams,
   ListTransactionsParams,
   UpdateTransactionRequest
@@ -113,13 +115,15 @@ export function useListTransactions<TData = Awaited<ReturnType<typeof listTransa
 
 export const createTransaction = (
     createTransactionRequest: MaybeRefOrGetter<CreateTransactionRequest>,
+    headers: MaybeRefOrGetter<CreateTransactionHeaders>,
  signal?: AbortSignal
 ) => {
       createTransactionRequest = toValue(createTransactionRequest);
+headers = toValue(headers);
 
       return orvalMutator<ApiResponseTransactionResponse>(
       {url: `/transactions`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
+      headers: {'Content-Type': 'application/json', ...headers},
       data: createTransactionRequest, signal
     },
       );
@@ -129,8 +133,8 @@ export const createTransaction = (
 
 
 export const getCreateTransactionMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest;headers: CreateTransactionHeaders}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest;headers: CreateTransactionHeaders}, TContext> => {
 
 const mutationKey = ['createTransaction'];
 const {mutation: mutationOptions} = options ?
@@ -142,10 +146,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTransaction>>, {data: CreateTransactionRequest}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTransaction>>, {data: CreateTransactionRequest;headers: CreateTransactionHeaders}> = (props) => {
+          const {data,headers} = props ?? {};
 
-          return  createTransaction(data,)
+          return  createTransaction(data,headers,)
         }
 
 
@@ -160,11 +164,11 @@ const {mutation: mutationOptions} = options ?
     export type CreateTransactionMutationError = ApiError
 
     export const useCreateTransaction = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTransaction>>, TError,{data: CreateTransactionRequest;headers: CreateTransactionHeaders}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof createTransaction>>,
         TError,
-        {data: CreateTransactionRequest},
+        {data: CreateTransactionRequest;headers: CreateTransactionHeaders},
         TContext
       > => {
       return useMutation(getCreateTransactionMutationOptions(options), queryClient);
@@ -235,12 +239,15 @@ export function useGetTransaction<TData = Awaited<ReturnType<typeof getTransacti
 
 export const deleteTransaction = (
     id: MaybeRefOrGetter<string>,
+    params: MaybeRefOrGetter<DeleteTransactionParams>,
  signal?: AbortSignal
 ) => {
       id = toValue(id);
+params = toValue(params);
 
       return orvalMutator<unknown>(
-      {url: `/transactions/${id}`, method: 'DELETE', signal
+      {url: `/transactions/${id}`, method: 'DELETE',
+        params, signal
     },
       );
     }
@@ -249,8 +256,8 @@ export const deleteTransaction = (
 
 
 export const getDeleteTransactionMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string;params: DeleteTransactionParams}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string;params: DeleteTransactionParams}, TContext> => {
 
 const mutationKey = ['deleteTransaction'];
 const {mutation: mutationOptions} = options ?
@@ -262,10 +269,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTransaction>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTransaction>>, {id: string;params: DeleteTransactionParams}> = (props) => {
+          const {id,params} = props ?? {};
 
-          return  deleteTransaction(id,)
+          return  deleteTransaction(id,params,)
         }
 
 
@@ -280,11 +287,11 @@ const {mutation: mutationOptions} = options ?
     export type DeleteTransactionMutationError = ApiError
 
     export const useDeleteTransaction = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTransaction>>, TError,{id: string;params: DeleteTransactionParams}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof deleteTransaction>>,
         TError,
-        {id: string},
+        {id: string;params: DeleteTransactionParams},
         TContext
       > => {
       return useMutation(getDeleteTransactionMutationOptions(options), queryClient);

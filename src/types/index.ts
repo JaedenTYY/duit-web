@@ -22,8 +22,9 @@ export interface Transaction {
   categoryIcon: string | null
   categoryColor: string | null
   description: string | null
-  source: 'receipt' | 'manual' | 'import'
+  source: 'receipt' | 'manual' | 'import' | 'statement' | 'gmail'
   occurredAt: string
+  version: number
   createdAt: string
   suggestedCategoryId?: string
   suggestedCategoryName?: string
@@ -164,10 +165,11 @@ export interface AnomalyFeatures {
 }
 
 export type StatementDirection = 'debit' | 'credit'
-export type StatementRowStatus = 'pending' | 'imported' | 'skipped'
+export type StatementRowStatus = 'pending' | 'imported' | 'skipped' | 'transaction_deleted'
 
 export interface StatementRow {
   id: string
+  sourceRowIndex: number
   occurredAt: string
   description: string
   merchantName: string
@@ -178,6 +180,7 @@ export interface StatementRow {
   suggestedCategoryName: string | null
   categorisationConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | null
   status: StatementRowStatus
+  transactionOccurredAt: string | null
   transactionId: string | null
 }
 

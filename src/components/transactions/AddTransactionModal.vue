@@ -7,6 +7,10 @@ import { logger } from '@/utils/logger'
 import CategorySuggestion from './CategorySuggestion.vue'
 import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
 import { instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
+import {
+  createTransactionOperationIdentity,
+  transactionOperationExpired,
+} from '@/utils/transactionOperation'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -28,6 +32,8 @@ const description = ref(props.transaction?.description ?? '')
 const rememberMerchantCategory = ref(false)
 const categorisationStatus = ref('')
 const financialError = ref('')
+const expectedVersion = ref(props.transaction?.version ?? 0)
+const operation = createTransactionOperationIdentity()
 const occurredAt = ref(
   props.transaction
     ? instantToLocalDateTimeInput(props.transaction.occurredAt)
@@ -104,6 +110,10 @@ async function handleSubmit() {
   const rateError = showFxRate.value ? validateFxRateInput(fxRate.value) : null
   financialError.value = amountError ?? rateError ?? ''
   if (financialError.value) return
+  if (!props.transaction && transactionOperationExpired(operation)) {
+    financialError.value = 'This submission is more than 24 hours old. Review transaction history before intentionally submitting it again.'
+    return
+  }
 
   try {
     const sharedPayload = {
@@ -117,17 +127,35 @@ async function handleSubmit() {
     }
 
     if (props.transaction) {
-      await store.updateTransaction(props.transaction.id, sharedPayload)
+      await store.updateTransaction(props.transaction.id, {
+        ...sharedPayload,
+        expectedVersion: expectedVersion.value,
+      })
     } else {
       await store.createTransaction({
         ...sharedPayload,
         merchantName: merchantName.value || undefined,
-      })
+      }, operation.key)
     }
     emit('close')
-  } catch {
-    // Error handled by store.error
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TransactionStaleConflictError') {
+      const current = (error as Error & { current?: Transaction | null }).current
+      if (current) applyCurrentTransaction(current)
+      financialError.value = error.message
+    }
   }
+}
+
+function applyCurrentTransaction(current: Transaction) {
+  amount.value = current.amount
+  currency.value = current.currency
+  fxRate.value = current.fxRate
+  categoryId.value = current.categoryId ?? ''
+  description.value = current.description ?? ''
+  occurredAt.value = instantToLocalDateTimeInput(current.occurredAt)
+  expectedVersion.value = current.version
+  rememberMerchantCategory.value = false
 }
 </script>
 

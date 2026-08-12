@@ -36,7 +36,8 @@ import type {
   ApiResponseGuestBillSummaryResponse,
   ApiResponseJoinBillResponse,
   JoinBillRequest,
-  SelectBillItemsRequest
+  SelectBillItemsRequest,
+  SummaryHeaders
 } from '../model';
 
 import { orvalMutator } from '../../../lib/orvalMutator.ts';
@@ -230,12 +231,15 @@ export function useGetGuestBill<TData = Awaited<ReturnType<typeof getGuestBill>>
 
 export const summary = (
     shareToken: MaybeRefOrGetter<string>,
+    headers: MaybeRefOrGetter<SummaryHeaders>,
  signal?: AbortSignal
 ) => {
       shareToken = toValue(shareToken);
+headers = toValue(headers);
 
       return orvalMutator<ApiResponseGuestBillSummaryResponse>(
-      {url: `/guest/bills/${shareToken}/summary`, method: 'GET', signal
+      {url: `/guest/bills/${shareToken}/summary`, method: 'GET',
+      headers, signal
     },
       );
     }
@@ -250,7 +254,8 @@ export const getSummaryQueryKey = (shareToken: MaybeRefOrGetter<string>,) => {
     }
 
 
-export const getSummaryQueryOptions = <TData = Awaited<ReturnType<typeof summary>>, TError = ApiError>(shareToken: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof summary>>, TError, TData>>, }
+export const getSummaryQueryOptions = <TData = Awaited<ReturnType<typeof summary>>, TError = ApiError>(shareToken: MaybeRefOrGetter<string>,
+    headers: MaybeRefOrGetter<SummaryHeaders>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof summary>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -259,7 +264,7 @@ const {query: queryOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof summary>>> = ({ signal }) => summary(shareToken, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof summary>>> = ({ signal }) => summary(shareToken,headers, signal);
 
 
 
@@ -274,11 +279,12 @@ export type SummaryQueryError = ApiError
 
 
 export function useSummary<TData = Awaited<ReturnType<typeof summary>>, TError = ApiError>(
- shareToken: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof summary>>, TError, TData>>, }
+ shareToken: MaybeRefOrGetter<string>,
+    headers: MaybeRefOrGetter<SummaryHeaders>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof summary>>, TError, TData>>, }
  , queryClient?: QueryClient
  ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getSummaryQueryOptions(shareToken,options)
+  const queryOptions = getSummaryQueryOptions(shareToken,headers,options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

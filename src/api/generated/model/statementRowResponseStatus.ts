@@ -13,4 +13,5 @@ export const StatementRowResponseStatus = {
   pending: 'pending',
   imported: 'imported',
   skipped: 'skipped',
+  transaction_deleted: 'transaction_deleted',
 } as const;

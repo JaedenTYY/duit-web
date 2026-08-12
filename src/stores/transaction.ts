@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Transaction, Category, MonthlySummary } from '@/types'
 import api from '@/lib/api'
 import { logger } from '@/utils/logger'
+import { extractApiFailure } from '@/lib/apiError'
 
 export interface CreateTransactionPayload {
   amount: string
@@ -15,7 +16,16 @@ export interface CreateTransactionPayload {
   rememberMerchantCategory?: boolean
 }
 
-export type UpdateTransactionPayload = Omit<Partial<CreateTransactionPayload>, 'merchantName'>
+export type UpdateTransactionPayload = Omit<Partial<CreateTransactionPayload>, 'merchantName'> & {
+  expectedVersion: number
+}
+
+export class TransactionStaleConflictError extends Error {
+  constructor(readonly current: Transaction | null) {
+    super('This transaction changed while you were editing it. Review the latest values before saving again.')
+    this.name = 'TransactionStaleConflictError'
+  }
+}
 
 interface TransactionResponse {
   data: Transaction
@@ -123,11 +133,16 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
-  async function createTransaction(payload: CreateTransactionPayload): Promise<Transaction> {
+  async function createTransaction(
+    payload: CreateTransactionPayload,
+    operationKey: string,
+  ): Promise<Transaction> {
     submitting.value = true
     error.value = null
     try {
-      const response = await api.post<TransactionResponse>('/transactions', payload)
+      const response = await api.post<TransactionResponse>('/transactions', payload, {
+        headers: { 'Idempotency-Key': operationKey },
+      })
       const newTransaction = response.data.data
       transactions.value = [newTransaction, ...transactions.value]
       return newTransaction
@@ -152,23 +167,46 @@ export const useTransactionStore = defineStore('transaction', () => {
       return updatedTransaction
     } catch (err: unknown) {
       error.value = _extractError(err)
+      if (extractApiFailure(err).code === 'ERR_TX_STALE_409') {
+        throw new TransactionStaleConflictError(await fetchTransaction(id))
+      }
       throw err
     } finally {
       submitting.value = false
     }
   }
 
-  async function deleteTransaction(id: string): Promise<void> {
+  async function deleteTransaction(id: string, expectedVersion: number): Promise<void> {
     submitting.value = true
     error.value = null
     try {
-      await api.delete(`/transactions/${id}`)
+      await api.delete(`/transactions/${id}`, { params: { expectedVersion } })
       transactions.value = transactions.value.filter(t => t.id !== id)
     } catch (err: unknown) {
       error.value = _extractError(err)
+      if (extractApiFailure(err).code === 'ERR_TX_STALE_409') {
+        throw new TransactionStaleConflictError(await fetchTransaction(id))
+      }
       throw err
     } finally {
       submitting.value = false
+    }
+  }
+
+  async function fetchTransaction(id: string): Promise<Transaction | null> {
+    try {
+      const response = await api.get<TransactionResponse>(`/transactions/${id}`)
+      const current = response.data.data
+      const index = transactions.value.findIndex(transaction => transaction.id === id)
+      if (index === -1) transactions.value = [current, ...transactions.value]
+      else transactions.value[index] = current
+      return current
+    } catch (err: unknown) {
+      if (extractApiFailure(err).status === 404) {
+        transactions.value = transactions.value.filter(transaction => transaction.id !== id)
+        return null
+      }
+      throw err
     }
   }
 

@@ -13,4 +13,5 @@ export const EmailExtractionResponseStatus = {
   pending: 'pending',
   confirmed: 'confirmed',
   skipped: 'skipped',
+  transaction_deleted: 'transaction_deleted',
 } as const;

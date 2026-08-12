@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { gsap } from 'gsap'
-import { useTransactionStore } from '@/stores/transaction'
+import { TransactionStaleConflictError, useTransactionStore } from '@/stores/transaction'
 import TransactionCard from '@/components/transactions/TransactionCard.vue'
 import AddTransactionModal from '@/components/transactions/AddTransactionModal.vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
@@ -45,12 +45,14 @@ watch(() => store.transactions.length, (newLen, oldLen) => {
   }
 })
 
-async function handleDelete(id: string) {
+async function handleDelete(transaction: Transaction) {
   if (confirm('Delete this transaction?')) {
     try {
-      await store.deleteTransaction(id)
-    } catch {
-      // Error handled by store
+      await store.deleteTransaction(transaction.id, transaction.version)
+    } catch (error) {
+      if (error instanceof TransactionStaleConflictError) {
+        alert('This transaction changed before it could be deleted. The latest version was loaded; review it and try again.')
+      }
     }
   }
 }
