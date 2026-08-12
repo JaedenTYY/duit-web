@@ -15,7 +15,17 @@ export interface GuestBillSummaryResponse {
   taxShare: string;
   serviceChargeShare: string;
   totalOwed: string;
+  lineAdjustmentShare: string;
+  totalAdjustmentShare: string;
+  allocationVersion: number;
+  unallocatedSubtotal: string;
+  unallocatedTax: string;
+  unallocatedServiceCharge: string;
+  unallocatedTotal: string;
   isPaid: boolean;
+  paidAt?: string;
+  paidAmount?: string;
+  paidAllocationVersion?: number;
   paymentQrProfile?: GuestPaymentQrProfileResponse;
   selectedItems: BillParticipantItemResponse[];
 }

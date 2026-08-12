@@ -12,4 +12,5 @@ export interface BillItemResponse {
   quantity: string;
   unitPrice: string;
   lineTotal: string;
+  claimantCount: number;
 }

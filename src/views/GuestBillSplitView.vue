@@ -34,6 +34,8 @@ const totalBarValues = computed(() => ({
   total: guestSummary.value?.totalOwed ?? selectedSubtotal.value
 }))
 
+const unallocatedTotal = computed(() => guestSummary.value?.unallocatedTotal ?? guestBill.value?.unallocatedTotal ?? '0.00')
+
 onMounted(async () => {
   await billStore.fetchGuestBill(shareToken.value)
   syncSelectedItems()
@@ -132,7 +134,10 @@ async function saveSelection() {
               Select your items
             </h2>
             <p class="mt-1 text-sm leading-6 text-slate-500">
-              Tap every item you consumed. You can update your choices later from this same link.
+              Tap every receipt line you shared or consumed. This is a whole-line split; saving sends the complete replacement selection.
+            </p>
+            <p class="mt-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-blue-700">
+              Before saving, the item subtotal is only a preview. Duit will replace it with the authoritative split, tax, service and reconciliation after the backend recalculates.
             </p>
           </div>
 
@@ -149,13 +154,18 @@ async function saveSelection() {
 
           <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? guestBill.paymentQrProfile" />
 
+          <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
+            Remaining / unallocated amount:
+            <span class="font-black text-slate-950">{{ formatCurrency(unallocatedTotal, guestBill.currency) }}</span>
+          </div>
+
           <SplitTotalBar
             :currency="guestBill.currency"
             :subtotal="totalBarValues.subtotal"
             :tax="totalBarValues.tax"
             :service="totalBarValues.service"
             :total="totalBarValues.total"
-            :disabled="selectedItemIds.size === 0"
+            :disabled="false"
             :loading="saving"
             action-label="Save items"
             @submit="saveSelection"

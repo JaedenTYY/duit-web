@@ -290,6 +290,7 @@ export interface BillItem {
   quantity: string
   unitPrice: string
   lineTotal: string
+  claimantCount: number
 }
 
 export interface Bill {
@@ -300,6 +301,13 @@ export interface Bill {
   taxAmount: string
   serviceCharge: string
   totalAmount: string
+  allocationVersion: number
+  lineAdjustment: string
+  totalAdjustment: string
+  unallocatedSubtotal: string
+  unallocatedTax: string
+  unallocatedServiceCharge: string
+  unallocatedTotal: string
   currency: string
   status: 'draft' | 'active' | 'expired' | 'closed'
   expiresAt: string
@@ -321,7 +329,13 @@ export interface BillParticipant {
   taxShare: string
   serviceChargeShare: string
   totalOwed: string
+  lineAdjustmentShare: string
+  totalAdjustmentShare: string
+  allocationVersion: number
   isPaid: boolean
+  paidAt: string | null
+  paidAmount: string | null
+  paidAllocationVersion: number | null
   joinedAt: string
   updatedAt: string
   selectedItems: BillParticipantItem[]
@@ -352,6 +366,13 @@ export interface GuestBill {
   taxAmount: string
   serviceCharge: string
   totalAmount: string
+  allocationVersion: number
+  lineAdjustment: string
+  totalAdjustment: string
+  unallocatedSubtotal: string
+  unallocatedTax: string
+  unallocatedServiceCharge: string
+  unallocatedTotal: string
   expiresAt: string
   paymentQrProfile: GuestPaymentQrProfile | null
   items: BillItem[]
@@ -364,7 +385,17 @@ export interface GuestBillSummary {
   taxShare: string
   serviceChargeShare: string
   totalOwed: string
+  lineAdjustmentShare: string
+  totalAdjustmentShare: string
+  allocationVersion: number
+  unallocatedSubtotal: string
+  unallocatedTax: string
+  unallocatedServiceCharge: string
+  unallocatedTotal: string
   isPaid: boolean
+  paidAt: string | null
+  paidAmount: string | null
+  paidAllocationVersion: number | null
   paymentQrProfile: GuestPaymentQrProfile | null
   selectedItems: BillParticipantItem[]
 }

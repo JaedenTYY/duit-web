@@ -14,7 +14,13 @@ export interface BillParticipantResponse {
   taxShare: string;
   serviceChargeShare: string;
   totalOwed: string;
+  lineAdjustmentShare: string;
+  totalAdjustmentShare: string;
+  allocationVersion: number;
   isPaid: boolean;
+  paidAt?: string;
+  paidAmount?: string;
+  paidAllocationVersion?: number;
   joinedAt: string;
   updatedAt: string;
   selectedItems: BillParticipantItemResponse[];

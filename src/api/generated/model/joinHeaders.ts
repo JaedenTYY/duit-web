@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BillPaymentQrProfileRequest {
-  paymentQrProfileId?: string;
-  expectedAllocationVersion: number;
-}
+export type JoinHeaders = {
+'Idempotency-Key': string;
+};

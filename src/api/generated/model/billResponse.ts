@@ -19,6 +19,13 @@ export interface BillResponse {
   taxAmount: string;
   serviceCharge: string;
   totalAmount: string;
+  allocationVersion: number;
+  lineAdjustment: string;
+  totalAdjustment: string;
+  unallocatedSubtotal: string;
+  unallocatedTax: string;
+  unallocatedServiceCharge: string;
+  unallocatedTotal: string;
   expiresAt: string;
   paymentQrProfile?: PaymentQrProfileResponse;
   items: BillItemResponse[];
