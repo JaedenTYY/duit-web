@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import api from '@/lib/api'
-import type { Bill, GuestBillSummary } from '@/types'
+import type { Bill, GuestBill, GuestBillSummary } from '@/types'
 import { useBillStore } from './bill'
 
 vi.mock('@/lib/api', () => ({
@@ -62,6 +62,26 @@ const ownerBill: Bill = {
   participants: [],
 }
 
+const guestBill: GuestBill = {
+  merchantName: 'Merchant',
+  status: 'active',
+  currency: 'MYR',
+  subtotal: '10.0000',
+  taxAmount: '0.0000',
+  serviceCharge: '0.0000',
+  totalAmount: '10.0000',
+  allocationVersion: 7,
+  lineAdjustment: '0.0000',
+  totalAdjustment: '0.0000',
+  unallocatedSubtotal: '10.0000',
+  unallocatedTax: '0.0000',
+  unallocatedServiceCharge: '0.0000',
+  unallocatedTotal: '10.0000',
+  expiresAt: '2027-01-01T00:00:00Z',
+  paymentQrProfile: null,
+  items: [],
+}
+
 describe('bill split mutation integrity', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', createMemoryStorage())
@@ -120,6 +140,7 @@ describe('bill split mutation integrity', () => {
         },
       })
       .mockResolvedValueOnce({ data: { data: guestSummary } })
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { data: guestBill } })
     const store = useBillStore()
 
     await store.joinGuestBill(SHARE_TOKEN, 'Guest')
@@ -134,6 +155,7 @@ describe('bill split mutation integrity', () => {
         expectedAllocationVersion: 7,
       }
     )
+    expect(api.get).toHaveBeenCalledWith(`/guest/bills/${SHARE_TOKEN}`)
   })
 
   it('sends owner mutation revisions and refetches for stale bill conflicts', async () => {

@@ -199,12 +199,11 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
     participantToken.value = loadParticipantToken(shareToken)
     try {
-      const response = await api.get<ApiResponse<GuestBill>>(`/guest/bills/${shareToken}`)
-      guestBill.value = response.data.data
+      const refreshedBill = await refreshGuestBillSnapshot(shareToken)
       if (participantToken.value) {
         await fetchGuestSummary(shareToken)
       }
-      return guestBill.value
+      return refreshedBill
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'This bill split is unavailable')
       throw requestError
@@ -252,6 +251,7 @@ export const useBillStore = defineStore('bill', () => {
         expectedAllocationVersion
       })
       guestSummary.value = response.data.data
+      await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
       await refetchGuestOnStaleBill(shareToken, requestError)
       error.value = extractError(requestError, 'Failed to update selected items')
@@ -259,6 +259,12 @@ export const useBillStore = defineStore('bill', () => {
     } finally {
       saving.value = false
     }
+  }
+
+  async function refreshGuestBillSnapshot(shareToken: string): Promise<GuestBill> {
+    const response = await api.get<ApiResponse<GuestBill>>(`/guest/bills/${shareToken}`)
+    guestBill.value = response.data.data
+    return guestBill.value
   }
 
   async function fetchGuestSummary(shareToken: string): Promise<void> {
