@@ -8,18 +8,19 @@
 import type { UpdateTransactionRequestCurrency } from './updateTransactionRequestCurrency.ts';
 
 export interface UpdateTransactionRequest {
-  expectedVersion: number;
   /** Positive plain decimal string with maximum scale 4. */
   amount?: string;
-  currency?: UpdateTransactionRequestCurrency;
   categoryId?: string;
+  currency?: UpdateTransactionRequestCurrency;
   /**
+     * When omitted or null, description is unchanged; null does not clear the existing value.
      * @minLength 0
      * @maxLength 500
      */
   description?: string;
-  occurredAt?: string;
+  expectedVersion: number;
   /** Positive plain decimal string with maximum scale 6. */
   fxRate?: string;
-  rememberMerchantCategory: boolean;
+  occurredAt?: string;
+  rememberMerchantCategory?: boolean;
 }

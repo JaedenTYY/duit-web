@@ -11,7 +11,7 @@ import type { InsightFindingSeverity } from './insightFindingSeverity.ts';
 export interface InsightFinding {
   category: string;
   changePct: number;
-  direction: InsightFindingDirection;
   commentary: string;
+  direction: InsightFindingDirection;
   severity: InsightFindingSeverity;
 }

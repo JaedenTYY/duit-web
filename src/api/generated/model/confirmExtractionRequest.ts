@@ -8,17 +8,16 @@
 import type { ConfirmExtractionRequestCurrency } from './confirmExtractionRequestCurrency.ts';
 
 export interface ConfirmExtractionRequest {
-  extractionId: string;
   /**
      * User-confirmed positive receipt total as a plain decimal string; maximum scale 4.
      * @minLength 1
      */
   amount: string;
+  categoryId?: string;
   /** @minLength 1 */
   currency: ConfirmExtractionRequestCurrency;
-  categoryId?: string;
   description?: string;
-  occurredAt: string;
+  extractionId: string;
   /** Positive plain decimal string in MYR per source-currency unit; maximum scale 6. */
   fxRate?: string;
   /**
@@ -26,5 +25,6 @@ export interface ConfirmExtractionRequest {
      * @maxLength 255
      */
   merchantName?: string;
+  occurredAt: string;
   rememberMerchantCategory: boolean;
 }

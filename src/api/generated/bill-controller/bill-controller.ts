@@ -36,8 +36,8 @@ import type {
   ApiResponseBillResponse,
   ApiResponseListBillParticipantResponse,
   BillPaymentQrProfileRequest,
-  CreateFromReceiptBody,
-  MarkPaidRequest
+  MarkPaidRequest,
+  ReceiptImageUploadRequest
 } from '../model';
 
 import { orvalMutator } from '../../../lib/orvalMutator.ts';
@@ -45,76 +45,21 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const markPaid = (
-    id: MaybeRefOrGetter<string>,
-    markPaidRequest: MaybeRefOrGetter<MarkPaidRequest>,
+/**
+ * @summary Create a split bill from a receipt image
+ */
+export const createFromReceipt = (
+    receiptImageUploadRequest: MaybeRefOrGetter<ReceiptImageUploadRequest>,
  signal?: AbortSignal
 ) => {
-      id = toValue(id);
-markPaidRequest = toValue(markPaidRequest);
-
-      return orvalMutator<ApiResponseBillParticipantResponse>(
-      {url: `/bills/${id}/mark-paid`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: markPaidRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getMarkPaidMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext> => {
-
-const mutationKey = ['markPaid'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markPaid>>, {id: string;data: MarkPaidRequest}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  markPaid(id,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MarkPaidMutationResult = NonNullable<Awaited<ReturnType<typeof markPaid>>>
-    export type MarkPaidMutationBody = MarkPaidRequest
-    export type MarkPaidMutationError = ApiError
-
-    export const useMarkPaid = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof markPaid>>,
-        TError,
-        {id: string;data: MarkPaidRequest},
-        TContext
-      > => {
-      return useMutation(getMarkPaidMutationOptions(options), queryClient);
-    }
-    export const createFromReceipt = (
-    createFromReceiptBody?: MaybeRefOrGetter<CreateFromReceiptBody>,
- signal?: AbortSignal
-) => {
-      createFromReceiptBody = toValue(createFromReceiptBody);
+      receiptImageUploadRequest = toValue(receiptImageUploadRequest);
+      const formData = new FormData();
+formData.append(`file`, receiptImageUploadRequest.file);
 
       return orvalMutator<ApiResponseBillResponse>(
       {url: `/bills/from-receipt`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createFromReceiptBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       );
     }
@@ -123,8 +68,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCreateFromReceiptMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data?: CreateFromReceiptBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data?: CreateFromReceiptBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data: ReceiptImageUploadRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data: ReceiptImageUploadRequest}, TContext> => {
 
 const mutationKey = ['createFromReceipt'];
 const {mutation: mutationOptions} = options ?
@@ -136,7 +81,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFromReceipt>>, {data?: CreateFromReceiptBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFromReceipt>>, {data: ReceiptImageUploadRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  createFromReceipt(data,)
@@ -150,78 +95,21 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateFromReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof createFromReceipt>>>
-    export type CreateFromReceiptMutationBody = CreateFromReceiptBody | undefined
+    export type CreateFromReceiptMutationBody = ReceiptImageUploadRequest
     export type CreateFromReceiptMutationError = ApiError
 
-    export const useCreateFromReceipt = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data?: CreateFromReceiptBody}, TContext>, }
+    /**
+ * @summary Create a split bill from a receipt image
+ */
+export const useCreateFromReceipt = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFromReceipt>>, TError,{data: ReceiptImageUploadRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof createFromReceipt>>,
         TError,
-        {data?: CreateFromReceiptBody},
+        {data: ReceiptImageUploadRequest},
         TContext
       > => {
       return useMutation(getCreateFromReceiptMutationOptions(options), queryClient);
-    }
-    export const setPaymentQrProfile = (
-    id: MaybeRefOrGetter<string>,
-    billPaymentQrProfileRequest: MaybeRefOrGetter<BillPaymentQrProfileRequest>,
- signal?: AbortSignal
-) => {
-      id = toValue(id);
-billPaymentQrProfileRequest = toValue(billPaymentQrProfileRequest);
-
-      return orvalMutator<ApiResponseBillResponse>(
-      {url: `/bills/${id}/payment-qr-profile`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: billPaymentQrProfileRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getSetPaymentQrProfileMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext> => {
-
-const mutationKey = ['setPaymentQrProfile'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPaymentQrProfile>>, {id: string;data: BillPaymentQrProfileRequest}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  setPaymentQrProfile(id,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SetPaymentQrProfileMutationResult = NonNullable<Awaited<ReturnType<typeof setPaymentQrProfile>>>
-    export type SetPaymentQrProfileMutationBody = BillPaymentQrProfileRequest
-    export type SetPaymentQrProfileMutationError = ApiError
-
-    export const useSetPaymentQrProfile = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof setPaymentQrProfile>>,
-        TError,
-        {id: string;data: BillPaymentQrProfileRequest},
-        TContext
-      > => {
-      return useMutation(getSetPaymentQrProfileMutationOptions(options), queryClient);
     }
     export const getBill = (
     id: MaybeRefOrGetter<string>,
@@ -287,7 +175,67 @@ export function useGetBill<TData = Awaited<ReturnType<typeof getBill>>, TError =
 
 
 
-export const getParticipants = (
+export const markPaid = (
+    id: MaybeRefOrGetter<string>,
+    markPaidRequest: MaybeRefOrGetter<MarkPaidRequest>,
+ signal?: AbortSignal
+) => {
+      id = toValue(id);
+markPaidRequest = toValue(markPaidRequest);
+
+      return orvalMutator<ApiResponseBillParticipantResponse>(
+      {url: `/bills/${id}/mark-paid`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: markPaidRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getMarkPaidMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext> => {
+
+const mutationKey = ['markPaid'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markPaid>>, {id: string;data: MarkPaidRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  markPaid(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkPaidMutationResult = NonNullable<Awaited<ReturnType<typeof markPaid>>>
+    export type MarkPaidMutationBody = MarkPaidRequest
+    export type MarkPaidMutationError = ApiError
+
+    export const useMarkPaid = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPaid>>, TError,{id: string;data: MarkPaidRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof markPaid>>,
+        TError,
+        {id: string;data: MarkPaidRequest},
+        TContext
+      > => {
+      return useMutation(getMarkPaidMutationOptions(options), queryClient);
+    }
+    export const getParticipants = (
     id: MaybeRefOrGetter<string>,
  signal?: AbortSignal
 ) => {
@@ -345,3 +293,69 @@ export function useGetParticipants<TData = Awaited<ReturnType<typeof getParticip
 
   return query;
 }
+
+
+
+
+
+
+export const setPaymentQrProfile = (
+    id: MaybeRefOrGetter<string>,
+    billPaymentQrProfileRequest: MaybeRefOrGetter<BillPaymentQrProfileRequest>,
+ signal?: AbortSignal
+) => {
+      id = toValue(id);
+billPaymentQrProfileRequest = toValue(billPaymentQrProfileRequest);
+
+      return orvalMutator<ApiResponseBillResponse>(
+      {url: `/bills/${id}/payment-qr-profile`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: billPaymentQrProfileRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getSetPaymentQrProfileMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext> => {
+
+const mutationKey = ['setPaymentQrProfile'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPaymentQrProfile>>, {id: string;data: BillPaymentQrProfileRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setPaymentQrProfile(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetPaymentQrProfileMutationResult = NonNullable<Awaited<ReturnType<typeof setPaymentQrProfile>>>
+    export type SetPaymentQrProfileMutationBody = BillPaymentQrProfileRequest
+    export type SetPaymentQrProfileMutationError = ApiError
+
+    export const useSetPaymentQrProfile = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPaymentQrProfile>>, TError,{id: string;data: BillPaymentQrProfileRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof setPaymentQrProfile>>,
+        TError,
+        {id: string;data: BillPaymentQrProfileRequest},
+        TContext
+      > => {
+      return useMutation(getSetPaymentQrProfileMutationOptions(options), queryClient);
+    }

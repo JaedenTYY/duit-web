@@ -7,11 +7,11 @@
  */
 
 export interface CategorySummary {
+  categoryColor?: string;
+  categoryIcon?: string;
   categoryId?: string;
   categoryName: string;
-  categoryIcon?: string;
-  categoryColor?: string;
-  total: string;
   count: number;
   percentage: string;
+  total: string;
 }

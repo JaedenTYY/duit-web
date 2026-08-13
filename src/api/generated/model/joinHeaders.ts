@@ -7,5 +7,11 @@
  */
 
 export type JoinHeaders = {
+/**
+ * Required opaque join operation key. Same bill + same key + same canonical display name returns the same participant for the bill lifetime.
+ * @minLength 1
+ * @maxLength 128
+ * @pattern [A-Za-z0-9._:-]+
+ */
 'Idempotency-Key': string;
 };

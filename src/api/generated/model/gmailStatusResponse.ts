@@ -8,8 +8,8 @@
 
 export interface GmailStatusResponse {
   connected: boolean;
+  connectedAt?: string;
   provider: string;
   providerEmail?: string;
   scopes: string[];
-  connectedAt?: string;
 }

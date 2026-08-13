@@ -7,8 +7,8 @@
  */
 
 export interface StatementImportResponse {
-  uploadId: string;
   importedCount: number;
   skippedCount: number;
   transactionIds: string[];
+  uploadId: string;
 }

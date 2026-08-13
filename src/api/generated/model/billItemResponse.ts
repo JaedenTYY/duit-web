@@ -7,10 +7,10 @@
  */
 
 export interface BillItemResponse {
+  claimantCount: number;
   id: string;
+  lineTotal: string;
   name: string;
   quantity: string;
   unitPrice: string;
-  lineTotal: string;
-  claimantCount: number;
 }

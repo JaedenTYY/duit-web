@@ -7,8 +7,13 @@
  */
 
 export interface SelectBillItemsRequest {
-  /** @minLength 1 */
-  participantToken: string;
-  itemIds: string[];
   expectedAllocationVersion: number;
+  /** Complete replacement set of selected item IDs. Empty array is valid and means the participant claims no items. */
+  itemIds: string[];
+  /**
+     * Opaque guest participant capability token.
+     * @minLength 1
+     * @maxLength 128
+     */
+  participantToken: string;
 }

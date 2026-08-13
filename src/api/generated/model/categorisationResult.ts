@@ -9,14 +9,14 @@ import type { CategorisationResultConfidence } from './categorisationResultConfi
 import type { CategorisationResultSource } from './categorisationResultSource.ts';
 
 export interface CategorisationResult {
-  merchantId?: string;
-  merchantName: string;
   categoryId?: string;
-  source: CategorisationResultSource;
-  personalised: boolean;
-  /** @nullable */
-  similarityScore?: number | null;
   /** @nullable */
   confidence?: CategorisationResultConfidence;
   isAutomaticCategory: boolean;
+  merchantId?: string;
+  merchantName: string;
+  personalised: boolean;
+  /** @nullable */
+  similarityScore?: number | null;
+  source: CategorisationResultSource;
 }

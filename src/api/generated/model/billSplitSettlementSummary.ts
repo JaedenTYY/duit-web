@@ -8,8 +8,8 @@
 
 export interface BillSplitSettlementSummary {
   billsCreated: number;
-  participants: number;
-  paidParticipants: number;
-  settledAmount: string;
   outstandingAmount: string;
+  paidParticipants: number;
+  participants: number;
+  settledAmount: string;
 }

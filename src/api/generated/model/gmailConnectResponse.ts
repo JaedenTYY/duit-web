@@ -7,6 +7,6 @@
  */
 
 export interface GmailConnectResponse {
-  connected: boolean;
   authorizationUrl?: string;
+  connected: boolean;
 }

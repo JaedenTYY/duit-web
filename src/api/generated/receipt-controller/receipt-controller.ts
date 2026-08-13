@@ -27,7 +27,7 @@ import type {
   ApiResponseReceiptExtractionResponse,
   ApiResponseTransactionResponse,
   ConfirmExtractionRequest,
-  UploadReceiptBody
+  ReceiptUploadRequest
 } from '../model';
 
 import { orvalMutator } from '../../../lib/orvalMutator.ts';
@@ -35,65 +35,7 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const uploadReceipt = (
-    uploadReceiptBody?: MaybeRefOrGetter<UploadReceiptBody>,
- signal?: AbortSignal
-) => {
-      uploadReceiptBody = toValue(uploadReceiptBody);
-
-      return orvalMutator<ApiResponseReceiptExtractionResponse>(
-      {url: `/receipt/upload`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: uploadReceiptBody, signal
-    },
-      );
-    }
-
-
-
-
-export const getUploadReceiptMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data?: UploadReceiptBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data?: UploadReceiptBody}, TContext> => {
-
-const mutationKey = ['uploadReceipt'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadReceipt>>, {data?: UploadReceiptBody}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadReceipt(data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UploadReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof uploadReceipt>>>
-    export type UploadReceiptMutationBody = UploadReceiptBody | undefined
-    export type UploadReceiptMutationError = ApiError
-
-    export const useUploadReceipt = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data?: UploadReceiptBody}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof uploadReceipt>>,
-        TError,
-        {data?: UploadReceiptBody},
-        TContext
-      > => {
-      return useMutation(getUploadReceiptMutationOptions(options), queryClient);
-    }
-    export const confirmExtraction = (
+export const confirmExtraction = (
     confirmExtractionRequest: MaybeRefOrGetter<ConfirmExtractionRequest>,
  signal?: AbortSignal
 ) => {
@@ -150,4 +92,70 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getConfirmExtractionMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Upload a receipt image for OCR and AI extraction
+ */
+export const uploadReceipt = (
+    receiptUploadRequest: MaybeRefOrGetter<ReceiptUploadRequest>,
+ signal?: AbortSignal
+) => {
+      receiptUploadRequest = toValue(receiptUploadRequest);
+      const formData = new FormData();
+formData.append(`file`, receiptUploadRequest.file);
+
+      return orvalMutator<ApiResponseReceiptExtractionResponse>(
+      {url: `/receipt/upload`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      );
+    }
+
+
+
+
+export const getUploadReceiptMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data: ReceiptUploadRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data: ReceiptUploadRequest}, TContext> => {
+
+const mutationKey = ['uploadReceipt'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadReceipt>>, {data: ReceiptUploadRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadReceipt(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof uploadReceipt>>>
+    export type UploadReceiptMutationBody = ReceiptUploadRequest
+    export type UploadReceiptMutationError = ApiError
+
+    /**
+ * @summary Upload a receipt image for OCR and AI extraction
+ */
+export const useUploadReceipt = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceipt>>, TError,{data: ReceiptUploadRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof uploadReceipt>>,
+        TError,
+        {data: ReceiptUploadRequest},
+        TContext
+      > => {
+      return useMutation(getUploadReceiptMutationOptions(options), queryClient);
     }

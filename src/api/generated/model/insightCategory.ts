@@ -7,7 +7,7 @@
  */
 
 export interface InsightCategory {
-  categoryName: string;
   amount: string;
+  categoryName: string;
   percentage: number;
 }

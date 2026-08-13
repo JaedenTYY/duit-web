@@ -7,7 +7,7 @@
  */
 
 export interface ConfirmStatementRow {
-  rowId: string;
   categoryId?: string;
   rememberMerchantCategory: boolean;
+  rowId: string;
 }

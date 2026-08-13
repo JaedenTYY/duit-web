@@ -8,9 +8,9 @@
 import type { SpendingTrendDirection } from './spendingTrendDirection.ts';
 
 export interface SpendingTrend {
-  direction: SpendingTrendDirection;
-  currentTotal: string;
-  previousTotal: string;
   /** @nullable */
   changePercentage: number | null;
+  currentTotal: string;
+  direction: SpendingTrendDirection;
+  previousTotal: string;
 }

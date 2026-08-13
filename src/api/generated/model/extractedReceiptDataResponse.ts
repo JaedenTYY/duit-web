@@ -8,17 +8,17 @@
 import type { LineItemResponse } from './lineItemResponse.ts';
 
 export interface ExtractedReceiptDataResponse {
-  merchantName?: string;
-  merchantCategoryHint?: string;
-  date?: string;
-  currency: string;
-  lineItems: LineItemResponse[];
-  subtotal?: string;
-  serviceCharge?: string;
-  tax?: string;
-  discountAmount?: string;
-  total: string;
-  paymentMethod: string;
   confidence: string;
+  currency: string;
+  date?: string;
+  discountAmount?: string;
   fieldsNeedingReview: string[];
+  lineItems: LineItemResponse[];
+  merchantCategoryHint?: string;
+  merchantName?: string;
+  paymentMethod: string;
+  serviceCharge?: string;
+  subtotal?: string;
+  tax?: string;
+  total: string;
 }

@@ -8,18 +8,18 @@
 import type { EmailExtractionResponseStatus } from './emailExtractionResponseStatus.ts';
 
 export interface EmailExtractionResponse {
-  id: string;
-  sender: string;
-  subject: string;
-  receivedAt: string;
-  merchantName: string;
   amount: string;
+  categorisationConfidence?: string;
+  createdAt: string;
   currency: string;
+  id: string;
+  merchantName: string;
   occurredAt: string;
+  receivedAt: string;
+  sender: string;
+  status: EmailExtractionResponseStatus;
+  subject: string;
   suggestedCategoryId?: string;
   suggestedCategoryName?: string;
-  categorisationConfidence?: string;
-  status: EmailExtractionResponseStatus;
   transactionId?: string;
-  createdAt: string;
 }

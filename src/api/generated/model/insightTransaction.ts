@@ -7,8 +7,8 @@
  */
 
 export interface InsightTransaction {
-  merchantName: string;
-  categoryName: string;
   amount: string;
+  categoryName: string;
+  merchantName: string;
   occurredAt: string;
 }

@@ -13,15 +13,14 @@ export interface CreateTransactionRequest {
      * @minLength 1
      */
   amount: string;
+  categoryId?: string;
   /** @minLength 1 */
   currency: CreateTransactionRequestCurrency;
-  categoryId?: string;
   /**
      * @minLength 0
      * @maxLength 500
      */
   description?: string;
-  occurredAt: string;
   /** Positive plain decimal string in MYR per source-currency unit; maximum scale 6 and maximum 9999.999999. */
   fxRate?: string;
   /**
@@ -29,5 +28,6 @@ export interface CreateTransactionRequest {
      * @maxLength 255
      */
   merchantName?: string;
-  rememberMerchantCategory: boolean;
+  occurredAt: string;
+  rememberMerchantCategory?: boolean;
 }

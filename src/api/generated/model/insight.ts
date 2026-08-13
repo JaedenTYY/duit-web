@@ -8,10 +8,10 @@
 import type { WeeklyInsightContent } from './weeklyInsightContent.ts';
 
 export interface Insight {
-  id: string;
-  userId: string;
-  periodStart: string;
-  periodEnd: string;
   content: WeeklyInsightContent;
   generatedAt: string;
+  id: string;
+  periodEnd: string;
+  periodStart: string;
+  userId: string;
 }

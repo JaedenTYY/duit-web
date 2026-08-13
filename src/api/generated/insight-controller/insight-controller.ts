@@ -36,63 +36,7 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const generate = (
-
- signal?: AbortSignal
-) => {
-
-
-      return orvalMutator<ApiResponseInsight>(
-      {url: `/insights/generate`, method: 'POST', signal
-    },
-      );
-    }
-
-
-
-
-export const getGenerateMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext> => {
-
-const mutationKey = ['generate'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generate>>, void> = () => {
-
-
-          return  generate()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GenerateMutationResult = NonNullable<Awaited<ReturnType<typeof generate>>>
-
-    export type GenerateMutationError = ApiError
-
-    export const useGenerate = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof generate>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getGenerateMutationOptions(options), queryClient);
-    }
-    export const list = (
+export const list = (
 
  signal?: AbortSignal
 ) => {
@@ -156,7 +100,63 @@ export function useList<TData = Awaited<ReturnType<typeof list>>, TError = ApiEr
 
 
 
-export const latest = (
+export const generate = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return orvalMutator<ApiResponseInsight>(
+      {url: `/insights/generate`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+
+export const getGenerateMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext> => {
+
+const mutationKey = ['generate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generate>>, void> = () => {
+
+
+          return  generate()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateMutationResult = NonNullable<Awaited<ReturnType<typeof generate>>>
+
+    export type GenerateMutationError = ApiError
+
+    export const useGenerate = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generate>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof generate>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenerateMutationOptions(options), queryClient);
+    }
+    export const latest = (
 
  signal?: AbortSignal
 ) => {

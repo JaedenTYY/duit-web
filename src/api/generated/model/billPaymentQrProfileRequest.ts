@@ -7,6 +7,6 @@
  */
 
 export interface BillPaymentQrProfileRequest {
-  paymentQrProfileId?: string;
   expectedAllocationVersion: number;
+  paymentQrProfileId?: string;
 }

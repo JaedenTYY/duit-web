@@ -9,23 +9,23 @@ import type { BillParticipantItemResponse } from './billParticipantItemResponse.
 import type { GuestPaymentQrProfileResponse } from './guestPaymentQrProfileResponse.ts';
 
 export interface GuestBillSummaryResponse {
-  displayName: string;
-  currency: string;
-  subtotalShare: string;
-  taxShare: string;
-  serviceChargeShare: string;
-  totalOwed: string;
-  lineAdjustmentShare: string;
-  totalAdjustmentShare: string;
   allocationVersion: number;
-  unallocatedSubtotal: string;
-  unallocatedTax: string;
-  unallocatedServiceCharge: string;
-  unallocatedTotal: string;
+  currency: string;
+  displayName: string;
   isPaid: boolean;
-  paidAt?: string;
-  paidAmount?: string;
+  lineAdjustmentShare: string;
   paidAllocationVersion?: number;
+  paidAmount?: string;
+  paidAt?: string;
   paymentQrProfile?: GuestPaymentQrProfileResponse;
   selectedItems: BillParticipantItemResponse[];
+  serviceChargeShare: string;
+  subtotalShare: string;
+  taxShare: string;
+  totalAdjustmentShare: string;
+  totalOwed: string;
+  unallocatedServiceCharge: string;
+  unallocatedSubtotal: string;
+  unallocatedTax: string;
+  unallocatedTotal: string;
 }

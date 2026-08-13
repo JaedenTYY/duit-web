@@ -41,127 +41,7 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const resolve = (
-    id: MaybeRefOrGetter<string>,
-    resolveAnomalyRequest: MaybeRefOrGetter<ResolveAnomalyRequest>,
- signal?: AbortSignal
-) => {
-      id = toValue(id);
-resolveAnomalyRequest = toValue(resolveAnomalyRequest);
-
-      return orvalMutator<ApiResponseAnomalyAlertResponse>(
-      {url: `/anomalies/${id}/resolve`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: resolveAnomalyRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getResolveMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext> => {
-
-const mutationKey = ['resolve'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolve>>, {id: string;data: ResolveAnomalyRequest}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  resolve(id,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ResolveMutationResult = NonNullable<Awaited<ReturnType<typeof resolve>>>
-    export type ResolveMutationBody = ResolveAnomalyRequest
-    export type ResolveMutationError = ApiError
-
-    export const useResolve = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof resolve>>,
-        TError,
-        {id: string;data: ResolveAnomalyRequest},
-        TContext
-      > => {
-      return useMutation(getResolveMutationOptions(options), queryClient);
-    }
-    export const resolveWithPatch = (
-    id: MaybeRefOrGetter<string>,
-    resolveAnomalyRequest: MaybeRefOrGetter<ResolveAnomalyRequest>,
- signal?: AbortSignal
-) => {
-      id = toValue(id);
-resolveAnomalyRequest = toValue(resolveAnomalyRequest);
-
-      return orvalMutator<ApiResponseAnomalyAlertResponse>(
-      {url: `/anomalies/${id}/resolve`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: resolveAnomalyRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getResolveWithPatchMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext> => {
-
-const mutationKey = ['resolveWithPatch'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveWithPatch>>, {id: string;data: ResolveAnomalyRequest}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  resolveWithPatch(id,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ResolveWithPatchMutationResult = NonNullable<Awaited<ReturnType<typeof resolveWithPatch>>>
-    export type ResolveWithPatchMutationBody = ResolveAnomalyRequest
-    export type ResolveWithPatchMutationError = ApiError
-
-    export const useResolveWithPatch = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof resolveWithPatch>>,
-        TError,
-        {id: string;data: ResolveAnomalyRequest},
-        TContext
-      > => {
-      return useMutation(getResolveWithPatchMutationOptions(options), queryClient);
-    }
-    export const list1 = (
+export const list1 = (
 
  signal?: AbortSignal
 ) => {
@@ -283,3 +163,129 @@ export function useLatest1<TData = Awaited<ReturnType<typeof latest1>>, TError =
 
   return query;
 }
+
+
+
+
+
+
+export const resolveWithPatch = (
+    id: MaybeRefOrGetter<string>,
+    resolveAnomalyRequest: MaybeRefOrGetter<ResolveAnomalyRequest>,
+ signal?: AbortSignal
+) => {
+      id = toValue(id);
+resolveAnomalyRequest = toValue(resolveAnomalyRequest);
+
+      return orvalMutator<ApiResponseAnomalyAlertResponse>(
+      {url: `/anomalies/${id}/resolve`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: resolveAnomalyRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getResolveWithPatchMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext> => {
+
+const mutationKey = ['resolveWithPatch'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveWithPatch>>, {id: string;data: ResolveAnomalyRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resolveWithPatch(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolveWithPatchMutationResult = NonNullable<Awaited<ReturnType<typeof resolveWithPatch>>>
+    export type ResolveWithPatchMutationBody = ResolveAnomalyRequest
+    export type ResolveWithPatchMutationError = ApiError
+
+    export const useResolveWithPatch = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveWithPatch>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof resolveWithPatch>>,
+        TError,
+        {id: string;data: ResolveAnomalyRequest},
+        TContext
+      > => {
+      return useMutation(getResolveWithPatchMutationOptions(options), queryClient);
+    }
+    export const resolve = (
+    id: MaybeRefOrGetter<string>,
+    resolveAnomalyRequest: MaybeRefOrGetter<ResolveAnomalyRequest>,
+ signal?: AbortSignal
+) => {
+      id = toValue(id);
+resolveAnomalyRequest = toValue(resolveAnomalyRequest);
+
+      return orvalMutator<ApiResponseAnomalyAlertResponse>(
+      {url: `/anomalies/${id}/resolve`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: resolveAnomalyRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getResolveMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext> => {
+
+const mutationKey = ['resolve'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolve>>, {id: string;data: ResolveAnomalyRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resolve(id,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolveMutationResult = NonNullable<Awaited<ReturnType<typeof resolve>>>
+    export type ResolveMutationBody = ResolveAnomalyRequest
+    export type ResolveMutationError = ApiError
+
+    export const useResolve = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolve>>, TError,{id: string;data: ResolveAnomalyRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof resolve>>,
+        TError,
+        {id: string;data: ResolveAnomalyRequest},
+        TContext
+      > => {
+      return useMutation(getResolveMutationOptions(options), queryClient);
+    }

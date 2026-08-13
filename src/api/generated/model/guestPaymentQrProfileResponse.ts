@@ -7,8 +7,8 @@
  */
 
 export interface GuestPaymentQrProfileResponse {
-  provider: string;
   displayName: string;
+  provider: string;
   qrImageUrl?: string;
   qrPayload?: string;
 }

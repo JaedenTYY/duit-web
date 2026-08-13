@@ -7,7 +7,7 @@
  */
 
 export interface PingResponse {
-  status: string;
   service: string;
+  status: string;
   timestamp: string;
 }

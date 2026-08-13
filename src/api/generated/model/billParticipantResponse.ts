@@ -8,20 +8,20 @@
 import type { BillParticipantItemResponse } from './billParticipantItemResponse.ts';
 
 export interface BillParticipantResponse {
-  id: string;
+  allocationVersion: number;
   displayName: string;
+  id: string;
+  isPaid: boolean;
+  joinedAt: string;
+  lineAdjustmentShare: string;
+  paidAllocationVersion?: number;
+  paidAmount?: string;
+  paidAt?: string;
+  selectedItems: BillParticipantItemResponse[];
+  serviceChargeShare: string;
   subtotalShare: string;
   taxShare: string;
-  serviceChargeShare: string;
-  totalOwed: string;
-  lineAdjustmentShare: string;
   totalAdjustmentShare: string;
-  allocationVersion: number;
-  isPaid: boolean;
-  paidAt?: string;
-  paidAmount?: string;
-  paidAllocationVersion?: number;
-  joinedAt: string;
+  totalOwed: string;
   updatedAt: string;
-  selectedItems: BillParticipantItemResponse[];
 }

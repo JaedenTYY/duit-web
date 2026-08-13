@@ -8,5 +8,10 @@
 
 export type GetMonthlySummaryParams = {
 year: number;
-month: number;
+/**
+ * Month number interpreted in Asia/Kuala_Lumpur reporting time.
+ * @minimum 1
+ * @maximum 12
+ */
+month: string;
 };

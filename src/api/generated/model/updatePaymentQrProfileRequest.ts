@@ -8,16 +8,20 @@
 
 export interface UpdatePaymentQrProfileRequest {
   /**
-     * @minLength 0
-     * @maxLength 50
-     */
-  provider?: string;
-  /**
+     * When omitted or null, displayName is unchanged.
      * @minLength 0
      * @maxLength 120
      */
   displayName?: string;
-  qrImageUrl?: string;
-  qrPayload?: string;
   isDefault?: boolean;
+  /**
+     * When omitted or null, provider is unchanged.
+     * @minLength 0
+     * @maxLength 50
+     */
+  provider?: string;
+  /** When omitted or null, qrImageUrl is unchanged; null does not clear the existing value. */
+  qrImageUrl?: string;
+  /** When omitted or null, qrPayload is unchanged; null does not clear the existing value. */
+  qrPayload?: string;
 }

@@ -7,6 +7,6 @@
  */
 
 export interface ResponseMeta {
-  timestamp: string;
   requestId: string;
+  timestamp: string;
 }

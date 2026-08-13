@@ -46,129 +46,7 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const join = (
-    shareToken: MaybeRefOrGetter<string>,
-    joinBillRequest: MaybeRefOrGetter<JoinBillRequest>,
-    headers: MaybeRefOrGetter<JoinHeaders>,
- signal?: AbortSignal
-) => {
-      shareToken = toValue(shareToken);
-joinBillRequest = toValue(joinBillRequest);
-headers = toValue(headers);
-
-      return orvalMutator<ApiResponseJoinBillResponse>(
-      {url: `/guest/bills/${shareToken}/join`, method: 'POST',
-      headers: {'Content-Type': 'application/json', ...headers},
-      data: joinBillRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getJoinMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext> => {
-
-const mutationKey = ['join'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof join>>, {shareToken: string;data: JoinBillRequest;headers: JoinHeaders}> = (props) => {
-          const {shareToken,data,headers} = props ?? {};
-
-          return  join(shareToken,data,headers,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type JoinMutationResult = NonNullable<Awaited<ReturnType<typeof join>>>
-    export type JoinMutationBody = JoinBillRequest
-    export type JoinMutationError = ApiError
-
-    export const useJoin = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof join>>,
-        TError,
-        {shareToken: string;data: JoinBillRequest;headers: JoinHeaders},
-        TContext
-      > => {
-      return useMutation(getJoinMutationOptions(options), queryClient);
-    }
-    export const selectItems = (
-    shareToken: MaybeRefOrGetter<string>,
-    selectBillItemsRequest: MaybeRefOrGetter<SelectBillItemsRequest>,
- signal?: AbortSignal
-) => {
-      shareToken = toValue(shareToken);
-selectBillItemsRequest = toValue(selectBillItemsRequest);
-
-      return orvalMutator<ApiResponseGuestBillSummaryResponse>(
-      {url: `/guest/bills/${shareToken}/items`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: selectBillItemsRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getSelectItemsMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext> => {
-
-const mutationKey = ['selectItems'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof selectItems>>, {shareToken: string;data: SelectBillItemsRequest}> = (props) => {
-          const {shareToken,data} = props ?? {};
-
-          return  selectItems(shareToken,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SelectItemsMutationResult = NonNullable<Awaited<ReturnType<typeof selectItems>>>
-    export type SelectItemsMutationBody = SelectBillItemsRequest
-    export type SelectItemsMutationError = ApiError
-
-    export const useSelectItems = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof selectItems>>,
-        TError,
-        {shareToken: string;data: SelectBillItemsRequest},
-        TContext
-      > => {
-      return useMutation(getSelectItemsMutationOptions(options), queryClient);
-    }
-    export const getGuestBill = (
+export const getGuestBill = (
     shareToken: MaybeRefOrGetter<string>,
  signal?: AbortSignal
 ) => {
@@ -232,7 +110,129 @@ export function useGetGuestBill<TData = Awaited<ReturnType<typeof getGuestBill>>
 
 
 
-export const summary = (
+export const selectItems = (
+    shareToken: MaybeRefOrGetter<string>,
+    selectBillItemsRequest: MaybeRefOrGetter<SelectBillItemsRequest>,
+ signal?: AbortSignal
+) => {
+      shareToken = toValue(shareToken);
+selectBillItemsRequest = toValue(selectBillItemsRequest);
+
+      return orvalMutator<ApiResponseGuestBillSummaryResponse>(
+      {url: `/guest/bills/${shareToken}/items`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: selectBillItemsRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getSelectItemsMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext> => {
+
+const mutationKey = ['selectItems'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof selectItems>>, {shareToken: string;data: SelectBillItemsRequest}> = (props) => {
+          const {shareToken,data} = props ?? {};
+
+          return  selectItems(shareToken,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SelectItemsMutationResult = NonNullable<Awaited<ReturnType<typeof selectItems>>>
+    export type SelectItemsMutationBody = SelectBillItemsRequest
+    export type SelectItemsMutationError = ApiError
+
+    export const useSelectItems = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectItems>>, TError,{shareToken: string;data: SelectBillItemsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof selectItems>>,
+        TError,
+        {shareToken: string;data: SelectBillItemsRequest},
+        TContext
+      > => {
+      return useMutation(getSelectItemsMutationOptions(options), queryClient);
+    }
+    export const join = (
+    shareToken: MaybeRefOrGetter<string>,
+    joinBillRequest: MaybeRefOrGetter<JoinBillRequest>,
+    headers: MaybeRefOrGetter<JoinHeaders>,
+ signal?: AbortSignal
+) => {
+      shareToken = toValue(shareToken);
+joinBillRequest = toValue(joinBillRequest);
+headers = toValue(headers);
+
+      return orvalMutator<ApiResponseJoinBillResponse>(
+      {url: `/guest/bills/${shareToken}/join`, method: 'POST',
+      headers: {'Content-Type': 'application/json', ...headers},
+      data: joinBillRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getJoinMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext> => {
+
+const mutationKey = ['join'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof join>>, {shareToken: string;data: JoinBillRequest;headers: JoinHeaders}> = (props) => {
+          const {shareToken,data,headers} = props ?? {};
+
+          return  join(shareToken,data,headers,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JoinMutationResult = NonNullable<Awaited<ReturnType<typeof join>>>
+    export type JoinMutationBody = JoinBillRequest
+    export type JoinMutationError = ApiError
+
+    export const useJoin = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof join>>, TError,{shareToken: string;data: JoinBillRequest;headers: JoinHeaders}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof join>>,
+        TError,
+        {shareToken: string;data: JoinBillRequest;headers: JoinHeaders},
+        TContext
+      > => {
+      return useMutation(getJoinMutationOptions(options), queryClient);
+    }
+    export const summary = (
     shareToken: MaybeRefOrGetter<string>,
     headers: MaybeRefOrGetter<SummaryHeaders>,
  signal?: AbortSignal
