@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { StatementImportResult, StatementUpload } from '@/types'
 import api from '@/lib/api'
+import { upload as uploadStatementContract } from '@/api/generated/statement-controller/statement-controller'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
@@ -22,12 +23,8 @@ export const useStatementStore = defineStore('statement', () => {
     error.value = null
     result.value = null
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const response = await api.post<{ data: StatementUpload }>('/statements/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      upload.value = response.data.data
+      const response = await uploadStatementContract({ file })
+      upload.value = response.data as StatementUpload
       return upload.value
     } catch (err: unknown) {
       error.value = extractError(err)

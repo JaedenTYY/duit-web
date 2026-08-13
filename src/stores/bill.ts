@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import api from '@/lib/api'
+import { createFromReceipt as createFromReceiptContract } from '@/api/generated/bill-controller/bill-controller'
 import type { Bill, GuestBill, GuestBillSummary, PaymentQrProfile } from '@/types'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
@@ -51,13 +52,8 @@ export const useBillStore = defineStore('bill', () => {
         throw new Error(validationError)
       }
 
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await api.post<ApiResponse<Bill>>('/bills/from-receipt', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-      bill.value = response.data.data
+      const response = await createFromReceiptContract({ file })
+      bill.value = response.data as Bill
       return bill.value
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Bill creation failed')
