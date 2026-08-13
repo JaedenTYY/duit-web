@@ -3191,7 +3191,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -3582,7 +3609,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -5284,7 +5338,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -5705,7 +5786,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -6089,7 +6197,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -6237,10 +6372,13 @@
       "get" : {
         "operationId" : "categorise",
         "parameters" : [ {
+          "description" : "Merchant display name to categorise. It must contain a canonical merchant identity after normalisation.",
           "in" : "query",
           "name" : "name",
           "required" : true,
           "schema" : {
+            "maxLength" : 255,
+            "minLength" : 1,
             "type" : "string"
           }
         } ],
@@ -6363,10 +6501,13 @@
       "get" : {
         "operationId" : "search",
         "parameters" : [ {
+          "description" : "Merchant search query. It must contain a canonical merchant identity after normalisation.",
           "in" : "query",
           "name" : "q",
           "required" : true,
           "schema" : {
+            "maxLength" : 255,
+            "minLength" : 1,
             "type" : "string"
           }
         } ],
@@ -7354,7 +7495,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -7490,7 +7658,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -7767,7 +7962,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -7916,7 +8138,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {
@@ -8603,6 +8852,7 @@
       "post" : {
         "operationId" : "createTransaction",
         "parameters" : [ {
+          "description" : "Required operation key for manual transaction creation. Use 1-128 ASCII characters matching [A-Za-z0-9._:-]+. The server keeps a 24-hour idempotency window: the same key with the same canonical request replays the committed response, while the same key with a different request conflicts.",
           "in" : "header",
           "name" : "Idempotency-Key",
           "required" : true,
@@ -8682,7 +8932,16 @@
                 }
               }
             },
-            "description" : "Idempotency conflict or in-progress transaction creation"
+            "description" : "Idempotency conflict or in-progress transaction creation. Retry-After is present only for ERR_IDEMPOTENCY_IN_PROGRESS_409.",
+            "headers" : {
+              "Retry-After" : {
+                "description" : "Whole seconds before retrying with the same Idempotency-Key when transaction creation is still in progress",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "410" : {
             "content" : {
@@ -8722,7 +8981,34 @@
                 }
               }
             },
-            "description" : "Rate limit exceeded"
+            "description" : "Rate limit exceeded",
+            "headers" : {
+              "RateLimit-Limit" : {
+                "description" : "Effective request limit when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Remaining" : {
+                "description" : "Remaining requests when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "RateLimit-Reset" : {
+                "description" : "Reset time as Unix epoch seconds when applicable",
+                "schema" : {
+                  "format" : "int64"
+                }
+              },
+              "Retry-After" : {
+                "description" : "Whole seconds until the request may be retried",
+                "schema" : {
+                  "format" : "int64",
+                  "minimum" : 0
+                }
+              }
+            }
           },
           "500" : {
             "content" : {

@@ -8,6 +8,7 @@
 
 export type CreateTransactionHeaders = {
 /**
+ * Required operation key for manual transaction creation. Use 1-128 ASCII characters matching [A-Za-z0-9._:-]+. The server keeps a 24-hour idempotency window: the same key with the same canonical request replays the committed response, while the same key with a different request conflicts.
  * @minLength 1
  * @maxLength 128
  * @pattern [A-Za-z0-9._:-]+
