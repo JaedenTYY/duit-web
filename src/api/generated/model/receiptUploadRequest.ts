@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Seed200 = {[key: string]: string};
+export interface ReceiptUploadRequest {
+  /** Receipt image file. Supported content types: image/jpeg, image/png, image/webp. Maximum size: 10 MB. */
+  file: Blob;
+}

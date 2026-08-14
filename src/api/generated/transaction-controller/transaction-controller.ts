@@ -173,14 +173,15 @@ const {mutation: mutationOptions} = options ?
       > => {
       return useMutation(getCreateTransactionMutationOptions(options), queryClient);
     }
-    export const getTransaction = (
-    id: MaybeRefOrGetter<string>,
+    export const getMonthlySummary = (
+    params: MaybeRefOrGetter<GetMonthlySummaryParams>,
  signal?: AbortSignal
 ) => {
-      id = toValue(id);
+      params = toValue(params);
 
-      return orvalMutator<ApiResponseTransactionResponse>(
-      {url: `/transactions/${id}`, method: 'GET', signal
+      return orvalMutator<ApiResponseMonthlySummaryResponse>(
+      {url: `/transactions/summary/monthly`, method: 'GET',
+        params, signal
     },
       );
     }
@@ -188,42 +189,42 @@ const {mutation: mutationOptions} = options ?
 
 
 
-export const getGetTransactionQueryKey = (id: MaybeRefOrGetter<string>,) => {
+export const getGetMonthlySummaryQueryKey = (params?: MaybeRefOrGetter<GetMonthlySummaryParams>,) => {
     return [
-    'transactions',id
+    'transactions','summary','monthly', ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetTransactionQueryOptions = <TData = Awaited<ReturnType<typeof getTransaction>>, TError = ApiError>(id: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>>, }
+export const getGetMonthlySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getMonthlySummary>>, TError = ApiError>(params: MaybeRefOrGetter<GetMonthlySummaryParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  getGetTransactionQueryKey(id);
+  const queryKey =  getGetMonthlySummaryQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTransaction>>> = ({ signal }) => getTransaction(id, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMonthlySummary>>> = ({ signal }) => getMonthlySummary(params, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: computed(() => toValue(id) !== null && toValue(id) !== undefined), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>
 }
 
-export type GetTransactionQueryResult = NonNullable<Awaited<ReturnType<typeof getTransaction>>>
-export type GetTransactionQueryError = ApiError
+export type GetMonthlySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getMonthlySummary>>>
+export type GetMonthlySummaryQueryError = ApiError
 
 
 
-export function useGetTransaction<TData = Awaited<ReturnType<typeof getTransaction>>, TError = ApiError>(
- id: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>>, }
+export function useGetMonthlySummary<TData = Awaited<ReturnType<typeof getMonthlySummary>>, TError = ApiError>(
+ params: MaybeRefOrGetter<GetMonthlySummaryParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>>, }
  , queryClient?: QueryClient
  ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetTransactionQueryOptions(id,options)
+  const queryOptions = getGetMonthlySummaryQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -296,7 +297,71 @@ const {mutation: mutationOptions} = options ?
       > => {
       return useMutation(getDeleteTransactionMutationOptions(options), queryClient);
     }
-    export const updateTransaction = (
+    export const getTransaction = (
+    id: MaybeRefOrGetter<string>,
+ signal?: AbortSignal
+) => {
+      id = toValue(id);
+
+      return orvalMutator<ApiResponseTransactionResponse>(
+      {url: `/transactions/${id}`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getGetTransactionQueryKey = (id: MaybeRefOrGetter<string>,) => {
+    return [
+    'transactions',id
+    ] as const;
+    }
+
+
+export const getGetTransactionQueryOptions = <TData = Awaited<ReturnType<typeof getTransaction>>, TError = ApiError>(id: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  getGetTransactionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTransaction>>> = ({ signal }) => getTransaction(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: computed(() => toValue(id) !== null && toValue(id) !== undefined), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>
+}
+
+export type GetTransactionQueryResult = NonNullable<Awaited<ReturnType<typeof getTransaction>>>
+export type GetTransactionQueryError = ApiError
+
+
+
+export function useGetTransaction<TData = Awaited<ReturnType<typeof getTransaction>>, TError = ApiError>(
+ id: MaybeRefOrGetter<string>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTransaction>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTransactionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
+
+  return query;
+}
+
+
+
+
+
+
+export const updateTransaction = (
     id: MaybeRefOrGetter<string>,
     updateTransactionRequest: MaybeRefOrGetter<UpdateTransactionRequest>,
  signal?: AbortSignal
@@ -356,62 +421,3 @@ const {mutation: mutationOptions} = options ?
       > => {
       return useMutation(getUpdateTransactionMutationOptions(options), queryClient);
     }
-    export const getMonthlySummary = (
-    params: MaybeRefOrGetter<GetMonthlySummaryParams>,
- signal?: AbortSignal
-) => {
-      params = toValue(params);
-
-      return orvalMutator<ApiResponseMonthlySummaryResponse>(
-      {url: `/transactions/summary/monthly`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-
-
-
-
-export const getGetMonthlySummaryQueryKey = (params?: MaybeRefOrGetter<GetMonthlySummaryParams>,) => {
-    return [
-    'transactions','summary','monthly', ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetMonthlySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getMonthlySummary>>, TError = ApiError>(params: MaybeRefOrGetter<GetMonthlySummaryParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  getGetMonthlySummaryQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMonthlySummary>>> = ({ signal }) => getMonthlySummary(params, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>
-}
-
-export type GetMonthlySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getMonthlySummary>>>
-export type GetMonthlySummaryQueryError = ApiError
-
-
-
-export function useGetMonthlySummary<TData = Awaited<ReturnType<typeof getMonthlySummary>>, TError = ApiError>(
- params: MaybeRefOrGetter<GetMonthlySummaryParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonthlySummary>>, TError, TData>>, }
- , queryClient?: QueryClient
- ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetMonthlySummaryQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
-
-  return query;
-}

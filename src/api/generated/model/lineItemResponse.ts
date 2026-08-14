@@ -7,8 +7,8 @@
  */
 
 export interface LineItemResponse {
+  lineTotal: string;
   name: string;
   qty: string;
   unitPrice: string;
-  lineTotal: string;
 }

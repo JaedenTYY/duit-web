@@ -9,12 +9,12 @@
 export interface DeleteAccountRequest {
   /**
      * @minLength 0
-     * @maxLength 128
-     */
-  currentPassword: string;
-  /**
-     * @minLength 0
      * @maxLength 64
      */
   confirmationPhrase: string;
+  /**
+     * @minLength 0
+     * @maxLength 128
+     */
+  currentPassword: string;
 }

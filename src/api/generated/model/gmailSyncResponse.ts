@@ -7,8 +7,8 @@
  */
 
 export interface GmailSyncResponse {
-  discoveredCount: number;
   createdCount: number;
+  discoveredCount: number;
   duplicateCount: number;
   ignoredCount: number;
 }

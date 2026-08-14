@@ -7,26 +7,26 @@
  */
 
 export interface TransactionResponse {
-  id: string;
-  userId: string;
   amount: string;
-  currency: string;
   amountMyr: string;
-  fxRate: string;
-  merchantId?: string;
-  merchantName?: string;
-  categoryId?: string;
-  categoryName?: string;
-  categoryIcon?: string;
-  categoryColor?: string;
-  description?: string;
-  source: string;
-  occurredAt: string;
-  version: number;
-  createdAt: string;
-  suggestedCategoryId?: string;
-  suggestedCategoryName?: string;
-  similarityScore?: number;
   categorisationConfidence?: string;
   categorisationMessage?: string;
+  categoryColor?: string;
+  categoryIcon?: string;
+  categoryId?: string;
+  categoryName?: string;
+  createdAt: string;
+  currency: string;
+  description?: string;
+  fxRate: string;
+  id: string;
+  merchantId?: string;
+  merchantName?: string;
+  occurredAt: string;
+  similarityScore?: number;
+  source: string;
+  suggestedCategoryId?: string;
+  suggestedCategoryName?: string;
+  userId: string;
+  version: number;
 }

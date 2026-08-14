@@ -7,5 +7,10 @@
  */
 
 export type SearchParams = {
+/**
+ * Merchant search query. It must contain a canonical merchant identity after normalisation.
+ * @minLength 1
+ * @maxLength 255
+ */
 q: string;
 };

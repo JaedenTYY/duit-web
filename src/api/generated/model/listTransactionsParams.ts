@@ -7,7 +7,18 @@
  */
 
 export type ListTransactionsParams = {
+/**
+ * Page size. Defaults to 20; maximum 100.
+ * @minimum 1
+ * @maximum 100
+ */
 limit?: number;
+/**
+ * Cursor timestamp from the previous page; must be supplied with cursorId.
+ */
 cursor?: string;
+/**
+ * Cursor UUID from the previous page; must be supplied with cursor.
+ */
 cursorId?: string;
 };

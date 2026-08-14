@@ -8,9 +8,9 @@
 import type { MerchantCategoryPreferenceResponseSource } from './merchantCategoryPreferenceResponseSource.ts';
 
 export interface MerchantCategoryPreferenceResponse {
-  merchantId: string;
   categoryId: string;
-  source: MerchantCategoryPreferenceResponseSource;
   createdAt: string;
+  merchantId: string;
+  source: MerchantCategoryPreferenceResponseSource;
   updatedAt: string;
 }

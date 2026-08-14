@@ -8,24 +8,24 @@
 
 export interface AnomalyFeatureVector {
   amount: string;
-  currency: string;
-  merchantId?: string;
-  merchantName: string;
+  amountDeviation: number;
   categoryId?: string;
   categoryName: string;
-  hourOfDay: number;
-  dayOfWeek: number;
-  hourSin: number;
-  hourCos: number;
-  daySin: number;
-  dayCos: number;
-  amountDeviation: number;
-  merchantRarity: number;
   categoryRarity: number;
-  timeRarity: number;
-  spendingVelocity: number;
-  gradualDrift: number;
-  recentSpendTotal: string;
-  reasonCodes: string[];
+  currency: string;
+  dayCos: number;
+  dayOfWeek: number;
+  daySin: number;
   feedbackSignature: string;
+  gradualDrift: number;
+  hourCos: number;
+  hourOfDay: number;
+  hourSin: number;
+  merchantId?: string;
+  merchantName: string;
+  merchantRarity: number;
+  reasonCodes: string[];
+  recentSpendTotal: string;
+  spendingVelocity: number;
+  timeRarity: number;
 }

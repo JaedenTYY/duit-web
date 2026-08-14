@@ -8,5 +8,6 @@
 import type { ConfirmStatementRow } from './confirmStatementRow.ts';
 
 export interface ConfirmStatementRequest {
-  rows: ConfirmStatementRow[];
+  /** Rows selected for import. Omitted or empty rows are rejected by statement domain validation. */
+  rows?: ConfirmStatementRow[];
 }

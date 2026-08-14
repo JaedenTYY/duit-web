@@ -8,14 +8,14 @@
 import type { ExtractedReceiptDataResponse } from './extractedReceiptDataResponse.ts';
 
 export interface ReceiptExtractionResponse {
-  extractionId: string;
-  extractedData: ExtractedReceiptDataResponse;
-  rawOcrText: string;
-  confidence: string;
-  duplicateImageWarning: boolean;
-  suggestedCategoryId?: string;
-  suggestedCategoryName?: string;
-  similarityScore?: number;
   categorisationConfidence?: string;
   categorisationMessage?: string;
+  confidence: string;
+  duplicateImageWarning: boolean;
+  extractedData: ExtractedReceiptDataResponse;
+  extractionId: string;
+  rawOcrText: string;
+  similarityScore?: number;
+  suggestedCategoryId?: string;
+  suggestedCategoryName?: string;
 }

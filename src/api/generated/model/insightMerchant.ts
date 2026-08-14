@@ -7,6 +7,6 @@
  */
 
 export interface InsightMerchant {
-  merchantName: string;
   amount: string;
+  merchantName: string;
 }

@@ -15,21 +15,21 @@ import type { SpendingTrend } from './spendingTrend.ts';
 import type { WeeklyInsightContentRiskLevel } from './weeklyInsightContentRiskLevel.ts';
 
 export interface WeeklyInsightContent {
-  headline: string;
-  summary: string;
-  totalSpent: string;
-  currency: string;
+  billSplitSettlements?: BillSplitSettlementSummary;
   /** @nullable */
   comparisonPercentage: number | null;
-  topCategories: InsightCategory[];
-  topMerchants: InsightMerchant[];
-  largestTransactions: InsightTransaction[];
-  unusualIncreases: CategoryIncrease[];
-  spendingTrend: SpendingTrend;
-  billSplitSettlements?: BillSplitSettlementSummary;
+  currency: string;
   findings: InsightFinding[];
+  headline: string;
+  largestTransactions: InsightTransaction[];
+  positiveNote: string;
   recommendation: string;
   recommendations: string[];
-  positiveNote: string;
   riskLevel: WeeklyInsightContentRiskLevel;
+  spendingTrend: SpendingTrend;
+  summary: string;
+  topCategories: InsightCategory[];
+  topMerchants: InsightMerchant[];
+  totalSpent: string;
+  unusualIncreases: CategoryIncrease[];
 }

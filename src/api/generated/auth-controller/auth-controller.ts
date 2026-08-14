@@ -45,19 +45,17 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 /**
- * Returns a short-lived access token and sets an opaque HttpOnly refresh cookie. The refresh token is never returned in JSON.
- * @summary Register and start a browser session
+ * Returns the masked CSRF token used by refresh and logout. The matching HttpOnly CSRF cookie is set by the server.
+ * @summary Bootstrap CSRF protection
  */
-export const register = (
-    registerRequest: MaybeRefOrGetter<RegisterRequest>,
+export const csrf = (
+
  signal?: AbortSignal
 ) => {
-      registerRequest = toValue(registerRequest);
 
-      return orvalMutator<ApiResponseAuthResponse>(
-      {url: `/auth/register`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: registerRequest, signal
+
+      return orvalMutator<ApiResponseCsrfBootstrapResponse>(
+      {url: `/auth/csrf`, method: 'GET', signal
     },
       );
     }
@@ -65,11 +63,84 @@ export const register = (
 
 
 
-export const getRegisterMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext> => {
+export const getCsrfQueryKey = () => {
+    return [
+    'auth','csrf'
+    ] as const;
+    }
 
-const mutationKey = ['register'];
+
+export const getCsrfQueryOptions = <TData = Awaited<ReturnType<typeof csrf>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  getCsrfQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof csrf>>> = ({ signal }) => csrf(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>
+}
+
+export type CsrfQueryResult = NonNullable<Awaited<ReturnType<typeof csrf>>>
+export type CsrfQueryError = ApiError
+
+
+/**
+ * @summary Bootstrap CSRF protection
+ */
+
+export function useCsrf<TData = Awaited<ReturnType<typeof csrf>>, TError = ApiError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCsrfQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
+
+  return query;
+}
+
+
+
+
+
+
+/**
+ * Returns a short-lived access token and sets an opaque HttpOnly refresh cookie. The refresh token is never returned in JSON.
+ * @summary Authenticate and start a browser session
+ */
+export const login = (
+    loginRequest: MaybeRefOrGetter<LoginRequest>,
+ signal?: AbortSignal
+) => {
+      loginRequest = toValue(loginRequest);
+
+      return orvalMutator<ApiResponseAuthResponse>(
+      {url: `/auth/login`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: loginRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getLoginMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext> => {
+
+const mutationKey = ['login'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -79,10 +150,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, {data: RegisterRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: LoginRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  register(data,)
+          return  login(data,)
         }
 
 
@@ -92,22 +163,85 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
-    export type RegisterMutationBody = RegisterRequest
-    export type RegisterMutationError = ApiError
+    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
+    export type LoginMutationBody = LoginRequest
+    export type LoginMutationError = ApiError
 
     /**
- * @summary Register and start a browser session
+ * @summary Authenticate and start a browser session
  */
-export const useRegister = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, }
+export const useLogin = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof register>>,
+        Awaited<ReturnType<typeof login>>,
         TError,
-        {data: RegisterRequest},
+        {data: LoginRequest},
         TContext
       > => {
-      return useMutation(getRegisterMutationOptions(options), queryClient);
+      return useMutation(getLoginMutationOptions(options), queryClient);
+    }
+    /**
+ * Works without a valid access token. Requires the refresh cookie, CSRF header, and an approved Origin or Referer. The operation is idempotent and clears session cookies.
+ * @summary Revoke and clear the browser session
+ */
+export const logout = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return orvalMutator<ApiResponseLogoutResponse>(
+      {url: `/auth/logout`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+
+export const getLogoutMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = ['logout'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ApiError
+
+    /**
+ * @summary Revoke and clear the browser session
+ */
+export const useLogout = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options), queryClient);
     }
     /**
  * Requires the host-only refresh cookie, the CSRF header obtained from /auth/csrf, an approved Origin or Referer, and a canonical X-Refresh-Request-ID. A successful response rotates the refresh cookie and returns a new short-lived access token.
@@ -174,82 +308,19 @@ export const useRefresh = <TError = ApiError,
       return useMutation(getRefreshMutationOptions(options), queryClient);
     }
     /**
- * Works without a valid access token. Requires the refresh cookie, CSRF header, and an approved Origin or Referer. The operation is idempotent and clears session cookies.
- * @summary Revoke and clear the browser session
- */
-export const logout = (
-
- signal?: AbortSignal
-) => {
-
-
-      return orvalMutator<ApiResponseLogoutResponse>(
-      {url: `/auth/logout`, method: 'POST', signal
-    },
-      );
-    }
-
-
-
-
-export const getLogoutMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
-
-const mutationKey = ['logout'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
-
-
-          return  logout()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
-
-    export type LogoutMutationError = ApiError
-
-    /**
- * @summary Revoke and clear the browser session
- */
-export const useLogout = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof logout>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getLogoutMutationOptions(options), queryClient);
-    }
-    /**
  * Returns a short-lived access token and sets an opaque HttpOnly refresh cookie. The refresh token is never returned in JSON.
- * @summary Authenticate and start a browser session
+ * @summary Register and start a browser session
  */
-export const login = (
-    loginRequest: MaybeRefOrGetter<LoginRequest>,
+export const register = (
+    registerRequest: MaybeRefOrGetter<RegisterRequest>,
  signal?: AbortSignal
 ) => {
-      loginRequest = toValue(loginRequest);
+      registerRequest = toValue(registerRequest);
 
       return orvalMutator<ApiResponseAuthResponse>(
-      {url: `/auth/login`, method: 'POST',
+      {url: `/auth/register`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: loginRequest, signal
+      data: registerRequest, signal
     },
       );
     }
@@ -257,11 +328,11 @@ export const login = (
 
 
 
-export const getLoginMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext> => {
+export const getRegisterMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext> => {
 
-const mutationKey = ['login'];
+const mutationKey = ['register'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -271,10 +342,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: LoginRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, {data: RegisterRequest}> = (props) => {
           const {data} = props ?? {};
 
-          return  login(data,)
+          return  register(data,)
         }
 
 
@@ -284,85 +355,20 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
-    export type LoginMutationBody = LoginRequest
-    export type LoginMutationError = ApiError
+    export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
+    export type RegisterMutationBody = RegisterRequest
+    export type RegisterMutationError = ApiError
 
     /**
- * @summary Authenticate and start a browser session
+ * @summary Register and start a browser session
  */
-export const useLogin = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: LoginRequest}, TContext>, }
+export const useRegister = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: RegisterRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof login>>,
+        Awaited<ReturnType<typeof register>>,
         TError,
-        {data: LoginRequest},
+        {data: RegisterRequest},
         TContext
       > => {
-      return useMutation(getLoginMutationOptions(options), queryClient);
+      return useMutation(getRegisterMutationOptions(options), queryClient);
     }
-    /**
- * Returns the masked CSRF token used by refresh and logout. The matching HttpOnly CSRF cookie is set by the server.
- * @summary Bootstrap CSRF protection
- */
-export const csrf = (
-
- signal?: AbortSignal
-) => {
-
-
-      return orvalMutator<ApiResponseCsrfBootstrapResponse>(
-      {url: `/auth/csrf`, method: 'GET', signal
-    },
-      );
-    }
-
-
-
-
-export const getCsrfQueryKey = () => {
-    return [
-    'auth','csrf'
-    ] as const;
-    }
-
-
-export const getCsrfQueryOptions = <TData = Awaited<ReturnType<typeof csrf>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  getCsrfQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof csrf>>> = ({ signal }) => csrf(signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>
-}
-
-export type CsrfQueryResult = NonNullable<Awaited<ReturnType<typeof csrf>>>
-export type CsrfQueryError = ApiError
-
-
-/**
- * @summary Bootstrap CSRF protection
- */
-
-export function useCsrf<TData = Awaited<ReturnType<typeof csrf>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof csrf>>, TError, TData>>, }
- , queryClient?: QueryClient
- ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCsrfQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
-
-  return query;
-}

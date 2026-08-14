@@ -9,18 +9,18 @@ import type { StatementRowResponseDirection } from './statementRowResponseDirect
 import type { StatementRowResponseStatus } from './statementRowResponseStatus.ts';
 
 export interface StatementRowResponse {
-  id: string;
-  sourceRowIndex: number;
-  occurredAt: string;
-  description: string;
-  merchantName: string;
   amount: string;
+  categorisationConfidence?: string;
   currency: string;
+  description: string;
   direction: StatementRowResponseDirection;
+  id: string;
+  merchantName: string;
+  occurredAt: string;
+  sourceRowIndex: number;
+  status: StatementRowResponseStatus;
   suggestedCategoryId?: string;
   suggestedCategoryName?: string;
-  categorisationConfidence?: string;
-  status: StatementRowResponseStatus;
   transactionId?: string;
   transactionOccurredAt?: string;
 }

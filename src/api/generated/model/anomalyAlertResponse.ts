@@ -9,18 +9,18 @@ import type { AnomalyAlertResponseStatus } from './anomalyAlertResponseStatus.ts
 import type { AnomalyFeatureVector } from './anomalyFeatureVector.ts';
 
 export interface AnomalyAlertResponse {
-  id: string;
-  transactionId: string;
-  title: string;
   amount: string;
-  currency: string;
-  merchantName: string;
-  categoryName: string;
-  reason: string;
-  explanation: string;
   anomalyScore: number;
-  threshold: number;
-  features: AnomalyFeatureVector;
-  status: AnomalyAlertResponseStatus;
+  categoryName: string;
   createdAt: string;
+  currency: string;
+  explanation: string;
+  features: AnomalyFeatureVector;
+  id: string;
+  merchantName: string;
+  reason: string;
+  status: AnomalyAlertResponseStatus;
+  threshold: number;
+  title: string;
+  transactionId: string;
 }

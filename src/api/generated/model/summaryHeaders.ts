@@ -7,5 +7,10 @@
  */
 
 export type SummaryHeaders = {
+/**
+ * Required opaque guest participant capability token. Treat it as sensitive bearer material.
+ * @minLength 1
+ * @maxLength 128
+ */
 'X-Participant-Token': string;
 };

@@ -8,8 +8,8 @@
 import type { TransactionResponse } from './transactionResponse.ts';
 
 export interface TransactionPageResponse {
-  transactions: TransactionResponse[];
+  hasMore: boolean;
   nextCursor?: string;
   nextCursorId?: string;
-  hasMore: boolean;
+  transactions: TransactionResponse[];
 }

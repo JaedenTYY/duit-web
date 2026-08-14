@@ -7,9 +7,9 @@
  */
 
 export interface UserResponse {
-  id: string;
+  createdAt: string;
   email: string;
   fullName: string;
+  id: string;
   preferredCurrency: string;
-  createdAt: string;
 }

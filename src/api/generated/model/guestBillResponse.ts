@@ -9,21 +9,21 @@ import type { BillItemResponse } from './billItemResponse.ts';
 import type { GuestPaymentQrProfileResponse } from './guestPaymentQrProfileResponse.ts';
 
 export interface GuestBillResponse {
-  merchantName?: string;
-  status: string;
+  allocationVersion: number;
   currency: string;
+  expiresAt: string;
+  items: BillItemResponse[];
+  lineAdjustment: string;
+  merchantName?: string;
+  paymentQrProfile?: GuestPaymentQrProfileResponse;
+  serviceCharge: string;
+  status: string;
   subtotal: string;
   taxAmount: string;
-  serviceCharge: string;
-  totalAmount: string;
-  allocationVersion: number;
-  lineAdjustment: string;
   totalAdjustment: string;
+  totalAmount: string;
+  unallocatedServiceCharge: string;
   unallocatedSubtotal: string;
   unallocatedTax: string;
-  unallocatedServiceCharge: string;
   unallocatedTotal: string;
-  expiresAt: string;
-  paymentQrProfile?: GuestPaymentQrProfileResponse;
-  items: BillItemResponse[];
 }

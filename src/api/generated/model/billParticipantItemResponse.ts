@@ -7,7 +7,7 @@
  */
 
 export interface BillParticipantItemResponse {
+  allocatedAmount: string;
   itemId: string;
   itemName: string;
-  allocatedAmount: string;
 }

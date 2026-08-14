@@ -8,8 +8,8 @@
 import type { CategorySummary } from './categorySummary.ts';
 
 export interface MonthlySummaryResponse {
-  totalSpend: string;
-  currency: string;
-  transactionCount: number;
   byCategory: CategorySummary[];
+  currency: string;
+  totalSpend: string;
+  transactionCount: number;
 }

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CreateFromReceiptBody = {
+export interface StatementUploadRequest {
+  /** PDF bank statement file. Supported content type: application/pdf. Maximum size: 10 MB. */
   file: Blob;
-};
+}

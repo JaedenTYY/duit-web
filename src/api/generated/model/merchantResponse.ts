@@ -7,7 +7,7 @@
  */
 
 export interface MerchantResponse {
+  canonical: string;
   id: string;
   name: string;
-  canonical: string;
 }

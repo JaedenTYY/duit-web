@@ -9,10 +9,10 @@ import type { StatementRowResponse } from './statementRowResponse.ts';
 import type { StatementUploadResponseStatus } from './statementUploadResponseStatus.ts';
 
 export interface StatementUploadResponse {
-  id: string;
-  fileName: string;
-  status: StatementUploadResponseStatus;
-  createdAt: string;
   confirmedAt?: string;
+  createdAt: string;
+  fileName: string;
+  id: string;
   rows: StatementRowResponse[];
+  status: StatementUploadResponseStatus;
 }

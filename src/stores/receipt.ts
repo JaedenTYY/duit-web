@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ReceiptExtractionResponse, Transaction } from '@/types'
 import api from '@/lib/api'
+import { uploadReceipt as uploadReceiptContract } from '@/api/generated/receipt-controller/receipt-controller'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
@@ -15,10 +16,6 @@ export interface ConfirmExtractionPayload {
   fxRate?: string
   merchantName?: string
   rememberMerchantCategory?: boolean
-}
-
-interface ExtractionApiResponse {
-  data: ReceiptExtractionResponse
 }
 
 interface TransactionApiResponse {
@@ -40,14 +37,8 @@ export const useReceiptStore = defineStore('receipt', () => {
         throw new Error(validationError)
       }
 
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await api.post<ExtractionApiResponse>('/receipt/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-      
-      const data = response.data.data
+      const response = await uploadReceiptContract({ file })
+      const data = response.data as ReceiptExtractionResponse
       extraction.value = data
       return data
     } catch (err: unknown) {

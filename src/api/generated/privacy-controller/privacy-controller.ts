@@ -35,6 +35,71 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 /**
+ * Requires bearer authentication, current-password confirmation, the exact deletion phrase, CSRF, and an approved Origin or Referer.
+ * @summary Delete the authenticated account
+ */
+export const deleteAccount = (
+    deleteAccountRequest: MaybeRefOrGetter<DeleteAccountRequest>,
+ signal?: AbortSignal
+) => {
+      deleteAccountRequest = toValue(deleteAccountRequest);
+
+      return orvalMutator<ApiResponseDeleteAccountResponse>(
+      {url: `/privacy/delete-account`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: deleteAccountRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getDeleteAccountMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext> => {
+
+const mutationKey = ['deleteAccount'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAccount>>, {data: DeleteAccountRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteAccount(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
+    export type DeleteAccountMutationBody = DeleteAccountRequest
+    export type DeleteAccountMutationError = ApiError
+
+    /**
+ * @summary Delete the authenticated account
+ */
+export const useDeleteAccount = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof deleteAccount>>,
+        TError,
+        {data: DeleteAccountRequest},
+        TContext
+      > => {
+      return useMutation(getDeleteAccountMutationOptions(options), queryClient);
+    }
+    /**
  * Requires bearer authentication, the current password, CSRF, and an approved Origin or Referer. Returns a no-store ZIP archive.
  * @summary Export personal data
  */
@@ -99,69 +164,4 @@ export const useExport = <TError = ApiError,
         TContext
       > => {
       return useMutation(getExportMutationOptions(options), queryClient);
-    }
-    /**
- * Requires bearer authentication, current-password confirmation, the exact deletion phrase, CSRF, and an approved Origin or Referer.
- * @summary Delete the authenticated account
- */
-export const deleteAccount = (
-    deleteAccountRequest: MaybeRefOrGetter<DeleteAccountRequest>,
- signal?: AbortSignal
-) => {
-      deleteAccountRequest = toValue(deleteAccountRequest);
-
-      return orvalMutator<ApiResponseDeleteAccountResponse>(
-      {url: `/privacy/delete-account`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: deleteAccountRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getDeleteAccountMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext> => {
-
-const mutationKey = ['deleteAccount'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAccount>>, {data: DeleteAccountRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  deleteAccount(data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
-    export type DeleteAccountMutationBody = DeleteAccountRequest
-    export type DeleteAccountMutationError = ApiError
-
-    /**
- * @summary Delete the authenticated account
- */
-export const useDeleteAccount = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,{data: DeleteAccountRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof deleteAccount>>,
-        TError,
-        {data: DeleteAccountRequest},
-        TContext
-      > => {
-      return useMutation(getDeleteAccountMutationOptions(options), queryClient);
     }

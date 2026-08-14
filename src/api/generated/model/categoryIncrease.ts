@@ -8,7 +8,7 @@
 
 export interface CategoryIncrease {
   categoryName: string;
+  changePercentage: number;
   currentAmount: string;
   previousAmount: string;
-  changePercentage: number;
 }

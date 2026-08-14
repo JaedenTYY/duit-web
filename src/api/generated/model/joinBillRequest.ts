@@ -8,7 +8,8 @@
 
 export interface JoinBillRequest {
   /**
-     * @minLength 0
+     * Participant display name. Blank names are rejected after normal request validation.
+     * @minLength 1
      * @maxLength 120
      */
   displayName: string;

@@ -10,7 +10,7 @@ import type { ErrorDetailFields } from './errorDetailFields.ts';
 
 export interface ErrorDetail {
   code: ErrorDetailCode;
+  fields?: ErrorDetailFields;
   message: string;
   requestId: string;
-  fields?: ErrorDetailFields;
 }

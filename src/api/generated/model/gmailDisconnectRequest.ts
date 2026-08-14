@@ -7,5 +7,5 @@
  */
 
 export interface GmailDisconnectRequest {
-  deleteExtractions: boolean;
+  deleteExtractions?: boolean;
 }

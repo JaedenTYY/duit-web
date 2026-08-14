@@ -10,13 +10,13 @@ export interface RegisterRequest {
   /** @minLength 1 */
   email: string;
   /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  fullName: string;
+  /**
      * @minLength 8
      * @maxLength 2147483647
      */
   password: string;
-  /**
-     * @minLength 0
-     * @maxLength 255
-     */
-  fullName: string;
 }

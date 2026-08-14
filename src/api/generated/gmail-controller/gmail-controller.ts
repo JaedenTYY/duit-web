@@ -48,14 +48,19 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const sync = (
-
+/**
+ * Google redirects the browser here with code/state or error. The backend then redirects to the configured frontend completion URL.
+ * @summary Complete Google OAuth callback
+ */
+export const callback = (
+    params?: MaybeRefOrGetter<CallbackParams>,
  signal?: AbortSignal
 ) => {
+      params = toValue(params);
 
-
-      return orvalMutator<ApiResponseGmailSyncResponse>(
-      {url: `/gmail/sync`, method: 'POST', signal
+      return orvalMutator<unknown>(
+      {url: `/gmail/callback`, method: 'GET',
+        params, signal
     },
       );
     }
@@ -63,11 +68,78 @@ export const sync = (
 
 
 
-export const getSyncMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext> => {
+export const getCallbackQueryKey = (params?: MaybeRefOrGetter<CallbackParams>,) => {
+    return [
+    'gmail','callback', ...(params ? [params] : [])
+    ] as const;
+    }
 
-const mutationKey = ['sync'];
+
+export const getCallbackQueryOptions = <TData = Awaited<ReturnType<typeof callback>>, TError = void>(params?: MaybeRefOrGetter<CallbackParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  getCallbackQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof callback>>> = ({ signal }) => callback(params, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>
+}
+
+export type CallbackQueryResult = NonNullable<Awaited<ReturnType<typeof callback>>>
+export type CallbackQueryError = void
+
+
+/**
+ * @summary Complete Google OAuth callback
+ */
+
+export function useCallback<TData = Awaited<ReturnType<typeof callback>>, TError = void>(
+ params?: MaybeRefOrGetter<CallbackParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCallbackQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
+
+  return query;
+}
+
+
+
+
+
+
+export const connect = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return orvalMutator<ApiResponseGmailConnectResponse>(
+      {url: `/gmail/connect`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+
+export const getConnectMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext> => {
+
+const mutationKey = ['connect'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -77,10 +149,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sync>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof connect>>, void> = () => {
 
 
-          return  sync()
+          return  connect()
         }
 
 
@@ -90,21 +162,144 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type SyncMutationResult = NonNullable<Awaited<ReturnType<typeof sync>>>
+    export type ConnectMutationResult = NonNullable<Awaited<ReturnType<typeof connect>>>
 
-    export type SyncMutationError = ApiError
+    export type ConnectMutationError = ApiError
 
-    export const useSync = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext>, }
+    export const useConnect = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof sync>>,
+        Awaited<ReturnType<typeof connect>>,
         TError,
         void,
         TContext
       > => {
-      return useMutation(getSyncMutationOptions(options), queryClient);
+      return useMutation(getConnectMutationOptions(options), queryClient);
     }
-    export const confirm1 = (
+    export const disconnect = (
+    gmailDisconnectRequest?: MaybeRefOrGetter<GmailDisconnectRequest>,
+ signal?: AbortSignal
+) => {
+      gmailDisconnectRequest = toValue(gmailDisconnectRequest);
+
+      return orvalMutator<ApiResponseGmailDisconnectResponse>(
+      {url: `/gmail/disconnect`, method: 'DELETE',
+      headers: {'Content-Type': 'application/json', },
+      data: gmailDisconnectRequest, signal
+    },
+      );
+    }
+
+
+
+
+export const getDisconnectMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext> => {
+
+const mutationKey = ['disconnect'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnect>>, {data?: GmailDisconnectRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  disconnect(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectMutationResult = NonNullable<Awaited<ReturnType<typeof disconnect>>>
+    export type DisconnectMutationBody = GmailDisconnectRequest | undefined
+    export type DisconnectMutationError = ApiError
+
+    export const useDisconnect = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof disconnect>>,
+        TError,
+        {data?: GmailDisconnectRequest},
+        TContext
+      > => {
+      return useMutation(getDisconnectMutationOptions(options), queryClient);
+    }
+    export const extractions = (
+    params?: MaybeRefOrGetter<ExtractionsParams>,
+ signal?: AbortSignal
+) => {
+      params = toValue(params);
+
+      return orvalMutator<ApiResponseListEmailExtractionResponse>(
+      {url: `/gmail/extractions`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getExtractionsQueryKey = (params?: MaybeRefOrGetter<ExtractionsParams>,) => {
+    return [
+    'gmail','extractions', ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExtractionsQueryOptions = <TData = Awaited<ReturnType<typeof extractions>>, TError = ApiError>(params?: MaybeRefOrGetter<ExtractionsParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  getExtractionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof extractions>>> = ({ signal }) => extractions(params, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>
+}
+
+export type ExtractionsQueryResult = NonNullable<Awaited<ReturnType<typeof extractions>>>
+export type ExtractionsQueryError = ApiError
+
+
+
+export function useExtractions<TData = Awaited<ReturnType<typeof extractions>>, TError = ApiError>(
+ params?: MaybeRefOrGetter<ExtractionsParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExtractionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
+
+  return query;
+}
+
+
+
+
+
+
+export const confirm1 = (
     id: MaybeRefOrGetter<string>,
     confirmEmailExtractionRequest: MaybeRefOrGetter<ConfirmEmailExtractionRequest>,
  signal?: AbortSignal
@@ -163,62 +358,6 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getConfirm1MutationOptions(options), queryClient);
-    }
-    export const connect = (
-
- signal?: AbortSignal
-) => {
-
-
-      return orvalMutator<ApiResponseGmailConnectResponse>(
-      {url: `/gmail/connect`, method: 'POST', signal
-    },
-      );
-    }
-
-
-
-
-export const getConnectMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext> => {
-
-const mutationKey = ['connect'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof connect>>, void> = () => {
-
-
-          return  connect()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ConnectMutationResult = NonNullable<Awaited<ReturnType<typeof connect>>>
-
-    export type ConnectMutationError = ApiError
-
-    export const useConnect = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connect>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof connect>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getConnectMutationOptions(options), queryClient);
     }
     export const skip = (
     id: MaybeRefOrGetter<string>,
@@ -340,15 +479,14 @@ export function useStatus<TData = Awaited<ReturnType<typeof status>>, TError = A
 
 
 
-export const extractions = (
-    params?: MaybeRefOrGetter<ExtractionsParams>,
+export const sync = (
+
  signal?: AbortSignal
 ) => {
-      params = toValue(params);
 
-      return orvalMutator<ApiResponseListEmailExtractionResponse>(
-      {url: `/gmail/extractions`, method: 'GET',
-        params, signal
+
+      return orvalMutator<ApiResponseGmailSyncResponse>(
+      {url: `/gmail/sync`, method: 'POST', signal
     },
       );
     }
@@ -356,142 +494,11 @@ export const extractions = (
 
 
 
-export const getExtractionsQueryKey = (params?: MaybeRefOrGetter<ExtractionsParams>,) => {
-    return [
-    'gmail','extractions', ...(params ? [params] : [])
-    ] as const;
-    }
+export const getSyncMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext> => {
 
-
-export const getExtractionsQueryOptions = <TData = Awaited<ReturnType<typeof extractions>>, TError = ApiError>(params?: MaybeRefOrGetter<ExtractionsParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  getExtractionsQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof extractions>>> = ({ signal }) => extractions(params, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>
-}
-
-export type ExtractionsQueryResult = NonNullable<Awaited<ReturnType<typeof extractions>>>
-export type ExtractionsQueryError = ApiError
-
-
-
-export function useExtractions<TData = Awaited<ReturnType<typeof extractions>>, TError = ApiError>(
- params?: MaybeRefOrGetter<ExtractionsParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof extractions>>, TError, TData>>, }
- , queryClient?: QueryClient
- ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getExtractionsQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
-
-  return query;
-}
-
-
-
-
-
-
-export const callback = (
-    params?: MaybeRefOrGetter<CallbackParams>,
- signal?: AbortSignal
-) => {
-      params = toValue(params);
-
-      return orvalMutator<void>(
-      {url: `/gmail/callback`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-
-
-
-
-export const getCallbackQueryKey = (params?: MaybeRefOrGetter<CallbackParams>,) => {
-    return [
-    'gmail','callback', ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getCallbackQueryOptions = <TData = Awaited<ReturnType<typeof callback>>, TError = ApiError>(params?: MaybeRefOrGetter<CallbackParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  getCallbackQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof callback>>> = ({ signal }) => callback(params, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>
-}
-
-export type CallbackQueryResult = NonNullable<Awaited<ReturnType<typeof callback>>>
-export type CallbackQueryError = ApiError
-
-
-
-export function useCallback<TData = Awaited<ReturnType<typeof callback>>, TError = ApiError>(
- params?: MaybeRefOrGetter<CallbackParams>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof callback>>, TError, TData>>, }
- , queryClient?: QueryClient
- ): UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCallbackQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryReturnType<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = unref(queryOptions).queryKey as DataTag<QueryKey, TData, TError>;
-
-  return query;
-}
-
-
-
-
-
-
-export const disconnect = (
-    gmailDisconnectRequest?: MaybeRefOrGetter<GmailDisconnectRequest>,
- signal?: AbortSignal
-) => {
-      gmailDisconnectRequest = toValue(gmailDisconnectRequest);
-
-      return orvalMutator<ApiResponseGmailDisconnectResponse>(
-      {url: `/gmail/disconnect`, method: 'DELETE',
-      headers: {'Content-Type': 'application/json', },
-      data: gmailDisconnectRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getDisconnectMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext> => {
-
-const mutationKey = ['disconnect'];
+const mutationKey = ['sync'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -501,10 +508,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnect>>, {data?: GmailDisconnectRequest}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sync>>, void> = () => {
 
-          return  disconnect(data,)
+
+          return  sync()
         }
 
 
@@ -514,17 +521,17 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type DisconnectMutationResult = NonNullable<Awaited<ReturnType<typeof disconnect>>>
-    export type DisconnectMutationBody = GmailDisconnectRequest | undefined
-    export type DisconnectMutationError = ApiError
+    export type SyncMutationResult = NonNullable<Awaited<ReturnType<typeof sync>>>
 
-    export const useDisconnect = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnect>>, TError,{data?: GmailDisconnectRequest}, TContext>, }
+    export type SyncMutationError = ApiError
+
+    export const useSync = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sync>>, TError,void, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof disconnect>>,
+        Awaited<ReturnType<typeof sync>>,
         TError,
-        {data?: GmailDisconnectRequest},
+        void,
         TContext
       > => {
-      return useMutation(getDisconnectMutationOptions(options), queryClient);
+      return useMutation(getSyncMutationOptions(options), queryClient);
     }

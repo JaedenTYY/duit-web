@@ -8,16 +8,16 @@
 
 export interface CreatePaymentQrProfileRequest {
   /**
-     * @minLength 0
-     * @maxLength 50
-     */
-  provider: string;
-  /**
-     * @minLength 0
+     * @minLength 1
      * @maxLength 120
      */
   displayName: string;
+  isDefault?: boolean;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  provider: string;
   qrImageUrl?: string;
   qrPayload?: string;
-  isDefault: boolean;
 }

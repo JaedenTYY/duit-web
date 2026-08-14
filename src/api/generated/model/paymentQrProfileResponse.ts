@@ -7,11 +7,11 @@
  */
 
 export interface PaymentQrProfileResponse {
-  id: string;
-  provider: string;
+  createdAt: string;
   displayName: string;
+  id: string;
+  isDefault: boolean;
+  provider: string;
   qrImageUrl?: string;
   qrPayload?: string;
-  isDefault: boolean;
-  createdAt: string;
 }

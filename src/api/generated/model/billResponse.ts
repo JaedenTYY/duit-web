@@ -10,24 +10,24 @@ import type { BillParticipantResponse } from './billParticipantResponse.ts';
 import type { PaymentQrProfileResponse } from './paymentQrProfileResponse.ts';
 
 export interface BillResponse {
+  allocationVersion: number;
+  currency: string;
+  expiresAt: string;
   id: string;
+  items: BillItemResponse[];
+  lineAdjustment: string;
   merchantName?: string;
+  participants: BillParticipantResponse[];
+  paymentQrProfile?: PaymentQrProfileResponse;
+  serviceCharge: string;
   shareToken: string;
   status: string;
-  currency: string;
   subtotal: string;
   taxAmount: string;
-  serviceCharge: string;
-  totalAmount: string;
-  allocationVersion: number;
-  lineAdjustment: string;
   totalAdjustment: string;
+  totalAmount: string;
+  unallocatedServiceCharge: string;
   unallocatedSubtotal: string;
   unallocatedTax: string;
-  unallocatedServiceCharge: string;
   unallocatedTotal: string;
-  expiresAt: string;
-  paymentQrProfile?: PaymentQrProfileResponse;
-  items: BillItemResponse[];
-  participants: BillParticipantResponse[];
 }

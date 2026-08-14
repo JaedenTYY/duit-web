@@ -13,6 +13,7 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "generate:api": "orval --config orval.config.ts && node scripts/normalize-generated-api.mjs",
+    "verify:api-contract": "node scripts/verify-openapi-provenance.mjs",
     "lint": "eslint .",
     "format": "prettier --write src/",
     "type-check": "vue-tsc --noEmit",

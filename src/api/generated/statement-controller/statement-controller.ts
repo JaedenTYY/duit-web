@@ -36,7 +36,7 @@ import type {
   ApiResponseStatementImportResponse,
   ApiResponseStatementUploadResponse,
   ConfirmStatementRequest,
-  UploadBody
+  StatementUploadRequest
 } from '../model';
 
 import { orvalMutator } from '../../../lib/orvalMutator.ts';
@@ -44,76 +44,21 @@ import { orvalMutator } from '../../../lib/orvalMutator.ts';
 
 
 
-export const confirm = (
-    uploadId: MaybeRefOrGetter<string>,
-    confirmStatementRequest: MaybeRefOrGetter<ConfirmStatementRequest>,
+/**
+ * @summary Upload a PDF bank statement
+ */
+export const upload = (
+    statementUploadRequest: MaybeRefOrGetter<StatementUploadRequest>,
  signal?: AbortSignal
 ) => {
-      uploadId = toValue(uploadId);
-confirmStatementRequest = toValue(confirmStatementRequest);
-
-      return orvalMutator<ApiResponseStatementImportResponse>(
-      {url: `/statements/${uploadId}/confirm`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: confirmStatementRequest, signal
-    },
-      );
-    }
-
-
-
-
-export const getConfirmMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext> => {
-
-const mutationKey = ['confirm'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirm>>, {uploadId: string;data: ConfirmStatementRequest}> = (props) => {
-          const {uploadId,data} = props ?? {};
-
-          return  confirm(uploadId,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ConfirmMutationResult = NonNullable<Awaited<ReturnType<typeof confirm>>>
-    export type ConfirmMutationBody = ConfirmStatementRequest
-    export type ConfirmMutationError = ApiError
-
-    export const useConfirm = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof confirm>>,
-        TError,
-        {uploadId: string;data: ConfirmStatementRequest},
-        TContext
-      > => {
-      return useMutation(getConfirmMutationOptions(options), queryClient);
-    }
-    export const upload = (
-    uploadBody?: MaybeRefOrGetter<UploadBody>,
- signal?: AbortSignal
-) => {
-      uploadBody = toValue(uploadBody);
+      statementUploadRequest = toValue(statementUploadRequest);
+      const formData = new FormData();
+formData.append(`file`, statementUploadRequest.file);
 
       return orvalMutator<ApiResponseStatementUploadResponse>(
       {url: `/statements/upload`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: uploadBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       );
     }
@@ -122,8 +67,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getUploadMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data?: UploadBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data?: UploadBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data: StatementUploadRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data: StatementUploadRequest}, TContext> => {
 
 const mutationKey = ['upload'];
 const {mutation: mutationOptions} = options ?
@@ -135,7 +80,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upload>>, {data?: UploadBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upload>>, {data: StatementUploadRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  upload(data,)
@@ -149,18 +94,77 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UploadMutationResult = NonNullable<Awaited<ReturnType<typeof upload>>>
-    export type UploadMutationBody = UploadBody | undefined
+    export type UploadMutationBody = StatementUploadRequest
     export type UploadMutationError = ApiError
 
-    export const useUpload = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data?: UploadBody}, TContext>, }
+    /**
+ * @summary Upload a PDF bank statement
+ */
+export const useUpload = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upload>>, TError,{data: StatementUploadRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
         Awaited<ReturnType<typeof upload>>,
         TError,
-        {data?: UploadBody},
+        {data: StatementUploadRequest},
         TContext
       > => {
       return useMutation(getUploadMutationOptions(options), queryClient);
+    }
+    export const _delete = (
+    uploadId: MaybeRefOrGetter<string>,
+ signal?: AbortSignal
+) => {
+      uploadId = toValue(uploadId);
+
+      return orvalMutator<void>(
+      {url: `/statements/${uploadId}`, method: 'DELETE', signal
+    },
+      );
+    }
+
+
+
+
+export const getDeleteMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext> => {
+
+const mutationKey = ['_delete'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof _delete>>, {uploadId: string}> = (props) => {
+          const {uploadId} = props ?? {};
+
+          return  _delete(uploadId,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type _DeleteMutationResult = NonNullable<Awaited<ReturnType<typeof _delete>>>
+
+    export type _DeleteMutationError = ApiError
+
+    export const useDelete = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationReturnType<
+        Awaited<ReturnType<typeof _delete>>,
+        TError,
+        {uploadId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteMutationOptions(options), queryClient);
     }
     export const get = (
     uploadId: MaybeRefOrGetter<string>,
@@ -226,14 +230,18 @@ export function useGet<TData = Awaited<ReturnType<typeof get>>, TError = ApiErro
 
 
 
-export const _delete = (
+export const confirm = (
     uploadId: MaybeRefOrGetter<string>,
+    confirmStatementRequest: MaybeRefOrGetter<ConfirmStatementRequest>,
  signal?: AbortSignal
 ) => {
       uploadId = toValue(uploadId);
+confirmStatementRequest = toValue(confirmStatementRequest);
 
-      return orvalMutator<void>(
-      {url: `/statements/${uploadId}`, method: 'DELETE', signal
+      return orvalMutator<ApiResponseStatementImportResponse>(
+      {url: `/statements/${uploadId}/confirm`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: confirmStatementRequest, signal
     },
       );
     }
@@ -241,11 +249,11 @@ export const _delete = (
 
 
 
-export const getDeleteMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext> => {
+export const getConfirmMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext> => {
 
-const mutationKey = ['_delete'];
+const mutationKey = ['confirm'];
 const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -255,10 +263,10 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof _delete>>, {uploadId: string}> = (props) => {
-          const {uploadId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirm>>, {uploadId: string;data: ConfirmStatementRequest}> = (props) => {
+          const {uploadId,data} = props ?? {};
 
-          return  _delete(uploadId,)
+          return  confirm(uploadId,data,)
         }
 
 
@@ -268,19 +276,19 @@ const {mutation: mutationOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type _DeleteMutationResult = NonNullable<Awaited<ReturnType<typeof _delete>>>
+    export type ConfirmMutationResult = NonNullable<Awaited<ReturnType<typeof confirm>>>
+    export type ConfirmMutationBody = ConfirmStatementRequest
+    export type ConfirmMutationError = ApiError
 
-    export type _DeleteMutationError = ApiError
-
-    export const useDelete = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof _delete>>, TError,{uploadId: string}, TContext>, }
+    export const useConfirm = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirm>>, TError,{uploadId: string;data: ConfirmStatementRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationReturnType<
-        Awaited<ReturnType<typeof _delete>>,
+        Awaited<ReturnType<typeof confirm>>,
         TError,
-        {uploadId: string},
+        {uploadId: string;data: ConfirmStatementRequest},
         TContext
       > => {
-      return useMutation(getDeleteMutationOptions(options), queryClient);
+      return useMutation(getConfirmMutationOptions(options), queryClient);
     }
     export const rows = (
     uploadId: MaybeRefOrGetter<string>,

@@ -30,6 +30,8 @@ jobs:
           test "$(npm --version)" = "10.9.8"
       - name: Install dependencies from lockfile
         run: npm ci
+      - name: Verify OpenAPI provenance
+        run: npm run verify:api-contract
       - name: Run linter
         run: npm run lint
       - name: Type check

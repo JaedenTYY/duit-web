@@ -7,5 +7,10 @@
  */
 
 export type CategoriseParams = {
+/**
+ * Merchant display name to categorise. It must contain a canonical merchant identity after normalisation.
+ * @minLength 1
+ * @maxLength 255
+ */
 name: string;
 };
