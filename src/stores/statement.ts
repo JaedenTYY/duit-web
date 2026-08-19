@@ -28,7 +28,7 @@ export const useStatementStore = defineStore('statement', () => {
     result.value = null
     try {
       const response = await uploadStatementContract({ file })
-      upload.value = response.data as StatementUpload
+      upload.value = response.data
       return upload.value
     } catch (err: unknown) {
       error.value = extractError(err)
@@ -50,9 +50,9 @@ export const useStatementStore = defineStore('statement', () => {
           rememberMerchantCategory: false,
         })),
       })
-      result.value = response.data as StatementImportResult
+      result.value = response.data
       const refreshed = await getStatementUpload(upload.value.id)
-      upload.value = refreshed.data as StatementUpload
+      upload.value = refreshed.data
     } catch (err: unknown) {
       error.value = extractError(err)
       logger.error('Failed to import statement rows', err)

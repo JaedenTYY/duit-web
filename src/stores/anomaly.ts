@@ -20,7 +20,7 @@ export const useAnomalyStore = defineStore('anomaly', () => {
 
     try {
       const response = await listAnomalies()
-      anomalies.value = response.data as AnomalyAlert[]
+      anomalies.value = response.data
     } catch (err: unknown) {
       error.value = _extractError(err)
       logger.error('Failed to fetch anomalies', err)
@@ -47,7 +47,7 @@ export const useAnomalyStore = defineStore('anomaly', () => {
       const response = await resolveAnomalyContract(alertId, { status })
       const index = anomalies.value.findIndex(a => a.id === alertId)
       if (index !== -1) {
-        anomalies.value[index] = response.data as AnomalyAlert
+        anomalies.value[index] = response.data
       }
     } catch (err: unknown) {
       error.value = _extractError(err)

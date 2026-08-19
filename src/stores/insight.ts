@@ -21,7 +21,7 @@ export const useInsightStore = defineStore('insight', () => {
 
     try {
       const response = await listInsights()
-      insights.value = response.data as Insight[]
+      insights.value = response.data
     } catch (err: unknown) {
       error.value = _extractError(err)
       logger.error('Failed to fetch insights', err)
@@ -37,7 +37,7 @@ export const useInsightStore = defineStore('insight', () => {
 
     try {
       const response = await generateInsight()
-      const generated = response.data as Insight
+      const generated = response.data
       insights.value = [
         generated,
         ...insights.value.filter((insight) => insight.id !== generated.id),

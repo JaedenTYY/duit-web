@@ -27,7 +27,7 @@ export const useReceiptStore = defineStore('receipt', () => {
       }
 
       const response = await uploadReceiptContract({ file })
-      const data = response.data as ReceiptExtractionResponse
+      const data = response.data
       extraction.value = data
       return data
     } catch (err: unknown) {
@@ -44,7 +44,7 @@ export const useReceiptStore = defineStore('receipt', () => {
     try {
       const response = await confirmExtractionContract(payload)
       extraction.value = null
-      return response.data as Transaction
+      return response.data
     } catch (err: unknown) {
       error.value = _extractError(err)
       throw err

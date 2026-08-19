@@ -57,9 +57,9 @@ export const useTransactionStore = defineStore('transaction', () => {
       const data = response.data
 
       if (reset) {
-        transactions.value = data.transactions as Transaction[]
+        transactions.value = mergeTransactionCache([], data.transactions)
       } else {
-        transactions.value = [...transactions.value, ...(data.transactions as Transaction[])]
+        transactions.value = mergeTransactionCache(transactions.value, data.transactions)
       }
 
       nextCursor.value = data.nextCursor ?? null
@@ -78,7 +78,7 @@ export const useTransactionStore = defineStore('transaction', () => {
 
     try {
       const response = await listCategories()
-      categories.value = response.data as Category[]
+      categories.value = response.data
     } catch (err: unknown) {
       logger.error('Failed to fetch categories', err)
     }
@@ -89,7 +89,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     try {
       const response = await getMonthlySummaryContract({ year, month: String(month) })
       logger.log('fetchMonthlySummary success:', response.data)
-      monthlySummary.value = response.data as MonthlySummary
+      monthlySummary.value = response.data
     } catch (err: unknown) {
       logger.error('Failed to fetch monthly summary', err)
       // Attempt to log more detail if it's an axios error
@@ -116,7 +116,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     error.value = null
     try {
       const response = await createTransactionContract(payload, { 'Idempotency-Key': operationKey })
-      const newTransaction = response.data as Transaction
+      const newTransaction = response.data
       recordCreatedTransaction(newTransaction)
       return newTransaction
     } catch (err: unknown) {
@@ -132,7 +132,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     error.value = null
     try {
       const response = await updateTransactionContract(id, payload)
-      const updatedTransaction = response.data as Transaction
+      const updatedTransaction = response.data
       replaceTransaction(updatedTransaction)
       return updatedTransaction
     } catch (err: unknown) {
@@ -166,7 +166,7 @@ export const useTransactionStore = defineStore('transaction', () => {
   async function fetchTransaction(id: string): Promise<Transaction | null> {
     try {
       const response = await getTransactionContract(id)
-      const current = response.data as Transaction
+      const current = response.data
       recordCreatedTransaction(current)
       return current
     } catch (err: unknown) {
@@ -199,17 +199,11 @@ export const useTransactionStore = defineStore('transaction', () => {
   }
 
   function recordCreatedTransaction(transaction: Transaction) {
-    const withoutDuplicate = transactions.value.filter(existing => existing.id !== transaction.id)
-    transactions.value = [transaction, ...withoutDuplicate]
+    transactions.value = mergeTransactionCache(transactions.value, [transaction])
   }
 
   function replaceTransaction(transaction: Transaction) {
-    const index = transactions.value.findIndex(existing => existing.id === transaction.id)
-    if (index === -1) {
-      recordCreatedTransaction(transaction)
-      return
-    }
-    transactions.value[index] = transaction
+    transactions.value = mergeTransactionCache(transactions.value, [transaction])
   }
 
   function _extractError(err: unknown): string {
@@ -242,3 +236,32 @@ export const useTransactionStore = defineStore('transaction', () => {
     reset,
   }
 })
+
+function mergeTransactionCache(
+  existing: readonly Transaction[],
+  incoming: readonly Transaction[],
+): Transaction[] {
+  const byId = new Map<string, Transaction>()
+
+  for (const transaction of [...existing, ...incoming]) {
+    const current = byId.get(transaction.id)
+    if (!current || transaction.version >= current.version) {
+      byId.set(transaction.id, transaction)
+    }
+  }
+
+  return [...byId.values()].sort(compareTransactionOrder)
+}
+
+function compareTransactionOrder(left: Transaction, right: Transaction) {
+  const occurredAt = instantSortKey(right.occurredAt).localeCompare(instantSortKey(left.occurredAt))
+  if (occurredAt !== 0) return occurredAt
+  return right.id.localeCompare(left.id)
+}
+
+function instantSortKey(value: string): string {
+  const normalized = value.replace(/\+00:00$/, 'Z')
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/.exec(normalized)
+  if (!match) return normalized
+  return `${match[1]}.${(match[2] ?? '').padEnd(9, '0')}Z`
+}

@@ -1,14 +1,14 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Transaction } from '@/types'
 import { useTransactionStore } from './transaction'
 import {
   createTransaction,
   deleteTransaction,
   getTransaction,
+  listTransactions,
   updateTransaction,
 } from '@/api/generated/transaction-controller/transaction-controller'
-import type { TransactionResponse } from '@/api/generated/model'
+import type { TransactionPageResponse, TransactionResponse } from '@/api/generated/model'
 
 vi.mock('@/api/generated/transaction-controller/transaction-controller', () => ({
   createTransaction: vi.fn(),
@@ -23,25 +23,12 @@ vi.mock('@/api/generated/category-controller/category-controller', () => ({
 }))
 vi.mock('@/utils/logger', () => ({ logger: { log: vi.fn(), error: vi.fn() } }))
 
-const transaction: Transaction = {
+const transaction = generatedTransaction({
   id: '11111111-1111-4111-8111-111111111111',
   userId: '22222222-2222-4222-8222-222222222222',
-  amount: '12.3400',
-  currency: 'MYR',
-  amountMyr: '12.3400',
-  fxRate: '1.000000',
-  merchantId: null,
-  merchantName: null,
-  categoryId: null,
-  categoryName: null,
-  categoryIcon: null,
-  categoryColor: null,
-  description: null,
-  source: 'manual',
   occurredAt: '2026-08-11T00:00:00Z',
   version: 3,
-  createdAt: '2026-08-11T00:00:00Z',
-}
+})
 
 describe('transaction mutation integrity', () => {
   beforeEach(() => {
@@ -50,7 +37,7 @@ describe('transaction mutation integrity', () => {
   })
 
   it('sends the caller-owned operation key without changing the exact payload', async () => {
-    vi.mocked(createTransaction).mockResolvedValue({ data: asGeneratedTransaction(transaction), meta: meta() })
+    vi.mocked(createTransaction).mockResolvedValue({ data: transaction, meta: meta() })
     const store = useTransactionStore()
     const payload = {
       amount: '12.3400',
@@ -67,7 +54,7 @@ describe('transaction mutation integrity', () => {
 
   it('submits expectedVersion on update', async () => {
     vi.mocked(updateTransaction).mockResolvedValue({
-      data: asGeneratedTransaction({ ...transaction, version: 4 }),
+      data: { ...transaction, version: 4 },
       meta: meta(),
     })
     const store = useTransactionStore()
@@ -86,7 +73,7 @@ describe('transaction mutation integrity', () => {
   it('refetches and rejects stale updates for explicit user review', async () => {
     vi.mocked(updateTransaction).mockRejectedValue(staleConflict())
     vi.mocked(getTransaction).mockResolvedValue({
-      data: asGeneratedTransaction({ ...transaction, version: 4 }),
+      data: { ...transaction, version: 4 },
       meta: meta(),
     })
     const store = useTransactionStore()
@@ -101,6 +88,33 @@ describe('transaction mutation integrity', () => {
     expect(getTransaction).toHaveBeenCalledWith(transaction.id)
   })
 
+  it('keeps stale-conflict refetches in backend order instead of moving old rows to the head', async () => {
+    const newer = generatedTransaction({
+      id: '33333333-3333-4333-8333-333333333333',
+      occurredAt: '2026-08-12T00:00:00Z',
+      version: 1,
+    })
+    const older = generatedTransaction({
+      id: transaction.id,
+      occurredAt: '2026-08-01T00:00:00Z',
+      version: 1,
+    })
+    vi.mocked(updateTransaction).mockRejectedValue(staleConflict())
+    vi.mocked(getTransaction).mockResolvedValue({
+      data: { ...older, version: 2 },
+      meta: meta(),
+    })
+    const store = useTransactionStore()
+    store.recordCreatedTransaction(newer)
+    store.recordCreatedTransaction(older)
+
+    await expect(store.updateTransaction(older.id, { expectedVersion: 1 }))
+      .rejects.toMatchObject({ name: 'TransactionStaleConflictError' })
+
+    expect(store.transactions.map((item) => item.id)).toEqual([newer.id, older.id])
+    expect(store.transactions[1]).toMatchObject({ id: older.id, version: 2 })
+  })
+
   it('submits expectedVersion on delete and accepts an already-gone 204', async () => {
     vi.mocked(deleteTransaction).mockResolvedValue(undefined)
     const store = useTransactionStore()
@@ -110,13 +124,145 @@ describe('transaction mutation integrity', () => {
     expect(deleteTransaction).toHaveBeenCalledWith(transaction.id, { expectedVersion: 3 })
   })
 
-  it('ingests externally created transactions once at the head of the cache', () => {
+  it('recordCreatedTransaction deduplicates the same ID and keeps the newest known version', () => {
     const store = useTransactionStore()
     store.recordCreatedTransaction(transaction)
     store.recordCreatedTransaction({ ...transaction, version: 4 })
 
     expect(store.transactions).toHaveLength(1)
     expect(store.transactions[0]).toMatchObject({ id: transaction.id, version: 4 })
+  })
+
+  it('places a backdated created transaction by occurredAt instead of blindly at index zero', () => {
+    const newer = generatedTransaction({
+      id: '33333333-3333-4333-8333-333333333333',
+      occurredAt: '2026-08-12T00:00:00Z',
+    })
+    const backdated = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-07-01T00:00:00Z',
+    })
+    const store = useTransactionStore()
+
+    store.recordCreatedTransaction(newer)
+    store.recordCreatedTransaction(backdated)
+
+    expect(store.transactions.map((item) => item.id)).toEqual([newer.id, backdated.id])
+  })
+
+  it('orders transactions with the same occurredAt by id descending', () => {
+    const occurredAt = '2026-08-11T00:00:00.123456789Z'
+    const lowerId = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt,
+    })
+    const higherId = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000002',
+      occurredAt,
+    })
+    const store = useTransactionStore()
+
+    store.recordCreatedTransaction(lowerId)
+    store.recordCreatedTransaction(higherId)
+
+    expect(store.transactions.map((item) => item.id)).toEqual([higherId.id, lowerId.id])
+  })
+
+  it('repositions an updated transaction when occurredAt changes', async () => {
+    const existing = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-08-01T00:00:00Z',
+      version: 1,
+    })
+    const other = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-08-10T00:00:00Z',
+      version: 1,
+    })
+    const moved = { ...existing, occurredAt: '2026-08-12T00:00:00Z', version: 2 }
+    vi.mocked(updateTransaction).mockResolvedValue({ data: moved, meta: meta() })
+    const store = useTransactionStore()
+    store.recordCreatedTransaction(existing)
+    store.recordCreatedTransaction(other)
+
+    await store.updateTransaction(existing.id, { occurredAt: moved.occurredAt, expectedVersion: 1 })
+
+    expect(store.transactions.map((item) => item.id)).toEqual([existing.id, other.id])
+  })
+
+  it('deduplicates a locally inserted older transaction when a later cursor page returns it', async () => {
+    const firstPage = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000003',
+      occurredAt: '2026-08-20T00:00:00Z',
+    })
+    const locallyInserted = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-08-01T00:00:00Z',
+      version: 1,
+    })
+    const nextPageSibling = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-07-31T00:00:00Z',
+    })
+    vi.mocked(listTransactions)
+      .mockResolvedValueOnce({ data: page([firstPage], '2026-08-10T00:00:00Z', firstPage.id), meta: meta() })
+      .mockResolvedValueOnce({
+        data: page([{ ...locallyInserted, version: 2 }, nextPageSibling], null, null),
+        meta: meta(),
+      })
+    const store = useTransactionStore()
+
+    await store.fetchTransactions(true)
+    store.recordCreatedTransaction(locallyInserted)
+    await store.fetchTransactions(false)
+
+    expect(listTransactions).toHaveBeenNthCalledWith(2, {
+      limit: 20,
+      cursor: '2026-08-10T00:00:00Z',
+      cursorId: firstPage.id,
+    })
+    expect(store.transactions.filter((item) => item.id === locallyInserted.id)).toHaveLength(1)
+    expect(store.transactions.find((item) => item.id === locallyInserted.id)?.version).toBe(2)
+  })
+
+  it('reconciles repeated page entries without duplicate IDs', async () => {
+    const repeated = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-08-11T00:00:00Z',
+      version: 1,
+    })
+    vi.mocked(listTransactions).mockResolvedValueOnce({
+      data: page([repeated, { ...repeated, version: 2 }]),
+      meta: meta(),
+    })
+    const store = useTransactionStore()
+
+    await store.fetchTransactions(true)
+
+    expect(store.transactions).toHaveLength(1)
+    expect(store.transactions[0]).toMatchObject({ id: repeated.id, version: 2 })
+  })
+
+  it('reset=true replaces the first-page cache and reconciles only that page', async () => {
+    const staleLocal = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-08-11T00:00:00Z',
+    })
+    const firstPage = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-08-12T00:00:00Z',
+    })
+    vi.mocked(listTransactions).mockResolvedValueOnce({
+      data: page([firstPage, { ...firstPage, version: firstPage.version + 1 }]),
+      meta: meta(),
+    })
+    const store = useTransactionStore()
+    store.recordCreatedTransaction(staleLocal)
+
+    await store.fetchTransactions(true)
+
+    expect(store.transactions.map((item) => item.id)).toEqual([firstPage.id])
+    expect(store.transactions[0]?.version).toBe(firstPage.version + 1)
   })
 })
 
@@ -127,8 +273,33 @@ function meta() {
   }
 }
 
-function asGeneratedTransaction(value: Transaction): TransactionResponse {
-  return value as unknown as TransactionResponse
+function generatedTransaction(overrides: Partial<TransactionResponse> = {}): TransactionResponse {
+  return {
+    id: '11111111-1111-4111-8111-111111111111',
+    userId: '22222222-2222-4222-8222-222222222222',
+    amount: '12.3400',
+    currency: 'MYR',
+    amountMyr: '12.3400',
+    fxRate: '1.000000',
+    source: 'manual',
+    occurredAt: '2026-08-11T00:00:00Z',
+    version: 3,
+    createdAt: '2026-08-11T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function page(
+  transactions: TransactionResponse[],
+  nextCursor: string | null = null,
+  nextCursorId: string | null = null,
+): TransactionPageResponse {
+  return {
+    transactions,
+    hasMore: Boolean(nextCursor && nextCursorId),
+    nextCursor: nextCursor ?? undefined,
+    nextCursorId: nextCursorId ?? undefined,
+  }
 }
 
 function staleConflict() {

@@ -30,7 +30,7 @@ export const useGmailStore = defineStore('gmail', () => {
     error.value = null
     try {
       const response = await getGmailStatus()
-      status.value = response.data as GmailStatus
+      status.value = response.data
       if (status.value.connected) await fetchExtractions()
     } catch (err: unknown) {
       handleError('Failed to load Gmail status', err)
@@ -63,7 +63,7 @@ export const useGmailStore = defineStore('gmail', () => {
     try {
       await disconnectGmail(deleteExtractions)
       status.value = status.value
-        ? { ...status.value, connected: false, providerEmail: null, connectedAt: null, scopes: [] }
+        ? { ...status.value, connected: false, providerEmail: undefined, connectedAt: undefined, scopes: [] }
         : null
       extractions.value = []
       lastSync.value = null
@@ -81,7 +81,7 @@ export const useGmailStore = defineStore('gmail', () => {
     error.value = null
     try {
       const response = await syncGmail()
-      lastSync.value = response.data as GmailSyncResult
+      lastSync.value = response.data
       await fetchExtractions()
     } catch (err: unknown) {
       handleError('Failed to sync eReceipts', err)
@@ -92,7 +92,7 @@ export const useGmailStore = defineStore('gmail', () => {
 
   async function fetchExtractions() {
     const response = await listEmailExtractions({ status: 'pending' })
-    extractions.value = response.data as EmailExtraction[]
+    extractions.value = response.data
   }
 
   async function confirm(extractionId: string, categoryId?: string) {

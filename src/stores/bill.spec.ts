@@ -56,10 +56,6 @@ const guestSummary: GuestBillSummary = {
   unallocatedServiceCharge: '0.0000',
   unallocatedTotal: '10.0000',
   isPaid: false,
-  paidAt: null,
-  paidAmount: null,
-  paidAllocationVersion: null,
-  paymentQrProfile: null,
   selectedItems: [],
 }
 
@@ -81,7 +77,6 @@ const ownerBill: Bill = {
   unallocatedServiceCharge: '0.0000',
   unallocatedTotal: '10.0000',
   expiresAt: '2027-01-01T00:00:00Z',
-  paymentQrProfile: null,
   items: [],
   participants: [],
 }
@@ -102,7 +97,6 @@ const guestBill: GuestBill = {
   unallocatedServiceCharge: '0.0000',
   unallocatedTotal: '10.0000',
   expiresAt: '2027-01-01T00:00:00Z',
-  paymentQrProfile: null,
   items: [],
 }
 
@@ -206,15 +200,15 @@ function meta() {
 }
 
 function asGeneratedBill(value: Bill): BillResponse {
-  return value as unknown as BillResponse
+  return value
 }
 
 function asGeneratedGuestBill(value: GuestBill): GuestBillResponse {
-  return value as unknown as GuestBillResponse
+  return value
 }
 
 function asGeneratedGuestSummary(value: GuestBillSummary): GuestBillSummaryResponse {
-  return value as unknown as GuestBillSummaryResponse
+  return value
 }
 
 function staleBillConflict() {

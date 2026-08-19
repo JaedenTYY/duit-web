@@ -25,14 +25,14 @@ const extraction = {
   extractionId: 'receipt-1',
   extractedData: {
     merchantName: 'Coffee House',
-    merchantCategoryHint: null,
+    merchantCategoryHint: undefined,
     date: '2026-07-25T10:00:00Z',
     currency: 'MYR',
     lineItems: [],
     subtotal: '12.5000',
-    serviceCharge: null,
+    serviceCharge: undefined,
     tax: '0.0000',
-    discountAmount: null,
+    discountAmount: undefined,
     total: '12.5000',
     paymentMethod: 'card',
     confidence: 'high',
@@ -40,6 +40,7 @@ const extraction = {
   },
   rawOcrText: '',
   confidence: 'high',
+  duplicateImageWarning: false,
 } satisfies ReceiptExtractionResponse
 
 describe('ReceiptReviewStep', () => {
