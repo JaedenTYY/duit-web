@@ -60,7 +60,7 @@ async function handleSplitBill() {
 async function handleConfirm(payload: ConfirmExtractionPayload) {
   try {
     const newTransaction = await receiptStore.confirmExtraction(payload)
-    transactionStore.transactions = [newTransaction, ...transactionStore.transactions]
+    transactionStore.recordCreatedTransaction(newTransaction)
     step.value = 'done'
     setTimeout(() => {
       emit('success')

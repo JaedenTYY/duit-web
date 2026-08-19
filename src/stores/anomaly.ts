@@ -1,8 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { AnomalyAlert } from '@/types'
-import api from '@/lib/api'
 import { logger } from '@/utils/logger'
+import {
+  list1 as listAnomalies,
+  resolve as resolveAnomalyContract,
+} from '@/api/generated/anomaly-controller/anomaly-controller'
 
 export const useAnomalyStore = defineStore('anomaly', () => {
   const anomalies = ref<AnomalyAlert[]>([])
@@ -16,8 +19,8 @@ export const useAnomalyStore = defineStore('anomaly', () => {
     error.value = null
 
     try {
-      const response = await api.get<{ data: AnomalyAlert[] }>('/anomalies')
-      anomalies.value = response.data.data
+      const response = await listAnomalies()
+      anomalies.value = response.data as AnomalyAlert[]
     } catch (err: unknown) {
       error.value = _extractError(err)
       logger.error('Failed to fetch anomalies', err)
@@ -41,10 +44,10 @@ export const useAnomalyStore = defineStore('anomaly', () => {
 
     try {
       const status = action === 'confirm' ? 'confirmed' : 'dismissed'
-      const response = await api.post<{ data: AnomalyAlert }>(`/anomalies/${alertId}/resolve`, { status })
+      const response = await resolveAnomalyContract(alertId, { status })
       const index = anomalies.value.findIndex(a => a.id === alertId)
       if (index !== -1) {
-        anomalies.value[index] = response.data.data
+        anomalies.value[index] = response.data as AnomalyAlert
       }
     } catch (err: unknown) {
       error.value = _extractError(err)

@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { StatementImportResult, StatementUpload } from '@/types'
-import api from '@/lib/api'
-import { upload as uploadStatementContract } from '@/api/generated/statement-controller/statement-controller'
+import {
+  _delete as deleteStatementUpload,
+  confirm as confirmStatementUpload,
+  get as getStatementUpload,
+  upload as uploadStatementContract,
+} from '@/api/generated/statement-controller/statement-controller'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
@@ -40,13 +44,15 @@ export const useStatementStore = defineStore('statement', () => {
     confirming.value = true
     error.value = null
     try {
-      const response = await api.post<{ data: StatementImportResult }>(
-        `/statements/${upload.value.id}/confirm`,
-        { rows },
-      )
-      result.value = response.data.data
-      const refreshed = await api.get<{ data: StatementUpload }>(`/statements/${upload.value.id}`)
-      upload.value = refreshed.data.data
+      const response = await confirmStatementUpload(upload.value.id, {
+        rows: rows.map(row => ({
+          ...row,
+          rememberMerchantCategory: false,
+        })),
+      })
+      result.value = response.data as StatementImportResult
+      const refreshed = await getStatementUpload(upload.value.id)
+      upload.value = refreshed.data as StatementUpload
     } catch (err: unknown) {
       error.value = extractError(err)
       logger.error('Failed to import statement rows', err)
@@ -58,7 +64,7 @@ export const useStatementStore = defineStore('statement', () => {
 
   async function discardUpload() {
     if (upload.value?.status === 'pending') {
-      await api.delete(`/statements/${upload.value.id}`)
+      await deleteStatementUpload(upload.value.id)
     }
     reset()
   }

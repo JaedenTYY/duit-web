@@ -38,4 +38,25 @@ export default defineConfigWithVueTs(
       'vue/multi-word-component-names': 'off',
     },
   },
+  {
+    files: ['src/components/**/*.{js,ts,vue}', 'src/views/**/*.{js,ts,vue}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [
+          {
+            name: 'axios',
+            message: 'Components and views must use feature stores/composables, not raw HTTP clients.',
+          },
+          {
+            name: '@/lib/api',
+            message: 'Components and views must use feature stores/composables, not the shared API transport.',
+          },
+        ],
+      }],
+      'no-restricted-globals': ['error', {
+        name: 'fetch',
+        message: 'Components and views must not issue raw HTTP requests.',
+      }],
+    },
+  },
 )

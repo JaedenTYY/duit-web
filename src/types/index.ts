@@ -1,4 +1,8 @@
 import type { CategorisationResult as ApiCategorisationResult } from '@/api/generated/model/categorisationResult'
+import type { CategoryResponse as ApiCategory } from '@/api/generated/model/categoryResponse'
+import type { EmailExtractionResponse as ApiEmailExtraction } from '@/api/generated/model/emailExtractionResponse'
+import type { MonthlySummaryResponse as ApiMonthlySummary } from '@/api/generated/model/monthlySummaryResponse'
+import type { TransactionResponse as ApiTransaction } from '@/api/generated/model/transactionResponse'
 
 export interface User {
   id: string
@@ -8,29 +12,23 @@ export interface User {
   createdAt: string
 }
 
-export interface Transaction {
-  id: string
-  userId: string
-  amount: string
-  currency: string
-  amountMyr: string
-  fxRate: string
-  merchantId: string | null
-  merchantName: string | null
-  categoryId: string | null
-  categoryName: string | null
-  categoryIcon: string | null
-  categoryColor: string | null
-  description: string | null
-  source: 'receipt' | 'manual' | 'import' | 'statement' | 'gmail'
-  occurredAt: string
-  version: number
-  createdAt: string
-  suggestedCategoryId?: string
-  suggestedCategoryName?: string
-  similarityScore?: number
-  categorisationConfidence?: string
-  categorisationMessage?: string
+export type Transaction = Omit<
+  ApiTransaction,
+  | 'merchantId'
+  | 'merchantName'
+  | 'categoryId'
+  | 'categoryName'
+  | 'categoryIcon'
+  | 'categoryColor'
+  | 'description'
+> & {
+  merchantId?: string | null
+  merchantName?: string | null
+  categoryId?: string | null
+  categoryName?: string | null
+  categoryIcon?: string | null
+  categoryColor?: string | null
+  description?: string | null
 }
 
 export interface Merchant {
@@ -40,11 +38,9 @@ export interface Merchant {
   categoryId: string
 }
 
-export interface Category {
-  id: string
-  name: string
-  icon: string
-  color: string
+export type Category = Omit<ApiCategory, 'icon' | 'color'> & {
+  icon?: string | null
+  color?: string | null
 }
 
 export interface Insight {
@@ -215,27 +211,17 @@ export interface GmailSyncResult {
   ignoredCount: number
 }
 
-export interface EmailExtraction {
-  id: string
-  sender: string
-  subject: string
-  receivedAt: string
-  merchantName: string
-  amount: string
-  currency: string
-  occurredAt: string
-  suggestedCategoryId: string | null
-  suggestedCategoryName: string | null
-  categorisationConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | null
-  status: 'pending' | 'confirmed' | 'skipped'
-  transactionId: string | null
-  createdAt: string
+export type EmailExtraction = Omit<
+  ApiEmailExtraction,
+  'suggestedCategoryId' | 'suggestedCategoryName' | 'categorisationConfidence' | 'transactionId'
+> & {
+  suggestedCategoryId?: string | null
+  suggestedCategoryName?: string | null
+  categorisationConfidence?: 'HIGH' | 'MEDIUM' | 'LOW' | null
+  transactionId?: string | null
 }
 
-export interface MonthlySummary {
-  totalSpend: string
-  currency: string
-  transactionCount: number
+export type MonthlySummary = Omit<ApiMonthlySummary, 'byCategory'> & {
   byCategory: CategorySummary[]
 }
 

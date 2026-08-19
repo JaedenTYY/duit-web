@@ -1,30 +1,34 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import api from '@/lib/api'
-import { createFromReceipt as createFromReceiptContract } from '@/api/generated/bill-controller/bill-controller'
+import {
+  createFromReceipt as createFromReceiptContract,
+  getBill as getBillContract,
+  getParticipants as getParticipantsContract,
+  markPaid as markPaidContract,
+  setPaymentQrProfile as setPaymentQrProfileContract,
+} from '@/api/generated/bill-controller/bill-controller'
+import {
+  getGuestBill as getGuestBillContract,
+  join as joinGuestBillContract,
+  selectItems as selectGuestItemsContract,
+  summary as getGuestSummaryContract,
+} from '@/api/generated/guest-bill-controller/guest-bill-controller'
+import {
+  createProfile as createPaymentProfileContract,
+  deleteProfile as deletePaymentProfileContract,
+  listProfiles as listPaymentProfilesContract,
+  updateProfile as updatePaymentProfileContract,
+} from '@/api/generated/payment-qr-profile-controller/payment-qr-profile-controller'
 import type { Bill, GuestBill, GuestBillSummary, PaymentQrProfile } from '@/types'
+import type {
+  CreatePaymentQrProfileRequest,
+  UpdatePaymentQrProfileRequest,
+} from '@/api/generated/model'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
-interface ApiResponse<T> {
-  data: T
-}
-
-export interface CreatePaymentQrProfilePayload {
-  provider: string
-  displayName: string
-  qrImageUrl?: string
-  qrPayload?: string
-  isDefault?: boolean
-}
-
-export interface UpdatePaymentQrProfilePayload {
-  provider?: string
-  displayName?: string
-  qrImageUrl?: string
-  qrPayload?: string
-  isDefault?: boolean
-}
+export type CreatePaymentQrProfilePayload = CreatePaymentQrProfileRequest
+export type UpdatePaymentQrProfilePayload = UpdatePaymentQrProfileRequest
 
 export const useBillStore = defineStore('bill', () => {
   const bill = ref<Bill | null>(null)
@@ -67,8 +71,8 @@ export const useBillStore = defineStore('bill', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get<ApiResponse<Bill>>(`/bills/${id}`)
-      bill.value = response.data.data
+      const response = await getBillContract(id)
+      bill.value = response.data as Bill
       return bill.value
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to load bill')
@@ -79,10 +83,10 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function fetchParticipants(id: string): Promise<void> {
-    const response = await api.get<ApiResponse<Bill['participants']>>(`/bills/${id}/participants`)
+    const response = await getParticipantsContract(id)
     if (bill.value && bill.value.id === id) {
-      bill.value.participants = response.data.data
-      const latestVersion = response.data.data[0]?.allocationVersion
+      bill.value.participants = response.data as Bill['participants']
+      const latestVersion = response.data[0]?.allocationVersion
       if (latestVersion !== undefined) {
         bill.value.allocationVersion = latestVersion
       }
@@ -97,16 +101,16 @@ export const useBillStore = defineStore('bill', () => {
     saving.value = true
     error.value = null
     try {
-      const response = await api.post<ApiResponse<Bill['participants'][number]>>(`/bills/${billId}/mark-paid`, {
+      const response = await markPaidContract(billId, {
         participantId,
         isPaid,
         expectedAllocationVersion
       })
       if (bill.value?.id === billId) {
-        bill.value.allocationVersion = response.data.data.allocationVersion
+        bill.value.allocationVersion = response.data.allocationVersion
         const index = bill.value.participants.findIndex(p => p.id === participantId)
         if (index >= 0) {
-          bill.value.participants[index] = response.data.data
+          bill.value.participants[index] = response.data as Bill['participants'][number]
         }
       }
     } catch (requestError: unknown) {
@@ -126,11 +130,11 @@ export const useBillStore = defineStore('bill', () => {
     saving.value = true
     error.value = null
     try {
-      const response = await api.patch<ApiResponse<Bill>>(`/bills/${billId}/payment-qr-profile`, {
-        paymentQrProfileId,
+      const response = await setPaymentQrProfileContract(billId, {
+        paymentQrProfileId: paymentQrProfileId ?? undefined,
         expectedAllocationVersion
       })
-      bill.value = response.data.data
+      bill.value = response.data as Bill
     } catch (requestError: unknown) {
       await refetchOnStaleBill(billId, requestError)
       error.value = extractError(requestError, 'Failed to update payment QR')
@@ -141,16 +145,17 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function fetchPaymentProfiles(): Promise<void> {
-    const response = await api.get<ApiResponse<PaymentQrProfile[]>>('/payment-qr-profiles')
-    paymentProfiles.value = response.data.data
+    const response = await listPaymentProfilesContract()
+    paymentProfiles.value = response.data as PaymentQrProfile[]
   }
 
   async function createPaymentProfile(payload: CreatePaymentQrProfilePayload): Promise<void> {
     saving.value = true
     error.value = null
     try {
-      const response = await api.post<ApiResponse<PaymentQrProfile>>('/payment-qr-profiles', payload)
-      paymentProfiles.value = [response.data.data, ...paymentProfiles.value.filter(p => p.id !== response.data.data.id)]
+      const response = await createPaymentProfileContract(payload)
+      const profile = response.data as PaymentQrProfile
+      paymentProfiles.value = [profile, ...paymentProfiles.value.filter(p => p.id !== profile.id)]
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to save payment QR')
       throw requestError
@@ -163,10 +168,10 @@ export const useBillStore = defineStore('bill', () => {
     saving.value = true
     error.value = null
     try {
-      const response = await api.patch<ApiResponse<PaymentQrProfile>>(`/payment-qr-profiles/${id}`, payload)
+      const response = await updatePaymentProfileContract(id, payload)
       const index = paymentProfiles.value.findIndex(p => p.id === id)
       if (index >= 0) {
-        paymentProfiles.value[index] = response.data.data
+        paymentProfiles.value[index] = response.data as PaymentQrProfile
       }
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to update payment QR')
@@ -180,7 +185,7 @@ export const useBillStore = defineStore('bill', () => {
     saving.value = true
     error.value = null
     try {
-      await api.delete(`/payment-qr-profiles/${id}`)
+      await deletePaymentProfileContract(id)
       paymentProfiles.value = paymentProfiles.value.filter(p => p.id !== id)
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to delete payment QR')
@@ -213,14 +218,14 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
     const operationKey = ensureJoinOperationKey(shareToken)
     try {
-      const response = await api.post<ApiResponse<{ participantToken: string; summary: GuestBillSummary }>>(
-        `/guest/bills/${shareToken}/join`,
+      const response = await joinGuestBillContract(
+        shareToken,
         { displayName },
-        { headers: { 'Idempotency-Key': operationKey } }
+        { 'Idempotency-Key': operationKey }
       )
-      participantToken.value = response.data.data.participantToken
-      guestSummary.value = response.data.data.summary
-      localStorage.setItem(participantTokenKey(shareToken), response.data.data.participantToken)
+      participantToken.value = response.data.participantToken
+      guestSummary.value = response.data.summary as GuestBillSummary
+      localStorage.setItem(participantTokenKey(shareToken), response.data.participantToken)
       localStorage.removeItem(joinOperationKey(shareToken))
     } catch (requestError: unknown) {
       error.value = extractError(requestError, 'Failed to join bill')
@@ -241,12 +246,12 @@ export const useBillStore = defineStore('bill', () => {
     saving.value = true
     error.value = null
     try {
-      const response = await api.post<ApiResponse<GuestBillSummary>>(`/guest/bills/${shareToken}/items`, {
+      const response = await selectGuestItemsContract(shareToken, {
         participantToken: participantToken.value,
         itemIds,
         expectedAllocationVersion
       })
-      guestSummary.value = response.data.data
+      guestSummary.value = response.data as GuestBillSummary
       await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
       await refetchGuestOnStaleBill(shareToken, requestError)
@@ -258,17 +263,15 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function refreshGuestBillSnapshot(shareToken: string): Promise<GuestBill> {
-    const response = await api.get<ApiResponse<GuestBill>>(`/guest/bills/${shareToken}`)
-    guestBill.value = response.data.data
+    const response = await getGuestBillContract(shareToken)
+    guestBill.value = response.data as GuestBill
     return guestBill.value
   }
 
   async function fetchGuestSummary(shareToken: string): Promise<void> {
     if (!participantToken.value) return
-    const response = await api.get<ApiResponse<GuestBillSummary>>(`/guest/bills/${shareToken}/summary`, {
-      headers: { 'X-Participant-Token': participantToken.value }
-    })
-    guestSummary.value = response.data.data
+    const response = await getGuestSummaryContract(shareToken, { 'X-Participant-Token': participantToken.value })
+    guestSummary.value = response.data as GuestBillSummary
   }
 
   function resetOwnerBill() {

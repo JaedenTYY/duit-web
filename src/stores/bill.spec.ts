@@ -1,16 +1,40 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import api from '@/lib/api'
 import type { Bill, GuestBill, GuestBillSummary } from '@/types'
 import { useBillStore } from './bill'
+import {
+  getBill,
+  markPaid,
+} from '@/api/generated/bill-controller/bill-controller'
+import {
+  getGuestBill,
+  join,
+  selectItems,
+} from '@/api/generated/guest-bill-controller/guest-bill-controller'
+import type {
+  BillResponse,
+  GuestBillResponse,
+  GuestBillSummaryResponse,
+} from '@/api/generated/model'
 
-vi.mock('@/lib/api', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
+vi.mock('@/api/generated/bill-controller/bill-controller', () => ({
+  createFromReceipt: vi.fn(),
+  getBill: vi.fn(),
+  getParticipants: vi.fn(),
+  markPaid: vi.fn(),
+  setPaymentQrProfile: vi.fn(),
+}))
+vi.mock('@/api/generated/guest-bill-controller/guest-bill-controller', () => ({
+  getGuestBill: vi.fn(),
+  join: vi.fn(),
+  selectItems: vi.fn(),
+  summary: vi.fn(),
+}))
+vi.mock('@/api/generated/payment-qr-profile-controller/payment-qr-profile-controller', () => ({
+  createProfile: vi.fn(),
+  deleteProfile: vi.fn(),
+  listProfiles: vi.fn(),
+  updateProfile: vi.fn(),
 }))
 
 const SHARE_TOKEN = 'share-token'
@@ -96,15 +120,14 @@ describe('bill split mutation integrity', () => {
   })
 
   it('reuses one guest join operation key after a transport failure', async () => {
-    vi.mocked(api.post)
+    vi.mocked(join)
       .mockRejectedValueOnce(new Error('network lost'))
       .mockResolvedValueOnce({
         data: {
-          data: {
-            participantToken: PARTICIPANT_TOKEN,
-            summary: guestSummary,
-          },
+          participantToken: PARTICIPANT_TOKEN,
+          summary: asGeneratedGuestSummary(guestSummary),
         },
+        meta: meta(),
       })
     const store = useBillStore()
 
@@ -113,54 +136,52 @@ describe('bill split mutation integrity', () => {
 
     await store.joinGuestBill(SHARE_TOKEN, 'Guest')
 
-    expect(api.post).toHaveBeenNthCalledWith(
+    expect(join).toHaveBeenNthCalledWith(
       1,
-      `/guest/bills/${SHARE_TOKEN}/join`,
+      SHARE_TOKEN,
       { displayName: 'Guest' },
-      { headers: { 'Idempotency-Key': JOIN_KEY } }
+      { 'Idempotency-Key': JOIN_KEY }
     )
-    expect(api.post).toHaveBeenNthCalledWith(
+    expect(join).toHaveBeenNthCalledWith(
       2,
-      `/guest/bills/${SHARE_TOKEN}/join`,
+      SHARE_TOKEN,
       { displayName: 'Guest' },
-      { headers: { 'Idempotency-Key': JOIN_KEY } }
+      { 'Idempotency-Key': JOIN_KEY }
     )
     expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBeNull()
     expect(localStorage.getItem(`duit_guest_participant_${SHARE_TOKEN}`)).toBe(PARTICIPANT_TOKEN)
   })
 
   it('submits empty selection as a complete state replacement with expected allocation version', async () => {
-    vi.mocked(api.post)
+    vi.mocked(join)
       .mockResolvedValueOnce({
         data: {
-          data: {
-            participantToken: PARTICIPANT_TOKEN,
-            summary: guestSummary,
-          },
+          participantToken: PARTICIPANT_TOKEN,
+          summary: asGeneratedGuestSummary(guestSummary),
         },
+        meta: meta(),
       })
-      .mockResolvedValueOnce({ data: { data: guestSummary } })
-    vi.mocked(api.get).mockResolvedValueOnce({ data: { data: guestBill } })
+    vi.mocked(selectItems).mockResolvedValueOnce({ data: asGeneratedGuestSummary(guestSummary), meta: meta() })
+    vi.mocked(getGuestBill).mockResolvedValueOnce({ data: asGeneratedGuestBill(guestBill), meta: meta() })
     const store = useBillStore()
 
     await store.joinGuestBill(SHARE_TOKEN, 'Guest')
     await store.selectGuestItems(SHARE_TOKEN, [])
 
-    expect(api.post).toHaveBeenNthCalledWith(
-      2,
-      `/guest/bills/${SHARE_TOKEN}/items`,
+    expect(selectItems).toHaveBeenCalledWith(
+      SHARE_TOKEN,
       {
         participantToken: PARTICIPANT_TOKEN,
         itemIds: [],
         expectedAllocationVersion: 7,
       }
     )
-    expect(api.get).toHaveBeenCalledWith(`/guest/bills/${SHARE_TOKEN}`)
+    expect(getGuestBill).toHaveBeenCalledWith(SHARE_TOKEN)
   })
 
   it('sends owner mutation revisions and refetches for stale bill conflicts', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: ownerBill } })
-    vi.mocked(api.post).mockRejectedValue(staleBillConflict())
+    vi.mocked(getBill).mockResolvedValue({ data: asGeneratedBill(ownerBill), meta: meta() })
+    vi.mocked(markPaid).mockRejectedValue(staleBillConflict())
     const store = useBillStore()
     await store.fetchBill(ownerBill.id)
 
@@ -168,14 +189,33 @@ describe('bill split mutation integrity', () => {
       response: { status: 409 },
     })
 
-    expect(api.post).toHaveBeenCalledWith(`/bills/${ownerBill.id}/mark-paid`, {
+    expect(markPaid).toHaveBeenCalledWith(ownerBill.id, {
       participantId: 'participant-id',
       isPaid: true,
       expectedAllocationVersion: 4,
     })
-    expect(api.get).toHaveBeenCalledWith(`/bills/${ownerBill.id}`)
+    expect(getBill).toHaveBeenCalledWith(ownerBill.id)
   })
 })
+
+function meta() {
+  return {
+    timestamp: '2026-08-11T00:00:00Z',
+    requestId: 'request-id',
+  }
+}
+
+function asGeneratedBill(value: Bill): BillResponse {
+  return value as unknown as BillResponse
+}
+
+function asGeneratedGuestBill(value: GuestBill): GuestBillResponse {
+  return value as unknown as GuestBillResponse
+}
+
+function asGeneratedGuestSummary(value: GuestBillSummary): GuestBillSummaryResponse {
+  return value as unknown as GuestBillSummaryResponse
+}
 
 function staleBillConflict() {
   return {
