@@ -10,6 +10,7 @@ export default defineConfig(async (env) => {
       environment: 'jsdom',
       exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**', '**/e2e/**'],
       passWithNoTests: false,
+      setupFiles: ['./src/test/consoleErrorGuard.ts'],
     },
     },
   )

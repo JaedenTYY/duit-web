@@ -3,15 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReceiptExtractionResponse } from '@/types'
 import ReceiptReviewStep from './ReceiptReviewStep.vue'
 
-const { apiGet } = vi.hoisted(() => ({
-  apiGet: vi.fn(),
+const merchantCategorisation = vi.hoisted(() => ({
+  categoriseMerchant: vi.fn(),
+  forgetMerchantCategoryPreference: vi.fn(),
 }))
 
-vi.mock('@/lib/api', () => ({
-  default: {
-    get: apiGet,
-    delete: vi.fn(),
-  },
+vi.mock('@/composables/useMerchantCategorisation', () => ({
+  useMerchantCategorisation: () => merchantCategorisation,
 }))
 
 vi.mock('gsap', () => ({
@@ -45,15 +43,12 @@ const extraction = {
 
 describe('ReceiptReviewStep', () => {
   beforeEach(() => {
-    apiGet.mockResolvedValue({
-      data: {
-        data: {
-          merchantName: 'Coffee House',
-          source: 'NONE',
-          personalised: false,
-        },
-      },
+    merchantCategorisation.categoriseMerchant.mockResolvedValue({
+      merchantName: 'Coffee House',
+      source: 'NONE',
+      personalised: false,
     })
+    merchantCategorisation.forgetMerchantCategoryPreference.mockResolvedValue(undefined)
   })
 
   it('defaults remember preference to false and emits true only after explicit selection', async () => {

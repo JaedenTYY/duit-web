@@ -66,6 +66,20 @@ describe('frontend architecture boundaries', () => {
     expectTypeOf<ConfirmExtractionRequest['amount']>().toEqualTypeOf<string>()
     expectTypeOf<ConfirmExtractionRequest['fxRate']>().toEqualTypeOf<string | undefined>()
   })
+
+  it('critical frontend tests are not skipped', () => {
+    const skippedTestTokens = ['describe.' + 'skip', 'it.' + 'skip', 'test.' + 'skip']
+    const violations = testFiles()
+      .flatMap((file) => {
+        const text = readFileSync(file, 'utf8')
+        const relativePath = relative(process.cwd(), file)
+        return skippedTestTokens
+          .filter((token) => text.includes(token))
+          .map((token) => `${relativePath} contains ${token}`)
+      })
+
+    expect(violations).toEqual([])
+  })
 })
 
 function sourceFiles(relativeDirs: string[]): string[] {
@@ -77,4 +91,10 @@ function walk(path: string): string[] {
   const stat = statSync(path)
   if (stat.isFile()) return [path]
   return readdirSync(path).flatMap((entry) => walk(join(path, entry)))
+}
+
+function testFiles(): string[] {
+  return [join(process.cwd(), 'src'), join(process.cwd(), 'tests')]
+    .flatMap((root) => walk(root))
+    .filter((file) => /\.spec\.ts$/.test(file))
 }
