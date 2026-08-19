@@ -2,9 +2,13 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useTransactionStore } from '@/stores/transaction'
 import type { Transaction, CategorisationResult } from '@/types'
-import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import CategorySuggestion from './CategorySuggestion.vue'
+import { useMerchantCategorisation } from '@/composables/useMerchantCategorisation'
+import type {
+  CreateTransactionRequestCurrency,
+  UpdateTransactionRequestCurrency,
+} from '@/api/generated/model'
 import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
 import { instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
 import {
@@ -21,6 +25,10 @@ const props = defineProps<{
 }>()
 
 const store = useTransactionStore()
+const {
+  categoriseMerchant,
+  forgetMerchantCategoryPreference,
+} = useMerchantCategorisation()
 
 const isEditing = computed(() => Boolean(props.transaction))
 const amount = ref(props.transaction?.amount ?? '')
@@ -55,10 +63,7 @@ async function fetchCategorisation(name: string) {
     return
   }
   try {
-    const res = await api.get<{ data: CategorisationResult }>('/merchants/categorise', {
-      params: { name }
-    })
-    categorisation.value = res.data.data
+    categorisation.value = await categoriseMerchant(name)
     categorisationStatus.value = ''
   } catch (err) {
     categorisationStatus.value = 'Could not refresh the merchant category suggestion.'
@@ -96,7 +101,7 @@ onMounted(() => {
 
 async function forgetPreference(merchantId: string) {
   try {
-    await api.delete(`/merchants/${merchantId}/category-preference`)
+    await forgetMerchantCategoryPreference(merchantId)
     await fetchCategorisation(merchantName.value)
     categorisationStatus.value = 'Saved merchant category forgotten. Your selected transaction category was kept.'
   } catch (err) {
@@ -118,7 +123,7 @@ async function handleSubmit() {
   try {
     const sharedPayload = {
       amount: normalizeDecimalInput(amount.value),
-      currency: currency.value,
+      currency: currency.value as CreateTransactionRequestCurrency & UpdateTransactionRequestCurrency,
       categoryId: categoryId.value || undefined,
       description: description.value || undefined,
       occurredAt: localDateTimeInputToInstant(occurredAt.value),

@@ -1,10 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { EmailExtraction, GmailStatus, GmailSyncResult } from '@/types'
-import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 import { disconnectGmail } from '@/lib/privacyTransport'
+import {
+  confirm1 as confirmEmailExtraction,
+  connect as connectGmail,
+  extractions as listEmailExtractions,
+  skip as skipEmailExtraction,
+  status as getGmailStatus,
+  sync as syncGmail,
+} from '@/api/generated/gmail-controller/gmail-controller'
 
 export const useGmailStore = defineStore('gmail', () => {
   const status = ref<GmailStatus | null>(null)
@@ -22,8 +29,8 @@ export const useGmailStore = defineStore('gmail', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get<{ data: GmailStatus }>('/gmail/status')
-      status.value = response.data.data
+      const response = await getGmailStatus()
+      status.value = response.data
       if (status.value.connected) await fetchExtractions()
     } catch (err: unknown) {
       handleError('Failed to load Gmail status', err)
@@ -36,11 +43,9 @@ export const useGmailStore = defineStore('gmail', () => {
     connecting.value = true
     error.value = null
     try {
-      const response = await api.post<{
-        data: { connected: boolean; authorizationUrl: string | null }
-      }>('/gmail/connect')
-      if (response.data.data.authorizationUrl) {
-        window.location.assign(response.data.data.authorizationUrl)
+      const response = await connectGmail()
+      if (response.data.authorizationUrl) {
+        window.location.assign(response.data.authorizationUrl)
         return
       }
       await initialise()
@@ -58,7 +63,7 @@ export const useGmailStore = defineStore('gmail', () => {
     try {
       await disconnectGmail(deleteExtractions)
       status.value = status.value
-        ? { ...status.value, connected: false, providerEmail: null, connectedAt: null, scopes: [] }
+        ? { ...status.value, connected: false, providerEmail: undefined, connectedAt: undefined, scopes: [] }
         : null
       extractions.value = []
       lastSync.value = null
@@ -75,8 +80,8 @@ export const useGmailStore = defineStore('gmail', () => {
     syncing.value = true
     error.value = null
     try {
-      const response = await api.post<{ data: GmailSyncResult }>('/gmail/sync')
-      lastSync.value = response.data.data
+      const response = await syncGmail()
+      lastSync.value = response.data
       await fetchExtractions()
     } catch (err: unknown) {
       handleError('Failed to sync eReceipts', err)
@@ -86,10 +91,8 @@ export const useGmailStore = defineStore('gmail', () => {
   }
 
   async function fetchExtractions() {
-    const response = await api.get<{ data: EmailExtraction[] }>('/gmail/extractions', {
-      params: { status: 'pending' },
-    })
-    extractions.value = response.data.data
+    const response = await listEmailExtractions({ status: 'pending' })
+    extractions.value = response.data
   }
 
   async function confirm(extractionId: string, categoryId?: string) {
@@ -97,7 +100,10 @@ export const useGmailStore = defineStore('gmail', () => {
     actionIds.value.add(extractionId)
     error.value = null
     try {
-      await api.post(`/gmail/extractions/${extractionId}/confirm`, { categoryId })
+      await confirmEmailExtraction(extractionId, {
+        categoryId,
+        rememberMerchantCategory: false,
+      })
       extractions.value = extractions.value.filter((item) => item.id !== extractionId)
     } catch (err: unknown) {
       handleError('Failed to confirm eReceipt', err)
@@ -111,7 +117,7 @@ export const useGmailStore = defineStore('gmail', () => {
     actionIds.value.add(extractionId)
     error.value = null
     try {
-      await api.patch(`/gmail/extractions/${extractionId}/skip`)
+      await skipEmailExtraction(extractionId)
       extractions.value = extractions.value.filter((item) => item.id !== extractionId)
     } catch (err: unknown) {
       handleError('Failed to skip eReceipt', err)

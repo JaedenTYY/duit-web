@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AddTransactionModal from './AddTransactionModal.vue'
 
-const { store, api } = vi.hoisted(() => ({
+const { store, merchantActions } = vi.hoisted(() => ({
   store: {
     categories: [
       { id: 'food', name: 'Food & Dining', icon: '🍔', color: '#FF5733' },
@@ -14,20 +14,23 @@ const { store, api } = vi.hoisted(() => ({
     createTransaction: vi.fn(),
     updateTransaction: vi.fn(),
   },
-  api: {
-    get: vi.fn(),
-    delete: vi.fn(),
+  merchantActions: {
+    categoriseMerchant: vi.fn(),
+    forgetMerchantCategoryPreference: vi.fn(),
   },
 }))
 
 vi.mock('@/stores/transaction', () => ({ useTransactionStore: () => store }))
-vi.mock('@/lib/api', () => ({ default: api }))
+vi.mock('@/composables/useMerchantCategorisation', () => ({
+  useMerchantCategorisation: () => merchantActions,
+}))
 vi.mock('@/utils/logger', () => ({ logger: { error: vi.fn() } }))
 
 describe('AddTransactionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    api.get.mockResolvedValue({ data: { data: { source: 'NONE' } } })
+    merchantActions.categoriseMerchant.mockResolvedValue({ source: 'NONE' })
+    merchantActions.forgetMerchantCategoryPreference.mockResolvedValue(undefined)
     store.createTransaction.mockResolvedValue({})
     store.updateTransaction.mockResolvedValue({})
   })
@@ -160,21 +163,19 @@ describe('AddTransactionModal', () => {
       .forgetPreference('merchant-1')
     await flushPromises()
 
-    expect(api.delete).toHaveBeenCalledWith('/merchants/merchant-1/category-preference')
-    expect(api.get).toHaveBeenLastCalledWith('/merchants/categorise', {
-      params: { name: 'Coffee House' },
-    })
+    expect(merchantActions.forgetMerchantCategoryPreference).toHaveBeenCalledWith('merchant-1')
+    expect(merchantActions.categoriseMerchant).toHaveBeenLastCalledWith('Coffee House')
     expect(wrapper.text()).toContain('Saved merchant category forgotten.')
   })
 
   it('does not announce success when forgetting a saved preference fails', async () => {
-    api.delete.mockRejectedValueOnce(new Error('network error'))
+    merchantActions.forgetMerchantCategoryPreference.mockRejectedValueOnce(new Error('network error'))
     const wrapper = mount(AddTransactionModal)
     await (wrapper.vm as unknown as { forgetPreference: (merchantId: string) => Promise<void> })
       .forgetPreference('merchant-1')
     await flushPromises()
 
-    expect(api.delete).toHaveBeenCalledWith('/merchants/merchant-1/category-preference')
+    expect(merchantActions.forgetMerchantCategoryPreference).toHaveBeenCalledWith('merchant-1')
     expect(wrapper.text()).toContain('Could not forget the saved merchant category')
     expect(wrapper.text()).not.toContain('Saved merchant category forgotten.')
   })

@@ -15,7 +15,7 @@ describe('InsightCard', () => {
             unusualIncreases: [], spendingTrend: {
               direction: 'NEW', currentTotal: '10.00', previousTotal: '0.00', changePercentage: null,
             },
-            billSplitSettlements: null, findings: [], recommendation: 'Keep tracking',
+            findings: [], recommendation: 'Keep tracking',
             recommendations: ['Keep tracking'], positiveNote: 'Good start', riskLevel: 'LOW',
           },
         },

@@ -1,26 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ReceiptExtractionResponse, Transaction } from '@/types'
-import api from '@/lib/api'
-import { uploadReceipt as uploadReceiptContract } from '@/api/generated/receipt-controller/receipt-controller'
+import {
+  confirmExtraction as confirmExtractionContract,
+  uploadReceipt as uploadReceiptContract,
+} from '@/api/generated/receipt-controller/receipt-controller'
+import type { ConfirmExtractionRequest } from '@/api/generated/model'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
-export interface ConfirmExtractionPayload {
-  extractionId: string
-  amount: string
-  currency: string
-  categoryId?: string
-  description?: string
-  occurredAt: string
-  fxRate?: string
-  merchantName?: string
-  rememberMerchantCategory?: boolean
-}
-
-interface TransactionApiResponse {
-  data: Transaction
-}
+export type ConfirmExtractionPayload = ConfirmExtractionRequest
 
 export const useReceiptStore = defineStore('receipt', () => {
   const uploading = ref(false)
@@ -38,7 +27,7 @@ export const useReceiptStore = defineStore('receipt', () => {
       }
 
       const response = await uploadReceiptContract({ file })
-      const data = response.data as ReceiptExtractionResponse
+      const data = response.data
       extraction.value = data
       return data
     } catch (err: unknown) {
@@ -53,9 +42,9 @@ export const useReceiptStore = defineStore('receipt', () => {
     confirming.value = true
     error.value = null
     try {
-      const response = await api.post<TransactionApiResponse>('/receipt/confirm', payload)
+      const response = await confirmExtractionContract(payload)
       extraction.value = null
-      return response.data.data
+      return response.data
     } catch (err: unknown) {
       error.value = _extractError(err)
       throw err

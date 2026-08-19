@@ -152,7 +152,7 @@ async function saveSelection() {
             />
           </div>
 
-          <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? guestBill.paymentQrProfile" />
+          <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? guestBill.paymentQrProfile ?? null" />
 
           <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
             Remaining / unallocated amount:

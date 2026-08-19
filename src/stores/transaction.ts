@@ -1,51 +1,31 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Transaction, Category, MonthlySummary } from '@/types'
-import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import { extractApiFailure } from '@/lib/apiError'
+import { listCategories } from '@/api/generated/category-controller/category-controller'
+import {
+  createTransaction as createTransactionContract,
+  deleteTransaction as deleteTransactionContract,
+  getMonthlySummary as getMonthlySummaryContract,
+  getTransaction as getTransactionContract,
+  listTransactions as listTransactionsContract,
+  updateTransaction as updateTransactionContract,
+} from '@/api/generated/transaction-controller/transaction-controller'
+import type {
+  CreateTransactionRequest,
+  ListTransactionsParams,
+  UpdateTransactionRequest,
+} from '@/api/generated/model'
 
-export interface CreateTransactionPayload {
-  amount: string
-  currency: string
-  merchantName?: string
-  categoryId?: string
-  description?: string
-  occurredAt: string
-  fxRate?: string
-  rememberMerchantCategory?: boolean
-}
-
-export type UpdateTransactionPayload = Omit<Partial<CreateTransactionPayload>, 'merchantName'> & {
-  expectedVersion: number
-}
+export type CreateTransactionPayload = CreateTransactionRequest
+export type UpdateTransactionPayload = UpdateTransactionRequest
 
 export class TransactionStaleConflictError extends Error {
   constructor(readonly current: Transaction | null) {
     super('This transaction changed while you were editing it. Review the latest values before saving again.')
     this.name = 'TransactionStaleConflictError'
   }
-}
-
-interface TransactionResponse {
-  data: Transaction
-}
-
-interface TransactionPageResponse {
-  data: {
-    transactions: Transaction[]
-    nextCursor: string | null
-    nextCursorId: string | null
-    hasMore: boolean
-  }
-}
-
-interface CategoriesResponse {
-  data: Category[]
-}
-
-interface MonthlySummaryResponse {
-  data: MonthlySummary
 }
 
 export const useTransactionStore = defineStore('transaction', () => {
@@ -67,26 +47,23 @@ export const useTransactionStore = defineStore('transaction', () => {
     error.value = null
     
     try {
-      const params: Record<string, string | number> = { limit: 20 }
-      if (selectedCategoryId.value) {
-        params.categoryId = selectedCategoryId.value
-      }
+      const params: ListTransactionsParams = { limit: 20 }
       if (!reset && nextCursor.value && nextCursorId.value) {
         params.cursor = nextCursor.value
         params.cursorId = nextCursorId.value
       }
 
-      const response = await api.get<TransactionPageResponse>('/transactions', { params })
-      const data = response.data.data
+      const response = await listTransactionsContract(params)
+      const data = response.data
 
       if (reset) {
-        transactions.value = data.transactions
+        transactions.value = mergeTransactionCache([], data.transactions)
       } else {
-        transactions.value = [...transactions.value, ...data.transactions]
+        transactions.value = mergeTransactionCache(transactions.value, data.transactions)
       }
 
-      nextCursor.value = data.nextCursor
-      nextCursorId.value = data.nextCursorId
+      nextCursor.value = data.nextCursor ?? null
+      nextCursorId.value = data.nextCursorId ?? null
       hasMore.value = data.hasMore
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -100,8 +77,8 @@ export const useTransactionStore = defineStore('transaction', () => {
     if (categories.value.length > 0) return
 
     try {
-      const response = await api.get<CategoriesResponse>('/categories')
-      categories.value = response.data.data
+      const response = await listCategories()
+      categories.value = response.data
     } catch (err: unknown) {
       logger.error('Failed to fetch categories', err)
     }
@@ -110,11 +87,9 @@ export const useTransactionStore = defineStore('transaction', () => {
   async function fetchMonthlySummary(year: number, month: number) {
     logger.log('fetchMonthlySummary called with:', { year, month })
     try {
-      const response = await api.get<MonthlySummaryResponse>('/transactions/summary/monthly', {
-        params: { year, month }
-      })
-      logger.log('fetchMonthlySummary success:', response.data.data)
-      monthlySummary.value = response.data.data
+      const response = await getMonthlySummaryContract({ year, month: String(month) })
+      logger.log('fetchMonthlySummary success:', response.data)
+      monthlySummary.value = response.data
     } catch (err: unknown) {
       logger.error('Failed to fetch monthly summary', err)
       // Attempt to log more detail if it's an axios error
@@ -140,11 +115,9 @@ export const useTransactionStore = defineStore('transaction', () => {
     submitting.value = true
     error.value = null
     try {
-      const response = await api.post<TransactionResponse>('/transactions', payload, {
-        headers: { 'Idempotency-Key': operationKey },
-      })
-      const newTransaction = response.data.data
-      transactions.value = [newTransaction, ...transactions.value]
+      const response = await createTransactionContract(payload, { 'Idempotency-Key': operationKey })
+      const newTransaction = response.data
+      recordCreatedTransaction(newTransaction)
       return newTransaction
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -158,12 +131,9 @@ export const useTransactionStore = defineStore('transaction', () => {
     submitting.value = true
     error.value = null
     try {
-      const response = await api.patch<TransactionResponse>(`/transactions/${id}`, payload)
-      const updatedTransaction = response.data.data
-      const index = transactions.value.findIndex(t => t.id === id)
-      if (index !== -1) {
-        transactions.value[index] = updatedTransaction
-      }
+      const response = await updateTransactionContract(id, payload)
+      const updatedTransaction = response.data
+      replaceTransaction(updatedTransaction)
       return updatedTransaction
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -180,7 +150,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     submitting.value = true
     error.value = null
     try {
-      await api.delete(`/transactions/${id}`, { params: { expectedVersion } })
+      await deleteTransactionContract(id, { expectedVersion })
       transactions.value = transactions.value.filter(t => t.id !== id)
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -195,11 +165,9 @@ export const useTransactionStore = defineStore('transaction', () => {
 
   async function fetchTransaction(id: string): Promise<Transaction | null> {
     try {
-      const response = await api.get<TransactionResponse>(`/transactions/${id}`)
-      const current = response.data.data
-      const index = transactions.value.findIndex(transaction => transaction.id === id)
-      if (index === -1) transactions.value = [current, ...transactions.value]
-      else transactions.value[index] = current
+      const response = await getTransactionContract(id)
+      const current = response.data
+      recordCreatedTransaction(current)
       return current
     } catch (err: unknown) {
       if (extractApiFailure(err).status === 404) {
@@ -230,6 +198,14 @@ export const useTransactionStore = defineStore('transaction', () => {
     selectedCategoryId.value = ''
   }
 
+  function recordCreatedTransaction(transaction: Transaction) {
+    transactions.value = mergeTransactionCache(transactions.value, [transaction])
+  }
+
+  function replaceTransaction(transaction: Transaction) {
+    transactions.value = mergeTransactionCache(transactions.value, [transaction])
+  }
+
   function _extractError(err: unknown): string {
     if (err && typeof err === 'object' && 'response' in err) {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } }
@@ -255,7 +231,37 @@ export const useTransactionStore = defineStore('transaction', () => {
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    recordCreatedTransaction,
     setCategoryFilter,
     reset,
   }
 })
+
+function mergeTransactionCache(
+  existing: readonly Transaction[],
+  incoming: readonly Transaction[],
+): Transaction[] {
+  const byId = new Map<string, Transaction>()
+
+  for (const transaction of [...existing, ...incoming]) {
+    const current = byId.get(transaction.id)
+    if (!current || transaction.version >= current.version) {
+      byId.set(transaction.id, transaction)
+    }
+  }
+
+  return [...byId.values()].sort(compareTransactionOrder)
+}
+
+function compareTransactionOrder(left: Transaction, right: Transaction) {
+  const occurredAt = instantSortKey(right.occurredAt).localeCompare(instantSortKey(left.occurredAt))
+  if (occurredAt !== 0) return occurredAt
+  return right.id.localeCompare(left.id)
+}
+
+function instantSortKey(value: string): string {
+  const normalized = value.replace(/\+00:00$/, 'Z')
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/.exec(normalized)
+  if (!match) return normalized
+  return `${match[1]}.${(match[2] ?? '').padEnd(9, '0')}Z`
+}

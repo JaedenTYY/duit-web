@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Insight } from '@/types'
-import api from '@/lib/api'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
+import {
+  generate as generateInsight,
+  list as listInsights,
+} from '@/api/generated/insight-controller/insight-controller'
 
 export const useInsightStore = defineStore('insight', () => {
   const insights = ref<Insight[]>([])
@@ -17,8 +20,8 @@ export const useInsightStore = defineStore('insight', () => {
     error.value = null
 
     try {
-      const response = await api.get<{ data: Insight[] }>('/insights')
-      insights.value = response.data.data
+      const response = await listInsights()
+      insights.value = response.data
     } catch (err: unknown) {
       error.value = _extractError(err)
       logger.error('Failed to fetch insights', err)
@@ -33,8 +36,8 @@ export const useInsightStore = defineStore('insight', () => {
     error.value = null
 
     try {
-      const response = await api.post<{ data: Insight }>('/insights/generate')
-      const generated = response.data.data
+      const response = await generateInsight()
+      const generated = response.data
       insights.value = [
         generated,
         ...insights.value.filter((insight) => insight.id !== generated.id),

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { gsap } from 'gsap'
-import api from '@/lib/api'
 import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
 import { logger } from '@/utils/logger'
 import CategorySuggestion from '../transactions/CategorySuggestion.vue'
+import { useMerchantCategorisation } from '@/composables/useMerchantCategorisation'
+import type { ConfirmExtractionRequestCurrency } from '@/api/generated/model'
 import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
 import { dateOnlyToLocalDateTimeInput, instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
 
@@ -21,6 +22,10 @@ const emit = defineEmits<{
 }>()
 
 const formContainer = ref<HTMLElement | null>(null)
+const {
+  categoriseMerchant,
+  forgetMerchantCategoryPreference,
+} = useMerchantCategorisation()
 
 const amount = ref(props.extraction.extractedData.total)
 const currency = ref(props.extraction.extractedData.currency)
@@ -54,10 +59,7 @@ async function fetchCategorisation(name: string) {
     return
   }
   try {
-    const res = await api.get<{ data: CategorisationResult }>('/merchants/categorise', {
-      params: { name }
-    })
-    categorisation.value = res.data.data
+    categorisation.value = await categoriseMerchant(name)
     categorisationStatus.value = ''
   } catch (err) {
     logger.error('Failed to fetch merchant categorisation', err)
@@ -66,7 +68,7 @@ async function fetchCategorisation(name: string) {
 
 async function forgetPreference(merchantId: string) {
   try {
-    await api.delete(`/merchants/${merchantId}/category-preference`)
+    await forgetMerchantCategoryPreference(merchantId)
     await fetchCategorisation(merchantName.value)
     categorisationStatus.value = 'Saved merchant category forgotten. The category selected for this receipt was kept.'
   } catch (err) {
@@ -123,7 +125,7 @@ function handleConfirm() {
   emit('confirm', {
     extractionId: props.extraction.extractionId,
     amount: normalizeDecimalInput(amount.value),
-    currency: currency.value,
+    currency: currency.value as ConfirmExtractionRequestCurrency,
     merchantName: merchantName.value || undefined,
     categoryId: categoryId.value || undefined,
     description: description.value || undefined,
