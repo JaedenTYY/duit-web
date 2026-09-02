@@ -13,6 +13,8 @@ const transactionStore = useTransactionStore()
 const selectedIds = ref<Set<string>>(new Set())
 const categoryOverrides = reactive<Record<string, string>>({})
 const fileInput = ref<HTMLInputElement | null>(null)
+const fileValidationError = ref('')
+const MAX_STATEMENT_BYTES = 10 * 1024 * 1024
 
 onMounted(() => transactionStore.fetchCategories())
 
@@ -28,6 +30,7 @@ watch(
       categoryOverrides[row.id] = row.suggestedCategoryId ?? ''
     }
   },
+  { immediate: true },
 )
 
 const pendingRows = computed(() => store.upload?.rows.filter((row) => row.status === 'pending') ?? [])
@@ -40,13 +43,22 @@ function isImportableExpense(row: StatementRow) {
 }
 
 async function handleFile(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  fileValidationError.value = ''
   if (!file) return
-  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) return
+  const validationError = validateStatementPdf(file)
+  if (validationError) {
+    fileValidationError.value = validationError
+    target.value = ''
+    return
+  }
   try {
     await store.uploadStatement(file)
   } catch {
     // Store exposes the API error.
+  } finally {
+    target.value = ''
   }
 }
 
@@ -66,9 +78,25 @@ async function confirmImport() {
     }))
   try {
     await store.confirmRows(rows)
+    await transactionStore.reconcileAfterFinancialMutation({ refreshTransactions: true })
   } catch {
     // Store exposes the API error.
   }
+}
+
+function validateStatementPdf(file: File): string | null {
+  const explicitType = file.type.trim().toLowerCase()
+  const hasPdfExtension = file.name.toLowerCase().endsWith('.pdf')
+  if (explicitType && explicitType !== 'application/pdf') {
+    return 'Choose a PDF statement. This file reports a different type.'
+  }
+  if (!explicitType && !hasPdfExtension) {
+    return 'Choose a PDF statement ending in .pdf.'
+  }
+  if (file.size > MAX_STATEMENT_BYTES) {
+    return 'Choose a PDF statement up to 10 MB.'
+  }
+  return null
 }
 
 function money(row: StatementRow) {
@@ -88,6 +116,10 @@ function money(row: StatementRow) {
     <ErrorBanner
       class="mb-6"
       :message="store.error"
+    />
+    <ErrorBanner
+      class="mb-6"
+      :message="store.refreshError"
     />
 
     <section
@@ -112,6 +144,13 @@ function money(row: StatementRow) {
       </h2>
       <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
         Maximum 10 MB. Raw PDF text is discarded after draft rows are created.
+      </p>
+      <p
+        v-if="fileValidationError"
+        role="alert"
+        class="mx-auto mt-4 max-w-md rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
+      >
+        {{ fileValidationError }}
       </p>
       <input
         ref="fileInput"

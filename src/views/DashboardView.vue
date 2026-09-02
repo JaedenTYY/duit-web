@@ -31,6 +31,8 @@ const monthName = computed(() => now.toLocaleDateString('en-MY', { month: 'long'
 const categoriesToShow = computed(() => store.monthlySummary?.byCategory?.slice(0, 5) ?? [])
 const topCategory = computed(() => store.monthlySummary?.byCategory?.[0] ?? null)
 const recentTransactions = computed(() => store.transactions.slice(0, 4))
+const hasSummary = computed(() => store.monthlySummaryStatus === 'loaded' && store.monthlySummary)
+const summaryTotal = computed(() => hasSummary.value ? store.monthlySummary?.totalSpend ?? '0' : null)
 const completedTasks = computed(() => {
   let count = 0
   if (store.transactions.length > 0) count += 1
@@ -121,6 +123,7 @@ const chartOptions = {
     </header>
 
     <ErrorBanner :message="store.error" />
+    <ErrorBanner :message="store.monthlySummaryError" />
 
     <LoadingSkeleton
       v-if="store.loading && (!store.monthlySummary || store.transactions.length === 0)"
@@ -164,10 +167,12 @@ const chartOptions = {
             Monthly spend
           </p>
           <p class="mt-2 text-3xl font-black text-slate-950 sm:mt-3 sm:text-4xl">
-            {{ formatCurrency(store.monthlySummary?.totalSpend || '0', 'MYR') }}
+            {{ summaryTotal ? formatCurrency(summaryTotal, 'MYR') : 'Unavailable' }}
           </p>
           <p class="mt-2 text-sm font-semibold text-slate-500">
-            Top category: {{ topCategory?.categoryName || 'not enough data yet' }}
+            {{ store.monthlySummaryStatus === 'error' && !hasSummary
+              ? 'Monthly summary could not be loaded. Retry by refreshing this page.'
+              : `Top category: ${topCategory?.categoryName || 'not enough data yet'}` }}
           </p>
           <div class="mt-6 grid grid-cols-2 gap-3">
             <div class="rounded-2xl bg-emerald-50 p-4">
@@ -218,7 +223,7 @@ const chartOptions = {
               />
               <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span class="text-xs font-black uppercase text-slate-400">Total</span>
-                <span class="mt-1 text-lg font-black text-slate-950">{{ formatCurrency(store.monthlySummary?.totalSpend || '0', 'MYR') }}</span>
+                <span class="mt-1 text-lg font-black text-slate-950">{{ summaryTotal ? formatCurrency(summaryTotal, 'MYR') : 'Unavailable' }}</span>
               </div>
             </div>
 
@@ -248,6 +253,13 @@ const chartOptions = {
               </div>
             </div>
           </div>
+
+          <EmptyState
+            v-else-if="store.monthlySummaryStatus === 'error'"
+            title="Spending map unavailable"
+            message="Duit could not load the monthly summary. Refresh this page to retry."
+            tone="rose"
+          />
 
           <EmptyState
             v-else

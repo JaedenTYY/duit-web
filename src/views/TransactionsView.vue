@@ -16,6 +16,7 @@ const isModalOpen = ref(false)
 const showReceiptModal = ref(false)
 const editingTransaction = ref<Transaction | null>(null)
 const listContainer = ref<HTMLElement | null>(null)
+const deletingIds = ref<Set<string>>(new Set())
 
 onMounted(async () => {
   await store.fetchCategories()
@@ -46,13 +47,19 @@ watch(() => store.transactions.length, (newLen, oldLen) => {
 })
 
 async function handleDelete(transaction: Transaction) {
+  if (deletingIds.value.has(transaction.id)) return
   if (confirm('Delete this transaction?')) {
+    deletingIds.value = new Set(deletingIds.value).add(transaction.id)
     try {
       await store.deleteTransaction(transaction.id, transaction.version)
     } catch (error) {
       if (error instanceof TransactionStaleConflictError) {
         alert('This transaction changed before it could be deleted. The latest version was loaded; review it and try again.')
       }
+    } finally {
+      const next = new Set(deletingIds.value)
+      next.delete(transaction.id)
+      deletingIds.value = next
     }
   }
 }
@@ -60,12 +67,6 @@ async function handleDelete(transaction: Transaction) {
 function handleEdit(transaction: Transaction) {
   editingTransaction.value = transaction
   isModalOpen.value = true
-}
-
-async function handleCategoryFilterChange(event: Event) {
-  const target = event.target as HTMLSelectElement
-  store.setCategoryFilter(target.value)
-  await store.fetchTransactions(true)
 }
 
 function closeTransactionModal() {
@@ -115,28 +116,6 @@ async function handleReceiptClose() {
       </button>
     </div>
 
-    <div class="mb-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
-      <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-        Category
-        <select
-          :value="store.selectedCategoryId"
-          class="mt-2 w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-700 font-semibold outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 sm:w-72"
-          @change="handleCategoryFilterChange"
-        >
-          <option value="">
-            All categories
-          </option>
-          <option
-            v-for="cat in store.categories"
-            :key="cat.id"
-            :value="cat.id"
-          >
-            {{ cat.icon }} {{ cat.name }}
-          </option>
-        </select>
-      </label>
-    </div>
-
     <ErrorBanner
       class="mb-6"
       :message="store.error"
@@ -150,9 +129,9 @@ async function handleReceiptClose() {
 
     <EmptyState
       v-else-if="!store.loading && store.transactions.length === 0"
-      :title="store.selectedCategoryId ? 'No transactions in this category' : 'No transactions yet'"
-      :message="store.selectedCategoryId ? 'Try another category or clear the filter to widen the feed.' : 'Add one manually or import from the Magic Inbox to start building your spending history.'"
-      :action-label="store.selectedCategoryId ? undefined : 'Add Transaction'"
+      title="No transactions yet"
+      message="Add one manually or import from the Magic Inbox to start building your spending history."
+      action-label="Add Transaction"
       tone="blue"
       @action="editingTransaction = null; isModalOpen = true"
     />
@@ -167,6 +146,7 @@ async function handleReceiptClose() {
         v-for="tx in store.transactions" 
         :key="tx.id" 
         :transaction="tx"
+        :deleting="deletingIds.has(tx.id)"
         @edit="handleEdit"
         @delete="handleDelete"
       />

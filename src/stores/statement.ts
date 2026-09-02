@@ -21,10 +21,12 @@ export const useStatementStore = defineStore('statement', () => {
   const uploading = ref(false)
   const confirming = ref(false)
   const error = ref<string | null>(null)
+  const refreshError = ref<string | null>(null)
 
   async function uploadStatement(file: File) {
     uploading.value = true
     error.value = null
+    refreshError.value = null
     result.value = null
     try {
       const response = await uploadStatementContract({ file })
@@ -43,6 +45,7 @@ export const useStatementStore = defineStore('statement', () => {
     if (!upload.value) return
     confirming.value = true
     error.value = null
+    refreshError.value = null
     try {
       const response = await confirmStatementUpload(upload.value.id, {
         rows: rows.map(row => ({
@@ -51,8 +54,13 @@ export const useStatementStore = defineStore('statement', () => {
         })),
       })
       result.value = response.data
-      const refreshed = await getStatementUpload(upload.value.id)
-      upload.value = refreshed.data
+      try {
+        const refreshed = await getStatementUpload(upload.value.id)
+        upload.value = refreshed.data
+      } catch (refreshFailure: unknown) {
+        refreshError.value = 'Import succeeded, but Duit could not refresh the statement draft. Open Transactions to verify the imported rows.'
+        logger.error('Failed to refresh statement upload after import', refreshFailure)
+      }
     } catch (err: unknown) {
       error.value = extractError(err)
       logger.error('Failed to import statement rows', err)
@@ -75,6 +83,7 @@ export const useStatementStore = defineStore('statement', () => {
     uploading.value = false
     confirming.value = false
     error.value = null
+    refreshError.value = null
   }
 
   function extractError(err: unknown): string {
@@ -90,6 +99,7 @@ export const useStatementStore = defineStore('statement', () => {
     uploading,
     confirming,
     error,
+    refreshError,
     uploadStatement,
     confirmRows,
     discardUpload,

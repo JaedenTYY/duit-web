@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { gsap } from 'gsap'
 import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
@@ -14,6 +14,7 @@ import { dateOnlyToLocalDateTimeInput, instantToLocalDateTimeInput, localDateTim
 const props = defineProps<{
   extraction: ReceiptExtractionResponse
   categories: Category[]
+  confirming?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -52,16 +53,23 @@ const canRememberMerchantCategory = computed(() =>
 const categorisation = ref<CategorisationResult | null>(null)
 const categorisationStatus = ref('')
 let debounceTimer: ReturnType<typeof setTimeout>
+let categorisationGeneration = 0
 
 async function fetchCategorisation(name: string) {
-  if (!name.trim()) {
+  const requestedMerchant = name.trim()
+  const generation = ++categorisationGeneration
+  if (!requestedMerchant) {
     categorisation.value = null
     return
   }
   try {
-    categorisation.value = await categoriseMerchant(name)
+    const result = await categoriseMerchant(requestedMerchant)
+    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
+    categorisation.value = result
     categorisationStatus.value = ''
   } catch (err) {
+    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
+    categorisation.value = null
     logger.error('Failed to fetch merchant categorisation', err)
   }
 }
@@ -117,7 +125,13 @@ onMounted(() => {
   }
 })
 
+onUnmounted(() => {
+  clearTimeout(debounceTimer)
+  categorisationGeneration += 1
+})
+
 function handleConfirm() {
+  if (props.confirming) return
   const amountError = validateAmountInput(amount.value)
   const rateError = showFxRate.value ? validateFxRateInput(fxRate.value) : null
   financialError.value = amountError ?? rateError ?? ''
@@ -348,9 +362,11 @@ function formatReviewField(field: string) {
         </button>
         <button
           type="submit"
-          class="min-h-12 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
+          class="min-h-12 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="confirming"
+          :aria-busy="confirming ? 'true' : undefined"
         >
-          Confirm & Save
+          {{ confirming ? 'Saving…' : 'Confirm & Save' }}
         </button>
       </div>
     </form>

@@ -6,6 +6,7 @@ import { useReceiptStore, type ConfirmExtractionPayload } from '@/stores/receipt
 import { useTransactionStore } from '@/stores/transaction'
 import ReceiptUploadStep from './ReceiptUploadStep.vue'
 import ReceiptReviewStep from './ReceiptReviewStep.vue'
+import { useDialogFocusManagement } from '@/composables/useDialogFocusManagement'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -19,11 +20,17 @@ const transactionStore = useTransactionStore()
 
 const step = ref<'upload' | 'choose' | 'reviewing' | 'done'>('upload')
 const selectedFile = ref<File | null>(null)
+const dialogRef = ref<HTMLElement | null>(null)
 const isWorking = computed(() => receiptStore.uploading || receiptStore.confirming || billStore.uploading)
 const currentError = computed(() => receiptStore.error || billStore.error)
 const workingLabel = computed(() => {
   if (billStore.uploading) return 'Creating bill split...'
   return receiptStore.uploading ? 'Scanning receipt...' : 'Saving transaction...'
+})
+
+useDialogFocusManagement(dialogRef, {
+  onEscape: closeModal,
+  canClose: () => !isWorking.value,
 })
 
 function handleFileSelected(file: File) {
@@ -58,9 +65,11 @@ async function handleSplitBill() {
 }
 
 async function handleConfirm(payload: ConfirmExtractionPayload) {
+  if (receiptStore.confirming) return
   try {
     const newTransaction = await receiptStore.confirmExtraction(payload)
     transactionStore.recordCreatedTransaction(newTransaction)
+    await transactionStore.reconcileAfterFinancialMutation()
     step.value = 'done'
     setTimeout(() => {
       emit('success')
@@ -85,6 +94,7 @@ function handleBack() {
 }
 
 function closeModal() {
+  if (isWorking.value) return
   receiptStore.reset()
   billStore.error = null
   emit('close')
@@ -97,7 +107,14 @@ function closeModal() {
       class="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center sm:p-4"
       @click.self="closeModal"
     >
-      <div class="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[88vh]">
+      <div
+        ref="dialogRef"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receipt-dialog-title"
+        tabindex="-1"
+        class="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[88vh]"
+      >
         <!-- Loading Overlay -->
         <div
           v-if="isWorking"
@@ -120,7 +137,10 @@ function closeModal() {
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
                   Receipt capture
                 </p>
-                <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                <h2
+                  id="receipt-dialog-title"
+                  class="mt-1 text-2xl font-black tracking-tight text-slate-950"
+                >
                   Scan or upload receipt
                 </h2>
                 <p class="mt-1 text-sm font-medium leading-6 text-slate-500">
@@ -128,8 +148,10 @@ function closeModal() {
                 </p>
               </div>
               <button
+                type="button"
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
                 aria-label="Close receipt scanner"
+                :disabled="isWorking"
                 @click="closeModal"
               >
                 <svg
@@ -168,7 +190,10 @@ function closeModal() {
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">
                   Receipt ready
                 </p>
-                <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                <h2
+                  id="receipt-dialog-title"
+                  class="mt-1 text-2xl font-black tracking-tight text-slate-950"
+                >
                   What should Duit do with it?
                 </h2>
                 <p class="mt-1 text-sm font-medium leading-6 text-slate-500">
@@ -176,8 +201,10 @@ function closeModal() {
                 </p>
               </div>
               <button
+                type="button"
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
                 aria-label="Close receipt scanner"
+                :disabled="isWorking"
                 @click="closeModal"
               >
                 <svg
@@ -274,9 +301,16 @@ function closeModal() {
           </div>
 
           <div v-else-if="step === 'reviewing' && receiptStore.extraction">
+            <h2
+              id="receipt-dialog-title"
+              class="sr-only"
+            >
+              Review receipt details
+            </h2>
             <ReceiptReviewStep
               :extraction="receiptStore.extraction"
               :categories="transactionStore.categories"
+              :confirming="receiptStore.confirming"
               @confirm="handleConfirm"
               @back="handleBack"
             />
@@ -289,7 +323,10 @@ function closeModal() {
             <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-emerald-50 text-4xl text-emerald-600">
               ✓
             </div>
-            <h2 class="mb-2 text-2xl font-black tracking-tight text-slate-950">
+            <h2
+              id="receipt-dialog-title"
+              class="mb-2 text-2xl font-black tracking-tight text-slate-950"
+            >
               Receipt saved
             </h2>
             <p class="font-medium text-slate-500">

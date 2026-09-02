@@ -1,5 +1,5 @@
-import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReceiptExtractionResponse } from '@/types'
 import ReceiptReviewStep from './ReceiptReviewStep.vue'
 
@@ -19,6 +19,10 @@ vi.mock('gsap', () => ({
 }))
 
 const categories = [{ id: 'food', name: 'Food & Dining', icon: '🍔', color: '#FF5733' }]
+const multiCategories = [
+  ...categories,
+  { id: 'transport', name: 'Transport', icon: '🚗', color: '#33FF57' },
+]
 const extraction = {
   extractionId: 'receipt-1',
   extractedData: {
@@ -49,6 +53,10 @@ describe('ReceiptReviewStep', () => {
       personalised: false,
     })
     merchantCategorisation.forgetMerchantCategoryPreference.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('defaults remember preference to false and emits true only after explicit selection', async () => {
@@ -138,5 +146,54 @@ describe('ReceiptReviewStep', () => {
     expect(wrapper.emitted('confirm')?.[0]?.[0]).toMatchObject({
       rememberMerchantCategory: false,
     })
+  })
+
+  it('does not emit confirmation while confirmation is already pending', async () => {
+    const wrapper = mount(ReceiptReviewStep, {
+      props: { extraction, categories, confirming: true },
+    })
+
+    await wrapper.findAll('select')[1].setValue('food')
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Saving…')
+  })
+
+  it('ignores stale merchant categorisation responses for previous merchant input', async () => {
+    vi.useFakeTimers()
+    let resolveSlow!: (value: unknown) => void
+    let resolveFast!: (value: unknown) => void
+    merchantCategorisation.categoriseMerchant.mockImplementation((merchant: string) => new Promise((resolve) => {
+      if (merchant === 'Slow Merchant') resolveSlow = resolve
+      if (merchant === 'Fast Merchant') resolveFast = resolve
+    }))
+    const wrapper = mount(ReceiptReviewStep, {
+      props: { extraction, categories: multiCategories },
+    })
+
+    await wrapper.get('input[placeholder="e.g. Kopitiam"]').setValue('Slow Merchant')
+    await vi.advanceTimersByTimeAsync(500)
+    await wrapper.get('input[placeholder="e.g. Kopitiam"]').setValue('Fast Merchant')
+    await vi.advanceTimersByTimeAsync(500)
+
+    resolveFast({
+      source: 'SYSTEM_MERCHANT',
+      categoryId: 'transport',
+      confidence: 'HIGH',
+    })
+    await flushPromises()
+    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+
+    resolveSlow({
+      source: 'SYSTEM_MERCHANT',
+      categoryId: 'food',
+      confidence: 'HIGH',
+    })
+    await flushPromises()
+
+    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use 🍔 Food & Dining category"]').exists()).toBe(false)
   })
 })

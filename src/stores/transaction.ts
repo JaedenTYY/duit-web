@@ -17,6 +17,7 @@ import type {
   ListTransactionsParams,
   UpdateTransactionRequest,
 } from '@/api/generated/model'
+import { currentReportingYearMonth } from '@/utils/localDateTime'
 
 export type CreateTransactionPayload = CreateTransactionRequest
 export type UpdateTransactionPayload = UpdateTransactionRequest
@@ -32,16 +33,19 @@ export const useTransactionStore = defineStore('transaction', () => {
   const transactions = ref<Transaction[]>([])
   const categories = ref<Category[]>([])
   const monthlySummary = ref<MonthlySummary | null>(null)
+  const monthlySummaryStatus = ref<'idle' | 'loading' | 'loaded' | 'error'>('idle')
+  const monthlySummaryError = ref<string | null>(null)
   const loading = ref(false)
   const submitting = ref(false)
   const error = ref<string | null>(null)
   const nextCursor = ref<string | null>(null)
   const nextCursorId = ref<string | null>(null)
   const hasMore = ref(false)
-  const selectedCategoryId = ref<string>('')
+  let fetchGeneration = 0
 
   async function fetchTransactions(reset = false) {
     if (loading.value) return
+    const generation = reset ? ++fetchGeneration : fetchGeneration
     
     loading.value = true
     error.value = null
@@ -55,6 +59,7 @@ export const useTransactionStore = defineStore('transaction', () => {
 
       const response = await listTransactionsContract(params)
       const data = response.data
+      if (generation !== fetchGeneration) return
 
       if (reset) {
         transactions.value = mergeTransactionCache([], data.transactions)
@@ -66,10 +71,11 @@ export const useTransactionStore = defineStore('transaction', () => {
       nextCursorId.value = data.nextCursorId ?? null
       hasMore.value = data.hasMore
     } catch (err: unknown) {
+      if (generation !== fetchGeneration) return
       error.value = _extractError(err)
       logger.error('Failed to fetch transactions', err)
     } finally {
-      loading.value = false
+      if (generation === fetchGeneration) loading.value = false
     }
   }
 
@@ -86,11 +92,16 @@ export const useTransactionStore = defineStore('transaction', () => {
 
   async function fetchMonthlySummary(year: number, month: number) {
     logger.log('fetchMonthlySummary called with:', { year, month })
+    monthlySummaryStatus.value = 'loading'
+    monthlySummaryError.value = null
     try {
       const response = await getMonthlySummaryContract({ year, month: String(month) })
       logger.log('fetchMonthlySummary success:', response.data)
       monthlySummary.value = response.data
+      monthlySummaryStatus.value = 'loaded'
     } catch (err: unknown) {
+      monthlySummaryStatus.value = 'error'
+      monthlySummaryError.value = _extractError(err)
       logger.error('Failed to fetch monthly summary', err)
       // Attempt to log more detail if it's an axios error
       if (err && typeof err === 'object' && 'isAxiosError' in err) {
@@ -108,6 +119,19 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
+  async function refreshCurrentMonthSummary(): Promise<void> {
+    const { year, month } = currentReportingYearMonth()
+    await fetchMonthlySummary(year, month)
+  }
+
+  async function reconcileAfterFinancialMutation(options: { refreshTransactions?: boolean } = {}): Promise<void> {
+    const tasks: Promise<void>[] = [refreshCurrentMonthSummary()]
+    if (options.refreshTransactions) {
+      tasks.push(fetchTransactions(true))
+    }
+    await Promise.all(tasks)
+  }
+
   async function createTransaction(
     payload: CreateTransactionPayload,
     operationKey: string,
@@ -118,6 +142,7 @@ export const useTransactionStore = defineStore('transaction', () => {
       const response = await createTransactionContract(payload, { 'Idempotency-Key': operationKey })
       const newTransaction = response.data
       recordCreatedTransaction(newTransaction)
+      await reconcileAfterFinancialMutation()
       return newTransaction
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -134,6 +159,7 @@ export const useTransactionStore = defineStore('transaction', () => {
       const response = await updateTransactionContract(id, payload)
       const updatedTransaction = response.data
       replaceTransaction(updatedTransaction)
+      await reconcileAfterFinancialMutation()
       return updatedTransaction
     } catch (err: unknown) {
       error.value = _extractError(err)
@@ -152,6 +178,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     try {
       await deleteTransactionContract(id, { expectedVersion })
       transactions.value = transactions.value.filter(t => t.id !== id)
+      await reconcileAfterFinancialMutation()
     } catch (err: unknown) {
       error.value = _extractError(err)
       if (extractApiFailure(err).code === 'ERR_TX_STALE_409') {
@@ -178,24 +205,19 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
-  function setCategoryFilter(categoryId: string) {
-    selectedCategoryId.value = categoryId
-    nextCursor.value = null
-    nextCursorId.value = null
-    hasMore.value = false
-  }
-
   function reset() {
+    fetchGeneration += 1
     transactions.value = []
     categories.value = []
     monthlySummary.value = null
+    monthlySummaryStatus.value = 'idle'
+    monthlySummaryError.value = null
     loading.value = false
     submitting.value = false
     error.value = null
     nextCursor.value = null
     nextCursorId.value = null
     hasMore.value = false
-    selectedCategoryId.value = ''
   }
 
   function recordCreatedTransaction(transaction: Transaction) {
@@ -218,21 +240,23 @@ export const useTransactionStore = defineStore('transaction', () => {
     transactions,
     categories,
     monthlySummary,
+    monthlySummaryStatus,
+    monthlySummaryError,
     loading,
     submitting,
     error,
     nextCursor,
     nextCursorId,
     hasMore,
-    selectedCategoryId,
     fetchTransactions,
     fetchCategories,
     fetchMonthlySummary,
+    refreshCurrentMonthSummary,
+    reconcileAfterFinancialMutation,
     createTransaction,
     updateTransaction,
     deleteTransaction,
     recordCreatedTransaction,
-    setCategoryFilter,
     reset,
   }
 })
