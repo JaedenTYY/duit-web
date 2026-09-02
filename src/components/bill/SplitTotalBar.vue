@@ -18,24 +18,24 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <aside class="sticky bottom-3 z-30 rounded-[1.75rem] border border-white/20 bg-slate-950/95 px-4 py-4 text-white shadow-2xl shadow-blue-900/20 backdrop-blur-xl sm:bottom-4 sm:px-5">
+  <aside class="sticky bottom-3 z-30 min-w-0 rounded-[1.75rem] border border-white/20 bg-slate-950/95 px-4 py-4 text-white shadow-2xl shadow-blue-900/20 backdrop-blur-xl sm:bottom-4 sm:px-5">
     <div class="flex flex-col gap-3">
-      <div class="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-300 sm:grid-cols-4">
-        <div class="flex flex-col">
+      <div class="grid min-w-0 grid-cols-2 gap-3 text-xs font-semibold text-slate-300 sm:grid-cols-4">
+        <div class="flex min-w-0 flex-col">
           <span class="text-slate-400">Items</span>
-          <span class="text-sm text-white">{{ formatCurrency(subtotal, currency) }}</span>
+          <span class="break-words text-sm text-white">{{ formatCurrency(subtotal, currency) }}</span>
         </div>
-        <div class="flex flex-col">
+        <div class="flex min-w-0 flex-col">
           <span class="text-slate-400">Tax</span>
-          <span class="text-sm text-white">{{ formatCurrency(tax, currency) }}</span>
+          <span class="break-words text-sm text-white">{{ formatCurrency(tax, currency) }}</span>
         </div>
-        <div class="flex flex-col">
+        <div class="flex min-w-0 flex-col">
           <span class="text-slate-400">Service</span>
-          <span class="text-sm text-white">{{ formatCurrency(service, currency) }}</span>
+          <span class="break-words text-sm text-white">{{ formatCurrency(service, currency) }}</span>
         </div>
-        <div class="flex flex-col items-end">
+        <div class="flex min-w-0 flex-col items-end">
           <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total owed</span>
-          <span class="text-lg font-black text-white">{{ formatCurrency(total, currency) }}</span>
+          <span class="break-words text-right text-lg font-black text-white">{{ formatCurrency(total, currency) }}</span>
         </div>
       </div>
       

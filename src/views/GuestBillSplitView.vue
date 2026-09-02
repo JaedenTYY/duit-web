@@ -15,14 +15,26 @@ import { addDecimalStrings } from '@/utils/financialDecimal'
 
 const route = useRoute()
 const billStore = useBillStore()
-const { guestBill, guestSummary, participantToken, loading, saving, error } = storeToRefs(billStore)
+const { guestBill, guestSummary, participantToken, guestShareToken, guestTerminalState, loading, saving, error } = storeToRefs(billStore)
 const displayName = ref('')
 const selectedItemIds = ref<Set<string>>(new Set())
 
 const shareToken = computed(() => String(route.params.shareToken))
+const currentGuestBill = computed(() => guestShareToken.value === shareToken.value ? guestBill.value : null)
+const isTerminalBill = computed(() => {
+  const status = currentGuestBill.value?.status.toLowerCase()
+  return Boolean(guestTerminalState.value || status === 'closed' || status === 'expired')
+})
+const terminalMessage = computed(() => {
+  if (guestTerminalState.value) return guestTerminalState.value.message
+  const status = currentGuestBill.value?.status.toLowerCase()
+  if (status === 'closed') return 'This bill split is closed. New joins and allocation changes are disabled.'
+  if (status === 'expired') return 'This bill split has expired. New joins and allocation changes are disabled.'
+  return null
+})
 const selectedSubtotal = computed(() => {
-  if (!guestBill.value) return '0.00'
-  return addDecimalStrings(guestBill.value.items
+  if (!currentGuestBill.value) return '0.00'
+  return addDecimalStrings(currentGuestBill.value.items
     .filter(item => selectedItemIds.value.has(item.id))
     .map(item => item.lineTotal))
 })
@@ -34,26 +46,32 @@ const totalBarValues = computed(() => ({
   total: guestSummary.value?.totalOwed ?? selectedSubtotal.value
 }))
 
-const unallocatedTotal = computed(() => guestSummary.value?.unallocatedTotal ?? guestBill.value?.unallocatedTotal ?? '0.00')
+const unallocatedTotal = computed(() => guestSummary.value?.unallocatedTotal ?? currentGuestBill.value?.unallocatedTotal ?? '0.00')
 
-onMounted(async () => {
-  await billStore.fetchGuestBill(shareToken.value)
+async function loadGuestBill(token: string) {
+  await billStore.fetchGuestBill(token).catch(() => undefined)
   syncSelectedItems()
+}
+
+onMounted(() => {
+  void loadGuestBill(shareToken.value)
 })
+watch(shareToken, loadGuestBill)
 
 watch(guestSummary, syncSelectedItems)
 
 function syncSelectedItems() {
-  if (!guestSummary.value) return
+  if (!guestSummary.value || isTerminalBill.value) return
   selectedItemIds.value = new Set(guestSummary.value.selectedItems.map(item => item.itemId))
 }
 
 async function joinBill() {
-  if (!displayName.value.trim()) return
+  if (!displayName.value.trim() || isTerminalBill.value) return
   await billStore.joinGuestBill(shareToken.value, displayName.value.trim())
 }
 
 function toggleItem(itemId: string) {
+  if (isTerminalBill.value || saving.value || !participantToken.value) return
   const next = new Set(selectedItemIds.value)
   if (next.has(itemId)) {
     next.delete(itemId)
@@ -64,6 +82,7 @@ function toggleItem(itemId: string) {
 }
 
 async function saveSelection() {
+  if (isTerminalBill.value || saving.value || !participantToken.value) return
   await billStore.selectGuestItems(shareToken.value, Array.from(selectedItemIds.value))
 }
 </script>
@@ -82,22 +101,23 @@ async function saveSelection() {
               Duit split
             </p>
             <h1 class="mt-2 truncate text-2xl font-black tracking-tight">
-              {{ guestBill?.merchantName || 'Shared bill' }}
+              {{ currentGuestBill?.merchantName || 'Shared bill' }}
             </h1>
             <p
-              v-if="guestBill"
+              v-if="currentGuestBill"
               class="mt-2 text-sm font-semibold leading-6 text-slate-300"
             >
-              Total {{ formatCurrency(guestBill.totalAmount, guestBill.currency) }} · Expires {{ new Date(guestBill.expiresAt).toLocaleDateString() }}
+              Total {{ formatCurrency(currentGuestBill.totalAmount, currentGuestBill.currency) }} · Expires {{ new Date(currentGuestBill.expiresAt).toLocaleDateString() }}
             </p>
           </div>
         </div>
       </header>
 
       <ErrorBanner :message="error" />
-      <LoadingSkeleton v-if="loading && !guestBill" />
+      <ErrorBanner :message="terminalMessage" />
+      <LoadingSkeleton v-if="loading && !currentGuestBill && !guestTerminalState" />
 
-      <template v-else-if="guestBill">
+      <template v-else-if="currentGuestBill">
         <form
           v-if="!participantToken"
           class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
@@ -118,7 +138,7 @@ async function saveSelection() {
           >
           <button
             type="submit"
-            :disabled="saving || !displayName.trim()"
+            :disabled="saving || !displayName.trim() || isTerminalBill"
             class="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
           >
             {{ saving ? 'Joining...' : 'Join bill' }}
@@ -143,29 +163,30 @@ async function saveSelection() {
 
           <div class="space-y-3">
             <GuestBillItemCard
-              v-for="item in guestBill.items"
+              v-for="item in currentGuestBill.items"
               :key="item.id"
               :item="item"
-              :currency="guestBill.currency"
+              :currency="currentGuestBill.currency"
               :selected="selectedItemIds.has(item.id)"
+              :disabled="isTerminalBill || saving"
               @toggle="toggleItem"
             />
           </div>
 
-          <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? guestBill.paymentQrProfile ?? null" />
+          <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? currentGuestBill.paymentQrProfile ?? null" />
 
           <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
             Remaining / unallocated amount:
-            <span class="font-black text-slate-950">{{ formatCurrency(unallocatedTotal, guestBill.currency) }}</span>
+            <span class="font-black text-slate-950">{{ formatCurrency(unallocatedTotal, currentGuestBill.currency) }}</span>
           </div>
 
           <SplitTotalBar
-            :currency="guestBill.currency"
+            :currency="currentGuestBill.currency"
             :subtotal="totalBarValues.subtotal"
             :tax="totalBarValues.tax"
             :service="totalBarValues.service"
             :total="totalBarValues.total"
-            :disabled="false"
+            :disabled="saving || isTerminalBill || !participantToken"
             :loading="saving"
             action-label="Save items"
             @submit="saveSelection"

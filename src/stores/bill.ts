@@ -29,6 +29,12 @@ import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
 
 export type CreatePaymentQrProfilePayload = CreatePaymentQrProfileRequest
 export type UpdatePaymentQrProfilePayload = UpdatePaymentQrProfileRequest
+export type BillTerminalCode = 'ERR_BILL_EXPIRED_410' | 'ERR_BILL_CLOSED_410'
+
+interface BillTerminalState {
+  code: BillTerminalCode
+  message: string
+}
 
 export const useBillStore = defineStore('bill', () => {
   const bill = ref<Bill | null>(null)
@@ -36,6 +42,9 @@ export const useBillStore = defineStore('bill', () => {
   const guestSummary = ref<GuestBillSummary | null>(null)
   const paymentProfiles = ref<PaymentQrProfile[]>([])
   const participantToken = ref<string | null>(null)
+  const guestShareToken = ref<string | null>(null)
+  const ownerTerminalState = ref<BillTerminalState | null>(null)
+  const guestTerminalState = ref<BillTerminalState | null>(null)
   const loading = ref(false)
   const uploading = ref(false)
   const saving = ref(false)
@@ -68,14 +77,19 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function fetchBill(id: string): Promise<Bill> {
+    if (bill.value?.id !== id) {
+      bill.value = null
+    }
     loading.value = true
     error.value = null
+    ownerTerminalState.value = null
     try {
       const response = await getBillContract(id)
       bill.value = response.data
       return bill.value
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'Failed to load bill')
+      ownerTerminalState.value = billTerminalState(requestError)
+      error.value = ownerTerminalState.value?.message ?? extractError(requestError, 'Failed to load bill')
       throw requestError
     } finally {
       loading.value = false
@@ -115,7 +129,7 @@ export const useBillStore = defineStore('bill', () => {
       }
     } catch (requestError: unknown) {
       await refetchOnStaleBill(billId, requestError)
-      error.value = extractError(requestError, 'Failed to update paid status')
+      error.value = billMutationError(requestError, 'Failed to update paid status')
       throw requestError
     } finally {
       saving.value = false
@@ -137,7 +151,7 @@ export const useBillStore = defineStore('bill', () => {
       bill.value = response.data
     } catch (requestError: unknown) {
       await refetchOnStaleBill(billId, requestError)
-      error.value = extractError(requestError, 'Failed to update payment QR')
+      error.value = billMutationError(requestError, 'Failed to update payment QR')
       throw requestError
     } finally {
       saving.value = false
@@ -196,8 +210,13 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function fetchGuestBill(shareToken: string): Promise<GuestBill> {
+    if (guestShareToken.value !== shareToken) {
+      resetGuestBill()
+    }
+    guestShareToken.value = shareToken
     loading.value = true
     error.value = null
+    guestTerminalState.value = null
     participantToken.value = loadParticipantToken(shareToken)
     try {
       const refreshedBill = await refreshGuestBillSnapshot(shareToken)
@@ -206,7 +225,9 @@ export const useBillStore = defineStore('bill', () => {
       }
       return refreshedBill
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'This bill split is unavailable')
+      guestTerminalState.value = billTerminalState(requestError)
+      clearGuestCapabilityIfPermanent(shareToken, requestError)
+      error.value = guestTerminalState.value?.message ?? extractError(requestError, 'This bill split is unavailable')
       throw requestError
     } finally {
       loading.value = false
@@ -228,7 +249,14 @@ export const useBillStore = defineStore('bill', () => {
       localStorage.setItem(participantTokenKey(shareToken), response.data.participantToken)
       localStorage.removeItem(joinOperationKey(shareToken))
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'Failed to join bill')
+      const failure = extractApiFailure(requestError)
+      if (failure.code === 'ERR_BILL_JOIN_IDEMPOTENCY_CONFLICT_409') {
+        error.value = 'This join attempt is already tied to another name. Use the existing participant session if available, or reload the link before trying again.'
+      } else {
+        guestTerminalState.value = billTerminalState(requestError)
+        clearGuestCapabilityIfPermanent(shareToken, requestError)
+        error.value = guestTerminalState.value?.message ?? extractError(requestError, 'Failed to join bill')
+      }
       throw requestError
     } finally {
       saving.value = false
@@ -255,7 +283,9 @@ export const useBillStore = defineStore('bill', () => {
       await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
       await refetchGuestOnStaleBill(shareToken, requestError)
-      error.value = extractError(requestError, 'Failed to update selected items')
+      guestTerminalState.value = billTerminalState(requestError)
+      clearGuestCapabilityIfPermanent(shareToken, requestError)
+      error.value = guestTerminalState.value?.message ?? billMutationError(requestError, 'Failed to update selected items')
       throw requestError
     } finally {
       saving.value = false
@@ -264,18 +294,23 @@ export const useBillStore = defineStore('bill', () => {
 
   async function refreshGuestBillSnapshot(shareToken: string): Promise<GuestBill> {
     const response = await getGuestBillContract(shareToken)
-    guestBill.value = response.data
-    return guestBill.value
+    if (guestShareToken.value === shareToken) {
+      guestBill.value = response.data
+    }
+    return response.data
   }
 
   async function fetchGuestSummary(shareToken: string): Promise<void> {
     if (!participantToken.value) return
     const response = await getGuestSummaryContract(shareToken, { 'X-Participant-Token': participantToken.value })
-    guestSummary.value = response.data
+    if (guestShareToken.value === shareToken) {
+      guestSummary.value = response.data
+    }
   }
 
   function resetOwnerBill() {
     bill.value = null
+    ownerTerminalState.value = null
     error.value = null
   }
 
@@ -283,7 +318,20 @@ export const useBillStore = defineStore('bill', () => {
     guestBill.value = null
     guestSummary.value = null
     participantToken.value = null
+    guestShareToken.value = null
+    guestTerminalState.value = null
     error.value = null
+  }
+
+  function resetAuthenticatedState() {
+    bill.value = null
+    paymentProfiles.value = []
+    loading.value = false
+    uploading.value = false
+    saving.value = false
+    error.value = null
+    ownerTerminalState.value = null
+    resetGuestBill()
   }
 
   function participantTokenKey(shareToken: string) {
@@ -320,6 +368,49 @@ export const useBillStore = defineStore('bill', () => {
     }
   }
 
+  function billMutationError(requestError: unknown, fallback: string): string {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_STALE_409') {
+      return 'This bill changed before your update was saved. Review the latest split, then try again.'
+    }
+    if (failure.code === 'ERR_BILL_PAID_ALLOCATION_CONFLICT_409') {
+      return 'This split includes a participant already marked paid. Mark them unpaid before changing allocations.'
+    }
+    return extractError(requestError, fallback)
+  }
+
+  function billTerminalState(requestError: unknown): BillTerminalState | null {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_EXPIRED_410') {
+      return {
+        code: 'ERR_BILL_EXPIRED_410',
+        message: 'This bill split has expired. The link can be reviewed only where already available; new guest updates are disabled.',
+      }
+    }
+    if (failure.code === 'ERR_BILL_CLOSED_410') {
+      return {
+        code: 'ERR_BILL_CLOSED_410',
+        message: 'This bill split is closed. New joins and allocation changes are disabled.',
+      }
+    }
+    return null
+  }
+
+  function clearGuestCapabilityForShareToken(shareToken: string): void {
+    if (participantToken.value && guestShareToken.value === shareToken) {
+      participantToken.value = null
+    }
+    localStorage.removeItem(participantTokenKey(shareToken))
+    localStorage.removeItem(joinOperationKey(shareToken))
+  }
+
+  function clearGuestCapabilityIfPermanent(shareToken: string, requestError: unknown): void {
+    const failure = extractApiFailure(requestError)
+    if (guestTerminalState.value || failure.status === 403 || failure.status === 404) {
+      clearGuestCapabilityForShareToken(shareToken)
+    }
+  }
+
   function extractError(requestError: unknown, fallback: string): string {
     if (requestError && typeof requestError === 'object' && 'response' in requestError) {
       const failure = extractApiFailure(requestError)
@@ -340,6 +431,9 @@ export const useBillStore = defineStore('bill', () => {
     guestSummary,
     paymentProfiles,
     participantToken,
+    guestShareToken,
+    ownerTerminalState,
+    guestTerminalState,
     loading,
     uploading,
     saving,
@@ -359,6 +453,7 @@ export const useBillStore = defineStore('bill', () => {
     selectGuestItems,
     fetchGuestSummary,
     resetOwnerBill,
-    resetGuestBill
+    resetGuestBill,
+    resetAuthenticatedState
   }
 })

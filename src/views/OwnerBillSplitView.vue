@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useBillStore } from '@/stores/bill'
@@ -16,7 +16,7 @@ import StatCard from '@/components/shared/StatCard.vue'
 
 const route = useRoute()
 const billStore = useBillStore()
-const { bill, paymentProfiles, loading, saving, error, shareUrl } = storeToRefs(billStore)
+const { bill, paymentProfiles, loading, saving, error, ownerTerminalState, shareUrl } = storeToRefs(billStore)
 const selectedProfileId = ref('')
 const provider = ref('DuitNow')
 const displayName = ref('')
@@ -26,21 +26,36 @@ const isDefault = ref(false)
 let refreshTimer: number | undefined
 
 const billId = computed(() => String(route.params.id))
-const selectedProfile = computed(() => bill.value?.paymentQrProfile ?? null)
+const currentBill = computed(() => bill.value?.id === billId.value ? bill.value : null)
+const selectedProfile = computed(() => currentBill.value?.paymentQrProfile ?? null)
+const isTerminalBill = computed(() => {
+  const status = currentBill.value?.status.toLowerCase()
+  return Boolean(ownerTerminalState.value || status === 'closed' || status === 'expired')
+})
+const terminalMessage = computed(() => {
+  if (ownerTerminalState.value) return ownerTerminalState.value.message
+  const status = currentBill.value?.status.toLowerCase()
+  if (status === 'closed') return 'This bill split is closed. Settlement controls are disabled.'
+  if (status === 'expired') return 'This bill split has expired. Review is available, but split updates are disabled.'
+  return null
+})
 const hasReconciliation = computed(() => {
-  if (!bill.value) return false
-  return bill.value.lineAdjustment !== '0.0000' || bill.value.totalAdjustment !== '0.0000'
+  if (!currentBill.value) return false
+  return currentBill.value.lineAdjustment !== '0.0000' || currentBill.value.totalAdjustment !== '0.0000'
 })
 
+async function loadBill(id: string) {
+  await billStore.fetchBill(id).catch(() => undefined)
+  if (currentBill.value) selectedProfileId.value = currentBill.value.paymentQrProfile?.id ?? ''
+}
+
+watch(billId, loadBill, { immediate: true })
+
 onMounted(async () => {
-  await Promise.all([
-    billStore.fetchBill(billId.value),
-    billStore.fetchPaymentProfiles()
-  ])
-  selectedProfileId.value = bill.value?.paymentQrProfile?.id ?? ''
+  await billStore.fetchPaymentProfiles()
   refreshTimer = window.setInterval(() => {
-    if (bill.value?.id) {
-      billStore.fetchParticipants(bill.value.id).catch(() => undefined)
+    if (currentBill.value?.id && !isTerminalBill.value) {
+      billStore.fetchParticipants(currentBill.value.id).catch(() => undefined)
     }
   }, 7000)
 })
@@ -52,8 +67,8 @@ onUnmounted(() => {
 })
 
 async function togglePaid(participantId: string, nextPaid: boolean) {
-  if (!bill.value) return
-  await billStore.markPaid(bill.value.id, participantId, nextPaid)
+  if (!currentBill.value || isTerminalBill.value) return
+  await billStore.markPaid(currentBill.value.id, participantId, nextPaid)
 }
 
 async function savePaymentProfile() {
@@ -72,8 +87,8 @@ async function savePaymentProfile() {
 }
 
 async function applyPaymentProfile() {
-  if (!bill.value) return
-  await billStore.setBillPaymentProfile(bill.value.id, selectedProfileId.value || null)
+  if (!currentBill.value || isTerminalBill.value) return
+  await billStore.setBillPaymentProfile(currentBill.value.id, selectedProfileId.value || null)
 }
 </script>
 
@@ -81,28 +96,29 @@ async function applyPaymentProfile() {
   <div class="mx-auto max-w-5xl space-y-8 pb-28">
     <PageHeader
       eyebrow="Bill split"
-      :title="bill?.merchantName || 'Receipt split'"
-      :description="bill ? `Expires ${new Date(bill.expiresAt).toLocaleString()}` : 'Review receipt items, share the guest link, and track settlement.'"
+      :title="currentBill?.merchantName || 'Receipt split'"
+      :description="currentBill ? `Expires ${new Date(currentBill.expiresAt).toLocaleString()}` : 'Review receipt items, share the guest link, and track settlement.'"
     />
 
     <ErrorBanner :message="error" />
-    <LoadingSkeleton v-if="loading && !bill" />
+    <ErrorBanner :message="terminalMessage" />
+    <LoadingSkeleton v-if="loading && !currentBill && !ownerTerminalState" />
 
-    <template v-else-if="bill">
-      <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <template v-else-if="currentBill">
+      <section class="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Subtotal"
-          :value="formatCurrency(bill.subtotal, bill.currency)"
+          :value="formatCurrency(currentBill.subtotal, currentBill.currency)"
           tone="slate"
         />
         <StatCard
           label="Tax"
-          :value="formatCurrency(bill.taxAmount, bill.currency)"
+          :value="formatCurrency(currentBill.taxAmount, currentBill.currency)"
           tone="blue"
         />
         <StatCard
           label="Service"
-          :value="formatCurrency(bill.serviceCharge, bill.currency)"
+          :value="formatCurrency(currentBill.serviceCharge, currentBill.currency)"
           tone="amber"
         />
         <div class="rounded-[2rem] border border-transparent bg-gradient-to-br from-slate-800 to-slate-950 p-5 shadow-lg shadow-slate-900/20">
@@ -110,7 +126,7 @@ async function applyPaymentProfile() {
             Total
           </p>
           <p class="mt-2 truncate text-2xl font-black text-white">
-            {{ formatCurrency(bill.totalAmount, bill.currency) }}
+            {{ formatCurrency(currentBill.totalAmount, currentBill.currency) }}
           </p>
         </div>
       </section>
@@ -121,7 +137,7 @@ async function applyPaymentProfile() {
             Allocation revision
           </p>
           <p class="mt-2 text-2xl font-black text-slate-950">
-            #{{ bill.allocationVersion }}
+            #{{ currentBill.allocationVersion }}
           </p>
         </div>
         <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -129,7 +145,7 @@ async function applyPaymentProfile() {
             Remaining / unallocated
           </p>
           <p class="mt-2 text-2xl font-black text-slate-950">
-            {{ formatCurrency(bill.unallocatedTotal, bill.currency) }}
+            {{ formatCurrency(currentBill.unallocatedTotal, currentBill.currency) }}
           </p>
         </div>
         <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -137,7 +153,7 @@ async function applyPaymentProfile() {
             Fully allocated
           </p>
           <p class="mt-2 text-2xl font-black text-slate-950">
-            {{ bill.unallocatedTotal === '0.0000' ? 'Yes' : 'No' }}
+            {{ currentBill.unallocatedTotal === '0.0000' ? 'Yes' : 'No' }}
           </p>
         </div>
       </section>
@@ -151,25 +167,25 @@ async function applyPaymentProfile() {
         </p>
         <p class="mt-2">
           Line subtotal reconciliation:
-          <span class="font-black">{{ formatCurrency(bill.lineAdjustment, bill.currency) }}</span>.
+          <span class="font-black">{{ formatCurrency(currentBill.lineAdjustment, currentBill.currency) }}</span>.
           Grand-total reconciliation:
-          <span class="font-black">{{ formatCurrency(bill.totalAdjustment, bill.currency) }}</span>.
+          <span class="font-black">{{ formatCurrency(currentBill.totalAdjustment, currentBill.currency) }}</span>.
         </p>
       </section>
 
       <QRShareCard :share-url="shareUrl" />
 
-      <section class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <section class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <div class="space-y-4">
           <h2 class="text-xl font-black text-slate-900">
             Receipt items
           </h2>
-          <div class="grid gap-3 sm:grid-cols-2">
+          <div class="grid min-w-0 gap-3 sm:grid-cols-2">
             <BillItemCard
-              v-for="item in bill.items"
+              v-for="item in currentBill.items"
               :key="item.id"
               :item="item"
-              :currency="bill.currency"
+              :currency="currentBill.currency"
             />
           </div>
         </div>
@@ -199,7 +215,7 @@ async function applyPaymentProfile() {
               </select>
               <button
                 type="button"
-                :disabled="saving"
+                :disabled="saving || isTerminalBill"
                 class="rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-40"
                 @click="applyPaymentProfile"
               >
@@ -266,26 +282,27 @@ async function applyPaymentProfile() {
           <button
             type="button"
             class="min-h-11 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 border border-slate-200"
-            @click="billStore.fetchParticipants(bill.id)"
+            :disabled="isTerminalBill"
+            @click="billStore.fetchParticipants(currentBill.id)"
           >
             Refresh
           </button>
         </div>
         <EmptyState
-          v-if="bill.participants.length === 0"
+          v-if="currentBill.participants.length === 0"
           title="No guests yet"
           message="Share the QR link and participants will appear here after they join."
         />
         <div
           v-else
-          class="grid gap-4 md:grid-cols-2"
+          class="grid min-w-0 gap-4 md:grid-cols-2"
         >
           <ParticipantStatusCard
-            v-for="participant in bill.participants"
+            v-for="participant in currentBill.participants"
             :key="participant.id"
             :participant="participant"
-            :currency="bill.currency"
-            :saving="saving"
+            :currency="currentBill.currency"
+            :saving="saving || isTerminalBill"
             @toggle-paid="togglePaid"
           />
         </div>

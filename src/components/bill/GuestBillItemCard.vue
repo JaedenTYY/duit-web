@@ -6,6 +6,7 @@ defineProps<{
   item: BillItem
   currency: string
   selected: boolean
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,17 +17,18 @@ const emit = defineEmits<{
 <template>
   <button
     type="button"
-    class="flex min-h-24 w-full items-center justify-between gap-4 rounded-3xl border-2 p-4 text-left transition-all duration-300 active:scale-95"
+    class="flex min-h-24 w-full min-w-0 items-center justify-between gap-4 rounded-3xl border-2 p-4 text-left transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
     :class="selected ? 'border-transparent bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-500/30' : 'border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50 hover:shadow-md'"
+    :disabled="disabled"
     @click="emit('toggle', item.id)"
   >
-    <span class="min-w-0">
+    <span class="min-w-0 flex-1">
       <span
-        class="block truncate text-base font-bold transition-colors"
+        class="block break-words text-base font-bold transition-colors"
         :class="selected ? 'text-white' : 'text-slate-900'"
       >{{ item.name }}</span>
       <span
-        class="mt-1 block text-sm font-semibold transition-colors"
+        class="mt-1 block break-words text-sm font-semibold transition-colors"
         :class="selected ? 'text-blue-100' : 'text-slate-500'"
       >
         {{ item.quantity }} x {{ formatCurrency(item.unitPrice, currency) }}
@@ -39,9 +41,9 @@ const emit = defineEmits<{
         Shared by {{ item.claimantCount }}
       </span>
     </span>
-    <span class="flex shrink-0 items-center gap-3">
+    <span class="flex min-w-0 shrink items-center gap-3">
       <span
-        class="text-lg font-black transition-colors"
+        class="min-w-0 break-words text-right text-lg font-black transition-colors"
         :class="selected ? 'text-white' : 'text-slate-900'"
       >{{ formatCurrency(item.lineTotal, currency) }}</span>
       <span

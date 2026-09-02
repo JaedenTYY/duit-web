@@ -190,6 +190,50 @@ describe('bill split mutation integrity', () => {
     })
     expect(getBill).toHaveBeenCalledWith(ownerBill.id)
   })
+
+  it('shows actionable guidance for paid allocation conflicts without auto-retrying', async () => {
+    vi.mocked(getBill).mockResolvedValue({ data: asGeneratedBill(ownerBill), meta: meta() })
+    vi.mocked(markPaid).mockRejectedValue(apiError('ERR_BILL_PAID_ALLOCATION_CONFLICT_409', 409, 'Paid participant conflict'))
+    const store = useBillStore()
+    await store.fetchBill(ownerBill.id)
+
+    await expect(store.markPaid(ownerBill.id, 'participant-id', true)).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+
+    expect(store.error).toContain('already marked paid')
+    expect(getBill).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves guest display-name context for join idempotency conflicts', async () => {
+    vi.mocked(join).mockRejectedValue(apiError('ERR_BILL_JOIN_IDEMPOTENCY_CONFLICT_409', 409, 'Idempotency conflict'))
+    const store = useBillStore()
+
+    await expect(store.joinGuestBill(SHARE_TOKEN, 'Guest A')).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+
+    expect(store.error).toContain('join attempt is already tied to another name')
+    expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBe(JOIN_KEY)
+  })
+
+  it('models expired guest bill as terminal and clears only the current share-token capability', async () => {
+    localStorage.setItem(`duit_guest_participant_${SHARE_TOKEN}`, PARTICIPANT_TOKEN)
+    localStorage.setItem(`duit_guest_join_operation_${SHARE_TOKEN}`, JOIN_KEY)
+    localStorage.setItem('duit_guest_participant_other-share', 'other-token')
+    vi.mocked(getGuestBill).mockRejectedValue(apiError('ERR_BILL_EXPIRED_410', 410, 'Bill expired'))
+    const store = useBillStore()
+
+    await expect(store.fetchGuestBill(SHARE_TOKEN)).rejects.toMatchObject({
+      response: { status: 410 },
+    })
+
+    expect(store.guestTerminalState?.code).toBe('ERR_BILL_EXPIRED_410')
+    expect(store.participantToken).toBeNull()
+    expect(localStorage.getItem(`duit_guest_participant_${SHARE_TOKEN}`)).toBeNull()
+    expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_other-share')).toBe('other-token')
+  })
 })
 
 function meta() {
@@ -212,14 +256,15 @@ function asGeneratedGuestSummary(value: GuestBillSummary): GuestBillSummaryRespo
 }
 
 function staleBillConflict() {
+  return apiError('ERR_BILL_STALE_409', 409, 'Bill changed')
+}
+
+function apiError(code: string, status: number, message: string) {
   return {
     response: {
-      status: 409,
+      status,
       data: {
-        error: {
-          code: 'ERR_BILL_STALE_409',
-          message: 'Bill changed',
-        },
+        error: { code, message },
       },
     },
   }
