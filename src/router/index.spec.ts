@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
 import type { User } from '@/types'
 import { useAuthStore } from '@/stores/auth'
-import { authenticationGuard } from './index'
+import router, { authenticationGuard } from './index'
 
 vi.mock('@/lib/sessionCoordinator', () => ({
   ensureSessionBootstrapped: vi.fn(async () => undefined),
@@ -77,6 +77,13 @@ describe('authenticationGuard', () => {
       authenticatedNext
     )
     expect(authenticatedNext).toHaveBeenCalledWith()
+  })
+
+  it('resolves unknown paths to a real not-found recovery route', () => {
+    const resolved = router.resolve('/missing/deep/path')
+
+    expect(resolved.name).toBe('not-found')
+    expect(resolved.matched).toHaveLength(1)
   })
 })
 

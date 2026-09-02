@@ -9,6 +9,7 @@ import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 import ApiErrorAlert from '@/components/shared/ApiErrorAlert.vue'
 import { extractApiFailure, type ApiFailureDetails } from '@/lib/apiError'
 import { useRetryAfterCooldown } from '@/composables/useRetryAfterCooldown'
+import { resolveSafeInternalRedirect } from '@/router/safeRedirect'
 
 const router = useRouter()
 const route = useRoute()
@@ -67,7 +68,7 @@ const onSubmit = handleSubmit(async (values) => {
         fullName: values.fullName,
       })
     }
-    router.push('/dashboard')
+    await router.replace(resolveSafeInternalRedirect(route.query.redirect, router) ?? '/dashboard')
   } catch (err: unknown) {
     const failure = extractApiFailure(err)
     apiError.value = failure
@@ -84,9 +85,11 @@ function toggleMode() {
 }
 
 function sessionExpiryFailure(): ApiFailureDetails | null {
-  if (route.query.reason !== 'session-expired') return null
+  if (route.query.reason !== 'session-expired' && route.query.reason !== 'logout-local') return null
   return {
-    message: 'Your session has expired. Please sign in again.',
+    message: route.query.reason === 'logout-local'
+      ? 'You are signed out locally. Duit could not confirm server revocation, so sign in again only if this device is trusted.'
+      : 'Your session has expired. Please sign in again.',
     requestId: null,
     code: null,
     fields: null,

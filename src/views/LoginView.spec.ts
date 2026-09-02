@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   register: vi.fn(),
   replace: vi.fn(),
   push: vi.fn(),
+  route: { name: 'login', query: {} as Record<string, unknown> },
+  cooldownActive: { value: true },
 }))
 
 vi.mock('@/composables/useAuthMutations', () => ({
@@ -21,13 +23,30 @@ vi.mock('@/composables/useAuthMutations', () => ({
 }))
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ name: 'login', query: {} }),
-  useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
+  useRoute: () => mocks.route,
+  useRouter: () => ({
+    replace: mocks.replace,
+    push: mocks.push,
+    resolve: (target: string) => {
+      const path = target.split(/[?#]/)[0]
+      const knownRoutes: Record<string, string> = {
+        '/dashboard': 'dashboard',
+        '/settings/privacy': 'privacy-settings',
+        '/login': 'login',
+        '/register': 'register',
+      }
+      return {
+        fullPath: target,
+        name: knownRoutes[path] ?? 'not-found',
+        matched: knownRoutes[path] ? [{}] : [{}],
+      }
+    },
+  }),
 }))
 
 vi.mock('@/composables/useRetryAfterCooldown', () => ({
   useRetryAfterCooldown: () => ({
-    active: { value: true },
+    active: mocks.cooldownActive,
     remainingSeconds: { value: 2 },
     accessibleMessage: { value: 'Please wait 2 seconds before trying again.' },
     start: vi.fn(),
@@ -40,6 +59,11 @@ describe('LoginView rate-limit cooldown', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-07-28T08:00:00.000Z'))
     mocks.login.mockReset()
+    mocks.register.mockReset()
+    mocks.replace.mockReset()
+    mocks.route.name = 'login'
+    mocks.route.query = {}
+    mocks.cooldownActive.value = true
   })
 
   afterEach(() => {
@@ -52,4 +76,5 @@ describe('LoginView rate-limit cooldown', () => {
     expect(wrapper.get('[data-testid="auth-submit"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[role="status"]').text()).toContain('2 seconds')
   })
+
 })

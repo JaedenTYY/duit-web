@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { nextTick, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { gsap } from 'gsap'
 import { useInsightStore } from '@/stores/insight'
 import InsightCard from '@/components/insights/InsightCard.vue'
@@ -11,11 +12,14 @@ import PageHeader from '@/components/shared/PageHeader.vue'
 import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 
 const store = useInsightStore()
+const route = useRoute()
 const listContainer = ref<HTMLElement | null>(null)
+const anomalySection = ref<HTMLElement | null>(null)
 
 onMounted(async () => {
   await store.fetchInsights()
   animateList()
+  await focusHashTarget()
 })
 
 function animateList() {
@@ -39,6 +43,17 @@ watch(() => store.insights.length, (newLen, oldLen) => {
     setTimeout(animateList, 50)
   }
 })
+
+watch(() => route.hash, () => {
+  void focusHashTarget()
+})
+
+async function focusHashTarget() {
+  if (route.hash !== '#anomalies') return
+  await nextTick()
+  anomalySection.value?.scrollIntoView({ block: 'start' })
+  anomalySection.value?.focus({ preventScroll: true })
+}
 </script>
 
 <template>
@@ -78,6 +93,7 @@ watch(() => store.insights.length, (newLen, oldLen) => {
         icon="check"
         tone="coral"
         action-label="Review"
+        @click="focusHashTarget"
       />
       <FeatureActionCard
         title="Add more receipts"
@@ -134,7 +150,12 @@ watch(() => store.insights.length, (newLen, oldLen) => {
       </div>
 
       <!-- Anomaly Column -->
-      <div class="space-y-8">
+      <div
+        id="anomalies"
+        ref="anomalySection"
+        tabindex="-1"
+        class="space-y-8 scroll-mt-6 focus:outline-none"
+      >
         <AnomalyDashboard />
       </div>
     </div>

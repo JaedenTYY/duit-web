@@ -63,7 +63,7 @@ const router = createRouter({
     {
       path: '/anomalies',
       name: 'anomalies',
-      component: () => import('../views/InsightsView.vue')
+      redirect: { path: '/insights', hash: '#anomalies' }
     },
     {
       path: '/tax',
@@ -99,6 +99,12 @@ const router = createRouter({
       path: '/guest/bills/:shareToken',
       name: 'guest-bill-split',
       component: () => import('../views/GuestBillSplitView.vue'),
+      meta: { hideNav: true }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
       meta: { hideNav: true }
     }
   ],
