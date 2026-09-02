@@ -29,7 +29,7 @@ function handleUploadSuccess() {
       </template>
     </PageHeader>
 
-    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
       <FeatureActionCard
         title="Scan receipt"
         description="Upload a receipt photo and let Google Vision plus Gemini draft the transaction."
@@ -38,6 +38,24 @@ function handleUploadSuccess() {
         tone="mint"
         action-label="Start scan"
         @click="showUpload = true"
+      />
+      <FeatureActionCard
+        title="Import statement"
+        description="Upload a PDF bank statement, review parsed rows, and import only eligible debit expenses."
+        status="PDF review"
+        icon="card"
+        tone="sky"
+        to="/statements"
+        action-label="Open"
+      />
+      <FeatureActionCard
+        title="Gmail eReceipts"
+        description="Connect Gmail read-only, sync receipt emails, and confirm each extraction before import."
+        status="Email review"
+        icon="mail"
+        tone="coral"
+        to="/gmail"
+        action-label="Review"
       />
       <FeatureActionCard
         title="Split bill"
