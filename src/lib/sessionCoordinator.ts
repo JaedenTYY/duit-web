@@ -26,6 +26,7 @@ let refreshPromise: Promise<AuthResponse> | null = null
 let bootstrapPromise: Promise<void> | null = null
 let sessionLifecycleVersion = 0
 let accountDeletionObserved = false
+let terminalNavigationInFlight = false
 let remoteRefresh: {
   promise: Promise<AuthResponse>
   resolve: (session: AuthResponse) => void
@@ -52,16 +53,22 @@ channel?.addEventListener('message', (event: MessageEvent<SessionMessage>) => {
       sessionLifecycleVersion += 1
     }
     clearCsrfToken()
-    store.finishAnonymous(message.reason === 'logout' ? 'manual' : 'revoked')
+    store.finishAnonymous(message.reason === 'logout' ? 'manual' : message.reason === 'deleted' ? 'deleted' : 'revoked')
     remoteRefresh?.reject(new Error('Refresh session is unavailable'))
     remoteRefresh = null
     if (accountDeleted) redirectToPublicEntry()
+    else void redirectToLoginIfProtected(message.reason === 'logout' ? 'logout' : 'session-expired')
   }
 })
 
 export function configureSessionLifecycle(): void {
   useAuthStore().configureRefresh(async () => {
-    await refreshSessionSingleFlight()
+    try {
+      await refreshSessionSingleFlight()
+    } catch (error) {
+      void redirectToLoginIfProtected('session-expired')
+      throw error
+    }
   })
 }
 
@@ -97,27 +104,33 @@ export function refreshSessionSingleFlight(): Promise<AuthResponse> {
   return refreshPromise
 }
 
-export async function logoutSession(): Promise<void> {
+export async function logoutSession(): Promise<{ revoked: boolean }> {
+  let revoked = true
   try {
     await revokeRefreshSession()
+  } catch {
+    revoked = false
   } finally {
     const store = useAuthStore()
     store.finishAnonymous('manual')
     channel?.postMessage({ type: 'anonymous', tabId, reason: 'logout' } satisfies SessionMessage)
+    void redirectToLoginIfProtected(revoked ? 'logout' : 'logout-local')
   }
+  return { revoked }
 }
 
 export function propagateRevocation(): void {
   clearCsrfToken()
   useAuthStore().finishAnonymous('revoked')
   channel?.postMessage({ type: 'anonymous', tabId, reason: 'revoked' } satisfies SessionMessage)
+  void redirectToLoginIfProtected('session-expired')
 }
 
 export function propagateAccountDeletion(): void {
   accountDeletionObserved = true
   sessionLifecycleVersion += 1
   clearCsrfToken()
-  useAuthStore().finishAnonymous('revoked')
+  useAuthStore().finishAnonymous('deleted')
   channel?.postMessage({ type: 'anonymous', tabId, reason: 'deleted' } satisfies SessionMessage)
 }
 
@@ -172,6 +185,7 @@ async function performRefresh(): Promise<AuthResponse> {
     throw new Error('Account deletion was observed')
   }
   const lifecycleVersion = sessionLifecycleVersion
+  const hadSession = Boolean(useAuthStore().token || useAuthStore().user)
   channel?.postMessage({ type: 'refresh-start', tabId } satisfies SessionMessage)
   try {
     const session = await refreshAccessToken(crypto.randomUUID())
@@ -188,6 +202,7 @@ async function performRefresh(): Promise<AuthResponse> {
       tabId,
       reason: 'refresh-failed',
     } satisfies SessionMessage)
+    if (hadSession) void redirectToLoginIfProtected('session-expired')
     throw error
   }
 }
@@ -239,4 +254,31 @@ function delay(milliseconds: number): Promise<void> {
 
 function redirectToPublicEntry(): void {
   location.replace('/')
+}
+
+export async function redirectToLoginIfProtected(reason: 'logout' | 'logout-local' | 'session-expired'): Promise<void> {
+  if (terminalNavigationInFlight) return
+  terminalNavigationInFlight = true
+  try {
+    const { default: router } = await import('@/router')
+    const currentRoute = router.currentRoute.value
+    const isPublicRoute = Boolean(currentRoute.meta.hideNav) ||
+      currentRoute.name === 'landing' ||
+      currentRoute.name === 'login' ||
+      currentRoute.name === 'register' ||
+      currentRoute.name === 'guest-bill-split' ||
+      currentRoute.name === 'not-found'
+
+    if (isPublicRoute) return
+
+    const query = reason === 'logout'
+      ? undefined
+      : {
+          reason,
+          redirect: currentRoute.fullPath,
+        }
+    await router.replace({ name: 'login', query })
+  } finally {
+    terminalNavigationInFlight = false
+  }
 }

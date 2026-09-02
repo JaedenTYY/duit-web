@@ -1,13 +1,13 @@
 import { computed, onScopeDispose, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { User } from '@/types'
-import { useTransactionStore } from '@/stores/transaction'
+import { resetUserScopedFrontendState, type UserScopedResetReason } from '@/stores/resetUserScopedState'
 import { CONFIG } from '@/config'
 
 export const SESSION_EXPIRY_SAFETY_SKEW_MS = 5_000
 export const MAX_TIMER_DELAY_MS = 2_147_483_647
 
-export type SessionClearReason = 'manual' | 'expired' | 'invalid' | 'revoked'
+export type SessionClearReason = 'manual' | 'expired' | 'invalid' | 'revoked' | 'deleted'
 export type SessionBootstrapStatus = 'unknown' | 'loading' | 'authenticated' | 'anonymous'
 
 type RefreshHandler = () => Promise<void>
@@ -22,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   let expiryTimer: ReturnType<typeof setTimeout> | null = null
   let refreshHandler: RefreshHandler | null = null
   let expiryRefresh: Promise<void> | null = null
+  let lastAuthenticatedUserId: string | null = null
 
   removeLegacyPersistedSession()
 
@@ -55,9 +56,16 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error('Server returned an invalid session expiry')
     }
 
+    const hadAuthenticatedSession = isAuthenticated.value
+    const userChanged = Boolean(lastAuthenticatedUserId && lastAuthenticatedUserId !== newUser.id)
+    if (!hadAuthenticatedSession || userChanged) {
+      resetUserScopedFrontendState(userChanged ? 'user-switch' : 'login')
+    }
+
     clearExpiryTimer()
     token.value = newToken
     user.value = newUser
+    lastAuthenticatedUserId = newUser.id
     expiresAt.value = new Date(expiryMs).toISOString()
     sessionExpired.value = false
     bootstrapStatus.value = 'authenticated'
@@ -79,13 +87,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSession(reason: SessionClearReason = 'manual'): void {
+    const resetReason = userScopedResetReason(reason)
     clearExpiryTimer()
     token.value = null
     user.value = null
     expiresAt.value = null
     sessionExpired.value = reason === 'expired' || reason === 'revoked'
     sessionVersion.value += 1
-    useTransactionStore().reset()
+    resetUserScopedFrontendState(resetReason)
   }
 
   function scheduleExpiry(expiryMs: number): void {
@@ -159,6 +168,13 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession,
   }
 })
+
+function userScopedResetReason(reason: SessionClearReason): UserScopedResetReason {
+  if (reason === 'manual') return 'logout'
+  if (reason === 'expired' || reason === 'invalid') return 'refresh-failed'
+  if (reason === 'deleted') return 'account-deleted'
+  return 'revoked'
+}
 
 function parseExpiry(value: string | null): number | null {
   if (!value?.trim()) return null

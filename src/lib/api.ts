@@ -3,7 +3,6 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import { useAuthStore } from '@/stores/auth'
-import router from '@/router'
 import { logger } from '@/utils/logger'
 import { CONFIG } from '@/config'
 import { extractApiFailure } from '@/lib/apiError'
@@ -43,7 +42,6 @@ api.interceptors.request.use(
 )
 
 export function processApiFailure(error: unknown): void {
-  const authStore = useAuthStore()
   const failure = extractApiFailure(error)
   const request = isRecord(error) && isRecord(error.config) ? error.config : null
   const method = typeof request?.method === 'string' ? request.method.toUpperCase() : 'UNKNOWN'
@@ -53,24 +51,7 @@ export function processApiFailure(error: unknown): void {
   )
 
   if (failure.status === 401) {
-    const hadSession = Boolean(authStore.token || authStore.user)
     propagateRevocation()
-
-    const currentRoute = router.currentRoute.value
-    const isPublicRoute = Boolean(currentRoute.meta.hideNav) ||
-      currentRoute.name === 'landing' ||
-      currentRoute.name === 'login' ||
-      currentRoute.name === 'register' ||
-      currentRoute.name === 'guest-bill-split'
-    if (hadSession && !isPublicRoute) {
-      void router.replace({
-        name: 'login',
-        query: {
-          reason: 'session-expired',
-          redirect: currentRoute.fullPath,
-        },
-      })
-    }
   }
 }
 

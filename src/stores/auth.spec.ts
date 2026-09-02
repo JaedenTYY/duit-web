@@ -6,6 +6,7 @@ import {
   SESSION_EXPIRY_SAFETY_SKEW_MS,
   useAuthStore,
 } from './auth'
+import { useInsightStore } from '@/stores/insight'
 
 const NOW = new Date('2026-07-27T00:00:00.000Z')
 const USER: User = {
@@ -14,6 +15,11 @@ const USER: User = {
   fullName: 'Example User',
   preferredCurrency: 'MYR',
   createdAt: NOW.toISOString(),
+}
+const OTHER_USER: User = {
+  ...USER,
+  id: '6e51fe8c-306d-463c-9c76-dd5368bfa5ab',
+  email: 'other@example.test',
 }
 
 describe('memory-only authentication state', () => {
@@ -102,6 +108,29 @@ describe('memory-only authentication state', () => {
 
     expect(refresh).not.toHaveBeenCalled()
     expect(store.token).toBe('second')
+  })
+
+  it('does not reset user-scoped feature state during a same-user token refresh', () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    insights.insights = [{ id: 'insight-a', title: 'same user cache' } as never]
+
+    store.setSession('second', USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    expect(insights.insights).toHaveLength(1)
+  })
+
+  it('resets user-scoped feature state before accepting a different user identity', () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    insights.insights = [{ id: 'insight-a', title: 'USER_A_PRIVATE_INSIGHT' } as never]
+
+    store.setSession('second', OTHER_USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    expect(store.user?.id).toBe(OTHER_USER.id)
+    expect(insights.insights).toEqual([])
   })
 
   it('rechecks expiry when the tab becomes visible', () => {

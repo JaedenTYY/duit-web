@@ -58,12 +58,20 @@ export const useAnomalyStore = defineStore('anomaly', () => {
     }
   }
 
+  function reset() {
+    anomalies.value = []
+    loading.value = false
+    resolvingIds.value = new Set()
+    error.value = null
+  }
+
   return {
     anomalies,
     loading,
     resolvingIds,
     error,
     fetchAnomalies,
-    resolveAnomaly
+    resolveAnomaly,
+    reset
   }
 })

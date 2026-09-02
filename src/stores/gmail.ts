@@ -95,8 +95,8 @@ export const useGmailStore = defineStore('gmail', () => {
     extractions.value = response.data
   }
 
-  async function confirm(extractionId: string, categoryId?: string) {
-    if (actionIds.value.has(extractionId)) return
+  async function confirm(extractionId: string, categoryId?: string): Promise<boolean> {
+    if (actionIds.value.has(extractionId)) return false
     actionIds.value.add(extractionId)
     error.value = null
     try {
@@ -105,8 +105,10 @@ export const useGmailStore = defineStore('gmail', () => {
         rememberMerchantCategory: false,
       })
       extractions.value = extractions.value.filter((item) => item.id !== extractionId)
+      return true
     } catch (err: unknown) {
       handleError('Failed to confirm eReceipt', err)
+      return false
     } finally {
       actionIds.value.delete(extractionId)
     }
@@ -143,6 +145,19 @@ export const useGmailStore = defineStore('gmail', () => {
     }
   }
 
+  function reset() {
+    status.value = null
+    extractions.value = []
+    lastSync.value = null
+    loading.value = false
+    connecting.value = false
+    syncing.value = false
+    disconnecting.value = false
+    actionIds.value = new Set()
+    error.value = null
+    errorRequestId.value = null
+  }
+
   return {
     status,
     extractions,
@@ -160,5 +175,6 @@ export const useGmailStore = defineStore('gmail', () => {
     sync,
     confirm,
     skip,
+    reset,
   }
 })

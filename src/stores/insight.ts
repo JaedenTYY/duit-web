@@ -57,6 +57,13 @@ export const useInsightStore = defineStore('insight', () => {
     return 'An unexpected error occurred'
   }
 
+  function reset() {
+    insights.value = []
+    loading.value = false
+    generating.value = false
+    error.value = null
+  }
+
   return {
     insights,
     loading,
@@ -64,5 +71,6 @@ export const useInsightStore = defineStore('insight', () => {
     error,
     fetchInsights,
     generateWeeklyInsight,
+    reset,
   }
 })

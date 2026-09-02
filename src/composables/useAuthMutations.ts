@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useMutation } from '@tanstack/vue-query'
 import { login, register } from '@/api/generated/auth-controller/auth-controller'
 import type { LoginRequest, RegisterRequest } from '@/api/generated/model'
 import {
@@ -29,12 +29,7 @@ export function useRegisterMutation() {
 }
 
 export function useLogoutMutation() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: logoutSession,
-    onSettled: () => {
-      queryClient.clear()
-    },
   })
 }
