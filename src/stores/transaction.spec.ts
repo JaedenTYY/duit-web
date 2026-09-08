@@ -4,6 +4,7 @@ import { useTransactionStore } from './transaction'
 import {
   createTransaction,
   deleteTransaction,
+  getMonthlySummary,
   getTransaction,
   listTransactions,
   updateTransaction,
@@ -264,6 +265,94 @@ describe('transaction mutation integrity', () => {
     expect(store.transactions.map((item) => item.id)).toEqual([firstPage.id])
     expect(store.transactions[0]?.version).toBe(firstPage.version + 1)
   })
+
+  it('lets an authoritative reconciliation fetch supersede an older in-flight transaction fetch', async () => {
+    const staleBeforeImport = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000001',
+      occurredAt: '2026-08-10T00:00:00Z',
+    })
+    const imported = generatedTransaction({
+      id: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-08-12T00:00:00Z',
+      source: 'statement',
+    })
+    const oldFetch = createDeferred<{ data: TransactionPageResponse; meta: ReturnType<typeof meta> }>()
+    vi.mocked(listTransactions)
+      .mockReturnValueOnce(oldFetch.promise)
+      .mockResolvedValueOnce({
+        data: page([imported], '2026-08-12T00:00:00Z', imported.id),
+        meta: meta(),
+      })
+    vi.mocked(getMonthlySummary).mockResolvedValue({
+      data: {
+        totalSpend: '12.3400',
+        currency: 'MYR',
+        transactionCount: 1,
+        byCategory: [],
+      },
+      meta: meta(),
+    })
+    const store = useTransactionStore()
+
+    const oldRequest = store.fetchTransactions(true)
+    expect(store.loading).toBe(true)
+    await store.reconcileAfterFinancialMutation({ refreshTransactions: true })
+
+    expect(listTransactions).toHaveBeenCalledTimes(2)
+    expect(store.transactions.map((item) => item.id)).toEqual([imported.id])
+    expect(store.nextCursor).toBe('2026-08-12T00:00:00Z')
+    expect(store.nextCursorId).toBe(imported.id)
+
+    oldFetch.resolve({ data: page([staleBeforeImport], '2026-08-10T00:00:00Z', staleBeforeImport.id), meta: meta() })
+    await oldRequest
+
+    expect(store.transactions.map((item) => item.id)).toEqual([imported.id])
+    expect(store.nextCursor).toBe('2026-08-12T00:00:00Z')
+    expect(store.nextCursorId).toBe(imported.id)
+  })
+
+  it('ignores an older monthly summary response after a newer summary request wins', async () => {
+    const oldSummary = createDeferred<{
+      data: {
+        totalSpend: string
+        currency: 'MYR'
+        transactionCount: number
+        byCategory: never[]
+      }
+      meta: ReturnType<typeof meta>
+    }>()
+    vi.mocked(getMonthlySummary)
+      .mockReturnValueOnce(oldSummary.promise)
+      .mockResolvedValueOnce({
+        data: {
+          totalSpend: '22.0000',
+          currency: 'MYR',
+          transactionCount: 2,
+          byCategory: [],
+        },
+        meta: meta(),
+      })
+    const store = useTransactionStore()
+
+    const older = store.fetchMonthlySummary(2026, 7)
+    await store.fetchMonthlySummary(2026, 8)
+    oldSummary.resolve({
+      data: {
+        totalSpend: '11.0000',
+        currency: 'MYR',
+        transactionCount: 1,
+        byCategory: [],
+      },
+      meta: meta(),
+    })
+    await older
+
+    expect(store.monthlySummary).toMatchObject({
+      totalSpend: '22.0000',
+      transactionCount: 2,
+    })
+    expect(store.monthlySummaryStatus).toBe('loaded')
+  })
 })
 
 function meta() {
@@ -314,4 +403,14 @@ function staleConflict() {
       },
     },
   }
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
 }

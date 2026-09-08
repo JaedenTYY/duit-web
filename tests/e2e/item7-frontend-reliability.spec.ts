@@ -43,17 +43,92 @@ test('cross-user insight cache is cleared before a second user sees delayed data
     return route.fulfill(ok([]))
   })
 
-  await login(page, userA.email)
-  await page.goto('/insights')
+  await startAtLogin(page)
+  await submitLogin(page, userA.email)
+  await spaNavigate(page, '/insights')
   await expect(page.getByRole('heading', { name: 'USER_A_PRIVATE_INSIGHT' })).toBeVisible()
 
-  await page.goto('/settings')
+  await spaNavigate(page, '/settings')
   await page.getByRole('button', { name: /Log out/ }).click()
   await expect(page).toHaveURL(/\/login/)
 
-  await login(page, userB.email)
-  await page.goto('/insights')
+  await submitLogin(page, userB.email)
+  await spaNavigate(page, '/insights')
 
+  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
+
+  releaseUserBInsights()
+  await expect(page.getByRole('heading', { name: 'USER_B_PRIVATE_INSIGHT' })).toBeVisible()
+  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+})
+
+test('in-flight user A insight response cannot commit after user B logs in within the same SPA runtime', async ({ page }) => {
+  let activeUser: typeof userA | typeof userB | null = null
+  let releaseUserAInsights!: () => void
+  let releaseUserBInsights!: () => void
+  const userAInsightsGate = new Promise<void>((resolve) => {
+    releaseUserAInsights = resolve
+  })
+  const userBInsightsGate = new Promise<void>((resolve) => {
+    releaseUserBInsights = resolve
+  })
+
+  await page.route('**/api/**', async (route) => {
+    const request = route.request()
+    const path = apiPath(request.url())
+    if (!path) return route.continue()
+
+    if (path === '/auth/csrf') return route.fulfill(ok({ headerName: 'X-XSRF-TOKEN', token: 'csrf-item7' }))
+    if (path === '/auth/refresh') return route.fulfill(activeUser ? ok(authResponse(activeUser)) : authError())
+    if (path === '/auth/login') {
+      const body = JSON.parse(request.postData() ?? '{}') as { email?: string }
+      activeUser = body.email === userB.email ? userB : userA
+      return route.fulfill(ok(authResponse(activeUser)))
+    }
+    if (path === '/auth/logout') {
+      activeUser = null
+      return route.fulfill(ok({}))
+    }
+    if (path === '/insights') {
+      const requestOwnerAtRequestStart = activeUser?.id
+      if (requestOwnerAtRequestStart === userA.id) {
+        await userAInsightsGate
+        return route.fulfill(ok([insight('user-a-insight', 'USER_A_PRIVATE_INSIGHT')]))
+      }
+      if (requestOwnerAtRequestStart === userB.id) {
+        await userBInsightsGate
+        return route.fulfill(ok([insight('user-b-insight', 'USER_B_PRIVATE_INSIGHT')]))
+      }
+      return route.fulfill(ok([]))
+    }
+    if (path === '/anomalies') return route.fulfill(ok([]))
+    if (path === '/categories') return route.fulfill(ok([]))
+    if (path === '/transactions') return route.fulfill(ok(emptyTransactionPage()))
+    if (path === '/transactions/summary/monthly') return route.fulfill(ok(monthlySummary()))
+    if (path === '/gmail/status') return route.fulfill(ok(gmailDisconnected()))
+    if (path.startsWith('/payment-qr-profiles') || path.startsWith('/bills') || path.startsWith('/statements')) {
+      return route.fulfill(ok([]))
+    }
+    return route.fulfill(ok([]))
+  })
+
+  await startAtLogin(page)
+  await submitLogin(page, userA.email)
+  await spaNavigate(page, '/insights')
+  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+
+  await spaNavigate(page, '/settings')
+  await page.getByRole('button', { name: /Log out/ }).click()
+  await expect(page).toHaveURL(/\/login/)
+
+  await submitLogin(page, userB.email)
+  await spaNavigate(page, '/insights')
+  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
+
+  releaseUserAInsights()
+  await page.waitForTimeout(100)
   await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
   await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
 
@@ -78,7 +153,7 @@ test('owner bill with long content has no horizontal page overflow at audited mo
     await fulfillAuthenticatedLongBillRoute(route, path, refreshActive)
   })
 
-  await login(page, userA.email)
+  await loginWithDocumentNavigation(page, userA.email)
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
     await page.goto('/split-bill/bill-long')
@@ -100,15 +175,28 @@ test('login redirect query accepts only safe internal targets', async ({ browser
   await expectLoginRedirect(browser, '/login?redirect=/settings/privacy', /\/dashboard$/)
 })
 
-async function login(page: Page, email: string) {
+async function startAtLogin(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('duit:onboardingCompleted', 'true')
   })
   await page.goto('/login')
+}
+
+async function submitLogin(page: Page, email: string) {
   await page.fill('input[type="email"]', email)
   await page.fill('input[type="password"]', 'correct-password')
   await page.click('[data-testid="auth-submit"]')
   await page.waitForURL(/\/dashboard/)
+}
+
+async function loginWithDocumentNavigation(page: Page, email: string) {
+  await startAtLogin(page)
+  await submitLogin(page, email)
+}
+
+async function spaNavigate(page: Page, path: string) {
+  await page.locator(`a[href="${path}"]:visible`).first().click()
+  await expect(page).toHaveURL(new RegExp(`${path.replace('/', '\\/')}(?:$|[?#])`))
 }
 
 async function expectLoginRedirect(browser: Browser, redirect: string, expectedUrl: RegExp) {

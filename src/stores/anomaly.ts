@@ -6,6 +6,11 @@ import {
   list1 as listAnomalies,
   resolve as resolveAnomalyContract,
 } from '@/api/generated/anomaly-controller/anomaly-controller'
+import {
+  captureUserScopeEpoch,
+  isCurrentUserScope,
+  UserScopeStaleError,
+} from '@/stores/resetUserScopedState'
 
 export const useAnomalyStore = defineStore('anomaly', () => {
   const anomalies = ref<AnomalyAlert[]>([])
@@ -15,17 +20,20 @@ export const useAnomalyStore = defineStore('anomaly', () => {
 
   async function fetchAnomalies() {
     if (loading.value) return
+    const scope = captureUserScopeEpoch()
     loading.value = true
     error.value = null
 
     try {
       const response = await listAnomalies()
+      if (!isCurrentUserScope(scope)) return
       anomalies.value = response.data
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = _extractError(err)
       logger.error('Failed to fetch anomalies', err)
     } finally {
-      loading.value = false
+      if (isCurrentUserScope(scope)) loading.value = false
     }
   }
 
@@ -39,22 +47,25 @@ export const useAnomalyStore = defineStore('anomaly', () => {
 
   async function resolveAnomaly(alertId: string, action: 'confirm' | 'dismiss') {
     if (resolvingIds.value.has(alertId)) return
+    const scope = captureUserScopeEpoch()
     resolvingIds.value.add(alertId)
     error.value = null
 
     try {
       const status = action === 'confirm' ? 'confirmed' : 'dismissed'
       const response = await resolveAnomalyContract(alertId, { status })
+      if (!isCurrentUserScope(scope)) return
       const index = anomalies.value.findIndex(a => a.id === alertId)
       if (index !== -1) {
         anomalies.value[index] = response.data
       }
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = _extractError(err)
       logger.error(`Failed to ${action} anomaly`, err)
       throw err
     } finally {
-      resolvingIds.value.delete(alertId)
+      if (isCurrentUserScope(scope)) resolvingIds.value.delete(alertId)
     }
   }
 

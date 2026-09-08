@@ -7,6 +7,7 @@ import {
   useAuthStore,
 } from './auth'
 import { useInsightStore } from '@/stores/insight'
+import { captureUserScopeEpoch } from '@/stores/resetUserScopedState'
 
 const NOW = new Date('2026-07-27T00:00:00.000Z')
 const USER: User = {
@@ -115,10 +116,12 @@ describe('memory-only authentication state', () => {
     const insights = useInsightStore()
     store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
     insights.insights = [{ id: 'insight-a', title: 'same user cache' } as never]
+    const epochAfterLogin = captureUserScopeEpoch()
 
     store.setSession('second', USER, new Date(NOW.getTime() + 120_000).toISOString())
 
     expect(insights.insights).toHaveLength(1)
+    expect(captureUserScopeEpoch()).toBe(epochAfterLogin)
   })
 
   it('resets user-scoped feature state before accepting a different user identity', () => {
@@ -126,11 +129,13 @@ describe('memory-only authentication state', () => {
     const insights = useInsightStore()
     store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
     insights.insights = [{ id: 'insight-a', title: 'USER_A_PRIVATE_INSIGHT' } as never]
+    const epochAfterUserA = captureUserScopeEpoch()
 
     store.setSession('second', OTHER_USER, new Date(NOW.getTime() + 120_000).toISOString())
 
     expect(store.user?.id).toBe(OTHER_USER.id)
     expect(insights.insights).toEqual([])
+    expect(captureUserScopeEpoch()).toBe(epochAfterUserA + 1)
   })
 
   it('rechecks expiry when the tab becomes visible', () => {

@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { resetUserScopedFrontendState } from './resetUserScopedState'
+import { captureUserScopeEpoch, resetUserScopedFrontendState } from './resetUserScopedState'
 import { useAnomalyStore } from '@/stores/anomaly'
 import { useBillStore } from '@/stores/bill'
 import { useGmailStore } from '@/stores/gmail'
@@ -142,6 +142,17 @@ describe('resetUserScopedFrontendState', () => {
     expect(billStore.saving).toBe(false)
     expect(billStore.error).toBeNull()
     expect(localStorage.getItem('duit_guest_participant_guest-share-token')).toBe('persisted-guest-token')
+  })
+
+  it('advances the in-memory user-scope epoch before clearing store state', () => {
+    const insightStore = useInsightStore()
+    insightStore.insights = [sampleInsight]
+    const before = captureUserScopeEpoch()
+
+    resetUserScopedFrontendState('user-switch')
+
+    expect(captureUserScopeEpoch()).toBe(before + 1)
+    expect(insightStore.insights).toEqual([])
   })
 })
 

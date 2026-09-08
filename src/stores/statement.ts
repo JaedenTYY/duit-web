@@ -9,6 +9,13 @@ import {
 } from '@/api/generated/statement-controller/statement-controller'
 import { logger } from '@/utils/logger'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
+import {
+  captureUserScopeEpoch,
+  isCurrentUserScope,
+  isUserScopeStaleError,
+  UserScopeStaleError,
+  throwIfUserScopeStale,
+} from '@/stores/resetUserScopedState'
 
 interface ConfirmRow {
   rowId: string
@@ -24,55 +31,70 @@ export const useStatementStore = defineStore('statement', () => {
   const refreshError = ref<string | null>(null)
 
   async function uploadStatement(file: File) {
+    const scope = captureUserScopeEpoch()
     uploading.value = true
     error.value = null
     refreshError.value = null
     result.value = null
     try {
       const response = await uploadStatementContract({ file })
+      throwIfUserScopeStale(scope)
       upload.value = response.data
       return upload.value
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = extractError(err)
       logger.error('Failed to upload bank statement', err)
       throw err
     } finally {
-      uploading.value = false
+      if (isCurrentUserScope(scope)) uploading.value = false
     }
   }
 
   async function confirmRows(rows: ConfirmRow[]) {
     if (!upload.value) return
+    const scope = captureUserScopeEpoch()
+    const uploadId = upload.value.id
     confirming.value = true
     error.value = null
     refreshError.value = null
     try {
-      const response = await confirmStatementUpload(upload.value.id, {
+      const response = await confirmStatementUpload(uploadId, {
         rows: rows.map(row => ({
           ...row,
           rememberMerchantCategory: false,
         })),
       })
+      throwIfUserScopeStale(scope)
       result.value = response.data
       try {
-        const refreshed = await getStatementUpload(upload.value.id)
+        const refreshed = await getStatementUpload(uploadId)
+        throwIfUserScopeStale(scope)
         upload.value = refreshed.data
       } catch (refreshFailure: unknown) {
+        if (isUserScopeStaleError(refreshFailure)) throw refreshFailure
+        if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
         refreshError.value = 'Import succeeded, but Duit could not refresh the statement draft. Open Transactions to verify the imported rows.'
         logger.error('Failed to refresh statement upload after import', refreshFailure)
       }
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = extractError(err)
       logger.error('Failed to import statement rows', err)
       throw err
     } finally {
-      confirming.value = false
+      if (isCurrentUserScope(scope)) confirming.value = false
     }
   }
 
   async function discardUpload() {
+    const scope = captureUserScopeEpoch()
     if (upload.value?.status === 'pending') {
-      await deleteStatementUpload(upload.value.id)
+      const uploadId = upload.value.id
+      await deleteStatementUpload(uploadId)
+      throwIfUserScopeStale(scope)
     }
     reset()
   }

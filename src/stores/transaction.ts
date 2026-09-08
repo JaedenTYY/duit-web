@@ -18,6 +18,13 @@ import type {
   UpdateTransactionRequest,
 } from '@/api/generated/model'
 import { currentReportingYearMonth } from '@/utils/localDateTime'
+import {
+  captureUserScopeEpoch,
+  isCurrentUserScope,
+  isUserScopeStaleError,
+  throwIfUserScopeStale,
+  UserScopeStaleError,
+} from '@/stores/resetUserScopedState'
 
 export type CreateTransactionPayload = CreateTransactionRequest
 export type UpdateTransactionPayload = UpdateTransactionRequest
@@ -42,9 +49,11 @@ export const useTransactionStore = defineStore('transaction', () => {
   const nextCursorId = ref<string | null>(null)
   const hasMore = ref(false)
   let fetchGeneration = 0
+  let summaryGeneration = 0
 
   async function fetchTransactions(reset = false) {
-    if (loading.value) return
+    if (loading.value && !reset) return
+    const scope = captureUserScopeEpoch()
     const generation = reset ? ++fetchGeneration : fetchGeneration
     
     loading.value = true
@@ -59,7 +68,7 @@ export const useTransactionStore = defineStore('transaction', () => {
 
       const response = await listTransactionsContract(params)
       const data = response.data
-      if (generation !== fetchGeneration) return
+      if (!isCurrentUserScope(scope) || generation !== fetchGeneration) return
 
       if (reset) {
         transactions.value = mergeTransactionCache([], data.transactions)
@@ -71,35 +80,42 @@ export const useTransactionStore = defineStore('transaction', () => {
       nextCursorId.value = data.nextCursorId ?? null
       hasMore.value = data.hasMore
     } catch (err: unknown) {
-      if (generation !== fetchGeneration) return
+      if (!isCurrentUserScope(scope) || generation !== fetchGeneration) return
       error.value = _extractError(err)
       logger.error('Failed to fetch transactions', err)
     } finally {
-      if (generation === fetchGeneration) loading.value = false
+      if (isCurrentUserScope(scope) && generation === fetchGeneration) loading.value = false
     }
   }
 
   async function fetchCategories() {
     if (categories.value.length > 0) return
+    const scope = captureUserScopeEpoch()
 
     try {
       const response = await listCategories()
+      if (!isCurrentUserScope(scope)) return
       categories.value = response.data
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope)) return
       logger.error('Failed to fetch categories', err)
     }
   }
 
   async function fetchMonthlySummary(year: number, month: number) {
+    const scope = captureUserScopeEpoch()
+    const generation = ++summaryGeneration
     logger.log('fetchMonthlySummary called with:', { year, month })
     monthlySummaryStatus.value = 'loading'
     monthlySummaryError.value = null
     try {
       const response = await getMonthlySummaryContract({ year, month: String(month) })
+      if (!isCurrentUserScope(scope) || generation !== summaryGeneration) return
       logger.log('fetchMonthlySummary success:', response.data)
       monthlySummary.value = response.data
       monthlySummaryStatus.value = 'loaded'
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope) || generation !== summaryGeneration) return
       monthlySummaryStatus.value = 'error'
       monthlySummaryError.value = _extractError(err)
       logger.error('Failed to fetch monthly summary', err)
@@ -125,78 +141,98 @@ export const useTransactionStore = defineStore('transaction', () => {
   }
 
   async function reconcileAfterFinancialMutation(options: { refreshTransactions?: boolean } = {}): Promise<void> {
+    const scope = captureUserScopeEpoch()
     const tasks: Promise<void>[] = [refreshCurrentMonthSummary()]
     if (options.refreshTransactions) {
       tasks.push(fetchTransactions(true))
     }
     await Promise.all(tasks)
+    throwIfUserScopeStale(scope)
   }
 
   async function createTransaction(
     payload: CreateTransactionPayload,
     operationKey: string,
   ): Promise<Transaction> {
+    const scope = captureUserScopeEpoch()
     submitting.value = true
     error.value = null
     try {
       const response = await createTransactionContract(payload, { 'Idempotency-Key': operationKey })
+      throwIfUserScopeStale(scope)
       const newTransaction = response.data
       recordCreatedTransaction(newTransaction)
       await reconcileAfterFinancialMutation()
+      throwIfUserScopeStale(scope)
       return newTransaction
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = _extractError(err)
       throw err
     } finally {
-      submitting.value = false
+      if (isCurrentUserScope(scope)) submitting.value = false
     }
   }
 
   async function updateTransaction(id: string, payload: UpdateTransactionPayload): Promise<Transaction> {
+    const scope = captureUserScopeEpoch()
     submitting.value = true
     error.value = null
     try {
       const response = await updateTransactionContract(id, payload)
+      throwIfUserScopeStale(scope)
       const updatedTransaction = response.data
       replaceTransaction(updatedTransaction)
       await reconcileAfterFinancialMutation()
+      throwIfUserScopeStale(scope)
       return updatedTransaction
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = _extractError(err)
       if (extractApiFailure(err).code === 'ERR_TX_STALE_409') {
         throw new TransactionStaleConflictError(await fetchTransaction(id))
       }
       throw err
     } finally {
-      submitting.value = false
+      if (isCurrentUserScope(scope)) submitting.value = false
     }
   }
 
   async function deleteTransaction(id: string, expectedVersion: number): Promise<void> {
+    const scope = captureUserScopeEpoch()
     submitting.value = true
     error.value = null
     try {
       await deleteTransactionContract(id, { expectedVersion })
+      throwIfUserScopeStale(scope)
       transactions.value = transactions.value.filter(t => t.id !== id)
       await reconcileAfterFinancialMutation()
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = _extractError(err)
       if (extractApiFailure(err).code === 'ERR_TX_STALE_409') {
         throw new TransactionStaleConflictError(await fetchTransaction(id))
       }
       throw err
     } finally {
-      submitting.value = false
+      if (isCurrentUserScope(scope)) submitting.value = false
     }
   }
 
   async function fetchTransaction(id: string): Promise<Transaction | null> {
+    const scope = captureUserScopeEpoch()
     try {
       const response = await getTransactionContract(id)
+      throwIfUserScopeStale(scope)
       const current = response.data
       recordCreatedTransaction(current)
       return current
     } catch (err: unknown) {
+      if (isUserScopeStaleError(err)) throw err
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       if (extractApiFailure(err).status === 404) {
         transactions.value = transactions.value.filter(transaction => transaction.id !== id)
         return null
@@ -207,6 +243,7 @@ export const useTransactionStore = defineStore('transaction', () => {
 
   function reset() {
     fetchGeneration += 1
+    summaryGeneration += 1
     transactions.value = []
     categories.value = []
     monthlySummary.value = null

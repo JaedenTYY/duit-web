@@ -10,6 +10,7 @@ import {
   getGuestBill,
   join,
   selectItems,
+  summary as getGuestSummary,
 } from '@/api/generated/guest-bill-controller/guest-bill-controller'
 import type {
   BillResponse,
@@ -234,6 +235,68 @@ describe('bill split mutation integrity', () => {
     expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBeNull()
     expect(localStorage.getItem('duit_guest_participant_other-share')).toBe('other-token')
   })
+
+  it('keeps the newer owner bill when an older owner fetch resolves late', async () => {
+    const slowA = createDeferred<{ data: BillResponse; meta: ReturnType<typeof meta> }>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'USER_A_BILL' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'USER_B_BILL' })
+    vi.mocked(getBill).mockImplementation((id) => {
+      if (id === 'bill-a') return slowA.promise
+      return Promise.resolve({ data: billB, meta: meta() })
+    })
+    const store = useBillStore()
+
+    const requestA = store.fetchBill('bill-a').catch(() => undefined)
+    await store.fetchBill('bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('USER_B_BILL')
+
+    slowA.resolve({ data: billA, meta: meta() })
+    await requestA
+
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('USER_B_BILL')
+    expect(store.error).toBeNull()
+    expect(store.ownerTerminalState).toBeNull()
+    expect(store.loading).toBe(false)
+  })
+
+  it('does not let a late terminal response for guest token A contaminate active token B', async () => {
+    const slowA = createDeferred<{ data: GuestBillResponse; meta: ReturnType<typeof meta> }>()
+    localStorage.setItem('duit_guest_participant_token-a', 'participant-a')
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => {
+      if (shareToken === 'token-a') return slowA.promise
+      return Promise.resolve({
+        data: asGeneratedGuestBill({ ...guestBill, merchantName: 'TOKEN_B_ACTIVE_BILL' }),
+        meta: meta(),
+      })
+    })
+    vi.mocked(getGuestSummary).mockResolvedValue({
+      data: asGeneratedGuestSummary({ ...guestSummary, displayName: 'Guest B' }),
+      meta: meta(),
+    })
+    const store = useBillStore()
+
+    const requestA = store.fetchGuestBill('token-a').catch(() => undefined)
+    await store.fetchGuestBill('token-b')
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_ACTIVE_BILL')
+    expect(store.participantToken).toBe('participant-b')
+
+    slowA.reject(apiError('ERR_BILL_EXPIRED_410', 410, 'Token A expired'))
+    await requestA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_ACTIVE_BILL')
+    expect(store.guestTerminalState).toBeNull()
+    expect(store.error).toBeNull()
+    expect(store.participantToken).toBe('participant-b')
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBe('participant-a')
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+    expect(store.loading).toBe(false)
+  })
 })
 
 function meta() {
@@ -286,4 +349,14 @@ function createMemoryStorage(): Storage {
       values.set(key, value)
     },
   }
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
 }

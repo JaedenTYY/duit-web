@@ -6,6 +6,9 @@ import {
   list,
 } from '@/api/generated/insight-controller/insight-controller'
 import type { Insight } from '@/api/generated/model'
+import { resetUserScopedFrontendState } from '@/stores/resetUserScopedState'
+import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types'
 
 vi.mock('@/api/generated/insight-controller/insight-controller', () => ({
   generate: vi.fn(),
@@ -72,6 +75,50 @@ describe('insight store generated contract behavior', () => {
     expect(store.error).toBe('Insight generation unavailable')
     expect(store.generating).toBe(false)
   })
+
+  it('ignores a stale user-scope insight response after reset and allows the next user response', async () => {
+    const userARequest = createDeferred<{ data: Insight[]; meta: ReturnType<typeof meta> }>()
+    const userBRequest = createDeferred<{ data: Insight[]; meta: ReturnType<typeof meta> }>()
+    vi.mocked(list)
+      .mockReturnValueOnce(userARequest.promise)
+      .mockReturnValueOnce(userBRequest.promise)
+    const store = useInsightStore()
+
+    const firstFetch = store.fetchInsights()
+    expect(store.loading).toBe(true)
+
+    resetUserScopedFrontendState('user-switch')
+    expect(store.loading).toBe(false)
+
+    userARequest.resolve({ data: [generatedInsightWithHeadline('insight-a', 'USER_A_PRIVATE_INSIGHT')], meta: meta() })
+    await firstFetch
+
+    expect(store.insights).toEqual([])
+    expect(store.error).toBeNull()
+    expect(store.loading).toBe(false)
+
+    const secondFetch = store.fetchInsights()
+    userBRequest.resolve({ data: [generatedInsightWithHeadline('insight-b', 'USER_B_PRIVATE_INSIGHT')], meta: meta() })
+    await secondFetch
+
+    expect(store.insights).toMatchObject([{ id: 'insight-b', content: { headline: 'USER_B_PRIVATE_INSIGHT' } }])
+  })
+
+  it('allows a pending insight response to commit across a same-user token refresh', async () => {
+    const authStore = useAuthStore()
+    authStore.setSession('first-token', USER, '2099-08-08T00:00:00.000Z')
+    const request = createDeferred<{ data: Insight[]; meta: ReturnType<typeof meta> }>()
+    vi.mocked(list).mockReturnValueOnce(request.promise)
+    const store = useInsightStore()
+
+    const fetch = store.fetchInsights()
+    authStore.setSession('refreshed-token', USER, '2099-08-08T00:30:00.000Z')
+    request.resolve({ data: [generatedInsightWithHeadline('same-user-insight', 'SAME_USER_INSIGHT')], meta: meta() })
+    await fetch
+
+    expect(store.insights).toMatchObject([{ content: { headline: 'SAME_USER_INSIGHT' } }])
+    expect(store.loading).toBe(false)
+  })
 })
 
 function generatedInsight(overrides: Partial<Insight> = {}): Insight {
@@ -108,6 +155,18 @@ function generatedInsight(overrides: Partial<Insight> = {}): Insight {
   }
 }
 
+function generatedInsightWithHeadline(id: string, headline: string): Insight {
+  const base = generatedInsight({ id })
+  return {
+    ...base,
+    content: {
+      ...base.content,
+      headline,
+      summary: headline,
+    },
+  }
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T) => void
   let reject!: (reason?: unknown) => void
@@ -133,3 +192,10 @@ function apiError(code: string, message: string, statusCode = 422) {
 }
 
 const REQUEST_ID = '44444444-4444-4444-8444-444444444444'
+const USER: User = {
+  id: '11111111-1111-4111-8111-111111111111',
+  email: 'user@example.test',
+  fullName: 'User',
+  preferredCurrency: 'MYR',
+  createdAt: '2026-08-01T00:00:00.000Z',
+}

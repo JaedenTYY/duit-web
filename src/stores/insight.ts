@@ -7,6 +7,7 @@ import {
   generate as generateInsight,
   list as listInsights,
 } from '@/api/generated/insight-controller/insight-controller'
+import { captureUserScopeEpoch, isCurrentUserScope } from '@/stores/resetUserScopedState'
 
 export const useInsightStore = defineStore('insight', () => {
   const insights = ref<Insight[]>([])
@@ -16,37 +17,43 @@ export const useInsightStore = defineStore('insight', () => {
 
   async function fetchInsights() {
     if (loading.value) return
+    const scope = captureUserScopeEpoch()
     loading.value = true
     error.value = null
 
     try {
       const response = await listInsights()
+      if (!isCurrentUserScope(scope)) return
       insights.value = response.data
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = _extractError(err)
       logger.error('Failed to fetch insights', err)
     } finally {
-      loading.value = false
+      if (isCurrentUserScope(scope)) loading.value = false
     }
   }
 
   async function generateWeeklyInsight() {
     if (generating.value) return
+    const scope = captureUserScopeEpoch()
     generating.value = true
     error.value = null
 
     try {
       const response = await generateInsight()
+      if (!isCurrentUserScope(scope)) return
       const generated = response.data
       insights.value = [
         generated,
         ...insights.value.filter((insight) => insight.id !== generated.id),
       ]
     } catch (err: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = _extractError(err)
       logger.error('Failed to generate weekly insight', err)
     } finally {
-      generating.value = false
+      if (isCurrentUserScope(scope)) generating.value = false
     }
   }
 
