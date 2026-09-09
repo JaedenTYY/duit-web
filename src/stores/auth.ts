@@ -56,9 +56,10 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error('Server returned an invalid session expiry')
     }
 
-    const hadAuthenticatedSession = isAuthenticated.value
-    const userChanged = Boolean(lastAuthenticatedUserId && lastAuthenticatedUserId !== newUser.id)
-    if (!hadAuthenticatedSession || userChanged) {
+    const currentUserId = user.value?.id ?? null
+    const hasCurrentUserIdentity = Boolean(currentUserId)
+    const userChanged = Boolean(currentUserId && currentUserId !== newUser.id)
+    if (!hasCurrentUserIdentity || userChanged) {
       resetUserScopedFrontendState(userChanged ? 'user-switch' : 'login')
     }
 

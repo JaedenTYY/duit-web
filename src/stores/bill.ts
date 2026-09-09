@@ -101,6 +101,7 @@ export const useBillStore = defineStore('bill', () => {
     const generation = ++ownerBillFetchGeneration
     if (bill.value?.id !== id) {
       bill.value = null
+      saving.value = false
     }
     loading.value = true
     error.value = null
@@ -137,6 +138,7 @@ export const useBillStore = defineStore('bill', () => {
 
   async function markPaid(billId: string, participantId: string, isPaid: boolean): Promise<void> {
     const scope = captureUserScopeEpoch()
+    const ownerGeneration = ownerBillFetchGeneration
     const expectedAllocationVersion = bill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before updating paid status')
@@ -149,7 +151,7 @@ export const useBillStore = defineStore('bill', () => {
         isPaid,
         expectedAllocationVersion
       })
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       if (bill.value?.id === billId) {
         bill.value.allocationVersion = response.data.allocationVersion
         const index = bill.value.participants.findIndex(p => p.id === participantId)
@@ -158,18 +160,19 @@ export const useBillStore = defineStore('bill', () => {
         }
       }
     } catch (requestError: unknown) {
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       await refetchOnStaleBill(billId, requestError)
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerBill(scope, billId)) return
       error.value = billMutationError(requestError, 'Failed to update paid status')
       throw requestError
     } finally {
-      if (isCurrentUserScope(scope)) saving.value = false
+      if (isCurrentOwnerBill(scope, billId)) saving.value = false
     }
   }
 
   async function setBillPaymentProfile(billId: string, paymentQrProfileId: string | null): Promise<void> {
     const scope = captureUserScopeEpoch()
+    const ownerGeneration = ownerBillFetchGeneration
     const expectedAllocationVersion = bill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before updating payment QR')
@@ -181,16 +184,16 @@ export const useBillStore = defineStore('bill', () => {
         paymentQrProfileId: paymentQrProfileId ?? undefined,
         expectedAllocationVersion
       })
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       bill.value = response.data
     } catch (requestError: unknown) {
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       await refetchOnStaleBill(billId, requestError)
-      if (!isCurrentUserScope(scope)) return
+      if (!isCurrentOwnerBill(scope, billId)) return
       error.value = billMutationError(requestError, 'Failed to update payment QR')
       throw requestError
     } finally {
-      if (isCurrentUserScope(scope)) saving.value = false
+      if (isCurrentOwnerBill(scope, billId)) saving.value = false
     }
   }
 
@@ -265,6 +268,7 @@ export const useBillStore = defineStore('bill', () => {
   async function fetchGuestBill(shareToken: string): Promise<GuestBill> {
     if (guestShareToken.value !== shareToken) {
       resetGuestBill()
+      saving.value = false
     }
     const generation = ++guestBillFetchGeneration
     guestShareToken.value = shareToken
@@ -292,6 +296,12 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function joinGuestBill(shareToken: string, displayName: string): Promise<void> {
+    if (guestShareToken.value !== shareToken) {
+      resetGuestBill()
+      guestShareToken.value = shareToken
+      participantToken.value = loadParticipantToken(shareToken)
+    }
+    const generation = guestBillFetchGeneration
     saving.value = true
     error.value = null
     const operationKey = ensureJoinOperationKey(shareToken)
@@ -301,11 +311,13 @@ export const useBillStore = defineStore('bill', () => {
         { displayName },
         { 'Idempotency-Key': operationKey }
       )
+      if (!isCurrentGuestBillRequest(shareToken, generation)) return
       participantToken.value = response.data.participantToken
       guestSummary.value = response.data.summary
       localStorage.setItem(participantTokenKey(shareToken), response.data.participantToken)
       localStorage.removeItem(joinOperationKey(shareToken))
     } catch (requestError: unknown) {
+      if (!isCurrentGuestBillRequest(shareToken, generation)) return
       const failure = extractApiFailure(requestError)
       if (failure.code === 'ERR_BILL_JOIN_IDEMPOTENCY_CONFLICT_409') {
         error.value = 'This join attempt is already tied to another name. Use the existing participant session if available, or reload the link before trying again.'
@@ -316,14 +328,17 @@ export const useBillStore = defineStore('bill', () => {
       }
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentGuestBillRequest(shareToken, generation)) saving.value = false
     }
   }
 
   async function selectGuestItems(shareToken: string, itemIds: string[]): Promise<void> {
+    const generation = guestBillFetchGeneration
+    if (!isCurrentGuestBillRequest(shareToken, generation)) return
     if (!participantToken.value) {
       throw new Error('Join the bill before selecting items')
     }
+    const requestParticipantToken = participantToken.value
     const expectedAllocationVersion = guestSummary.value?.allocationVersion ?? guestBill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before selecting items')
@@ -332,20 +347,23 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
     try {
       const response = await selectGuestItemsContract(shareToken, {
-        participantToken: participantToken.value,
+        participantToken: requestParticipantToken,
         itemIds,
         expectedAllocationVersion
       })
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
       guestSummary.value = response.data
       await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
       await refetchGuestOnStaleBill(shareToken, requestError)
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
       guestTerminalState.value = billTerminalState(requestError)
       clearGuestCapabilityIfPermanent(shareToken, requestError)
       error.value = guestTerminalState.value?.message ?? billMutationError(requestError, 'Failed to update selected items')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentGuestBillRequest(shareToken, generation) && participantToken.value === requestParticipantToken) saving.value = false
     }
   }
 
@@ -419,6 +437,16 @@ export const useBillStore = defineStore('bill', () => {
     if (generation !== ownerBillFetchGeneration || (bill.value !== null && bill.value.id !== id)) {
       throw new UserScopeStaleError()
     }
+  }
+
+  function isCurrentOwnerMutation(scope: number, billId: string, generation: number): boolean {
+    return isCurrentUserScope(scope) &&
+      generation === ownerBillFetchGeneration &&
+      bill.value?.id === billId
+  }
+
+  function isCurrentOwnerBill(scope: number, billId: string): boolean {
+    return isCurrentUserScope(scope) && bill.value?.id === billId
   }
 
   function participantTokenKey(shareToken: string) {

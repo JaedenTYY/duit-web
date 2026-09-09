@@ -5,6 +5,7 @@ import { useBillStore } from './bill'
 import {
   getBill,
   markPaid,
+  setPaymentQrProfile,
 } from '@/api/generated/bill-controller/bill-controller'
 import {
   getGuestBill,
@@ -296,6 +297,165 @@ describe('bill split mutation integrity', () => {
     expect(localStorage.getItem('duit_guest_participant_token-a')).toBe('participant-a')
     expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
     expect(store.loading).toBe(false)
+  })
+
+  it('ignores a delayed guest join response after the active share token changes', async () => {
+    const delayedJoin = createDeferred<{
+      data: {
+        participantToken: string
+        summary: GuestBillSummaryResponse
+      }
+      meta: ReturnType<typeof meta>
+    }>()
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestBill({
+        ...guestBill,
+        merchantName: shareToken === 'token-a' ? 'TOKEN_A_BILL' : 'TOKEN_B_BILL',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(getGuestSummary).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestSummary({
+        ...guestSummary,
+        displayName: shareToken === 'token-a' ? 'Guest A' : 'Guest B',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(join).mockReturnValue(delayedJoin.promise)
+    const store = useBillStore()
+
+    await store.fetchGuestBill('token-a')
+    const joinA = store.joinGuestBill('token-a', 'Guest A')
+    expect(store.saving).toBe(true)
+
+    await store.fetchGuestBill('token-b')
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.saving).toBe(false)
+
+    delayedJoin.resolve({
+      data: {
+        participantToken: 'participant-a-from-late-join',
+        summary: asGeneratedGuestSummary({ ...guestSummary, displayName: 'Late Guest A' }),
+      },
+      meta: meta(),
+    })
+    await joinA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.error).toBeNull()
+    expect(store.guestTerminalState).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+  })
+
+  it('ignores a delayed guest selection failure after the active share token changes', async () => {
+    const delayedSelection = createDeferred<{ data: GuestBillSummaryResponse; meta: ReturnType<typeof meta> }>()
+    localStorage.setItem('duit_guest_participant_token-a', 'participant-a')
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestBill({
+        ...guestBill,
+        merchantName: shareToken === 'token-a' ? 'TOKEN_A_BILL' : 'TOKEN_B_BILL',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(getGuestSummary).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestSummary({
+        ...guestSummary,
+        displayName: shareToken === 'token-a' ? 'Guest A' : 'Guest B',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(selectItems).mockReturnValue(delayedSelection.promise)
+    const store = useBillStore()
+
+    await store.fetchGuestBill('token-a')
+    const selectionA = store.selectGuestItems('token-a', ['item-a'])
+    expect(store.saving).toBe(true)
+
+    await store.fetchGuestBill('token-b')
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.saving).toBe(false)
+
+    delayedSelection.reject(apiError('ERR_BILL_EXPIRED_410', 410, 'Token A expired'))
+    await selectionA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.error).toBeNull()
+    expect(store.guestTerminalState).toBeNull()
+    expect(store.saving).toBe(false)
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBe('participant-a')
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+  })
+
+  it('does not refetch or contaminate bill B when an old mark-paid mutation for bill A becomes stale', async () => {
+    const staleMarkPaid = createDeferred<never>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'BILL_A' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'BILL_B' })
+    vi.mocked(getBill).mockImplementation((id) => Promise.resolve({
+      data: id === 'bill-a' ? billA : billB,
+      meta: meta(),
+    }))
+    vi.mocked(markPaid).mockReturnValue(staleMarkPaid.promise)
+    const store = useBillStore()
+
+    await store.fetchBill('bill-a')
+    const markPaidA = store.markPaid('bill-a', 'participant-a', true)
+    expect(store.saving).toBe(true)
+
+    await store.fetchBill('bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.saving).toBe(false)
+
+    staleMarkPaid.reject(staleBillConflict())
+    await markPaidA
+
+    expect(getBill).toHaveBeenCalledTimes(2)
+    expect(getBill).toHaveBeenNthCalledWith(1, 'bill-a')
+    expect(getBill).toHaveBeenNthCalledWith(2, 'bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.error).toBeNull()
+    expect(store.ownerTerminalState).toBeNull()
+    expect(store.loading).toBe(false)
+    expect(store.saving).toBe(false)
+  })
+
+  it('ignores a delayed payment QR assignment after the active owner bill changes', async () => {
+    const delayedAssignment = createDeferred<{ data: BillResponse; meta: ReturnType<typeof meta> }>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'BILL_A' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'BILL_B' })
+    vi.mocked(getBill).mockImplementation((id) => Promise.resolve({
+      data: id === 'bill-a' ? billA : billB,
+      meta: meta(),
+    }))
+    vi.mocked(setPaymentQrProfile).mockReturnValue(delayedAssignment.promise)
+    const store = useBillStore()
+
+    await store.fetchBill('bill-a')
+    const assignmentA = store.setBillPaymentProfile('bill-a', 'profile-a')
+    await store.fetchBill('bill-b')
+
+    delayedAssignment.resolve({ data: { ...billA, merchantName: 'LATE_BILL_A' }, meta: meta() })
+    await assignmentA
+
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.error).toBeNull()
+    expect(store.saving).toBe(false)
   })
 })
 

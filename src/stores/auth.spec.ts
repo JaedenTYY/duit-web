@@ -8,6 +8,7 @@ import {
 } from './auth'
 import { useInsightStore } from '@/stores/insight'
 import { captureUserScopeEpoch } from '@/stores/resetUserScopedState'
+import { useTransactionStore } from '@/stores/transaction'
 
 const NOW = new Date('2026-07-27T00:00:00.000Z')
 const USER: User = {
@@ -96,6 +97,36 @@ describe('memory-only authentication state', () => {
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(store.token).toBe('successor')
     expect(store.isAuthenticated).toBe(true)
+  })
+
+  it('preserves same-user feature state and epoch during safety-window automatic refresh', async () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    const transactions = useTransactionStore()
+    const refresh = vi.fn(async () => {
+      store.setSession(
+        'successor',
+        USER,
+        new Date(NOW.getTime() + 120_000).toISOString()
+      )
+    })
+    store.configureRefresh(refresh)
+    store.setSession(
+      'access-token',
+      USER,
+      new Date(NOW.getTime() + 60_000).toISOString()
+    )
+    insights.insights = [{ id: 'insight-a', content: { headline: 'same user insight' } } as never]
+    transactions.transactions = [{ id: 'tx-a', merchantName: 'same user merchant' } as never]
+    const epochBeforeRefresh = captureUserScopeEpoch()
+
+    await vi.advanceTimersByTimeAsync(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(store.token).toBe('successor')
+    expect(insights.insights).toHaveLength(1)
+    expect(transactions.transactions).toHaveLength(1)
+    expect(captureUserScopeEpoch()).toBe(epochBeforeRefresh)
   })
 
   it('setting a new session replaces the old expiry timer', async () => {
