@@ -26,9 +26,29 @@ import type {
 } from '@/api/generated/model'
 import { normalizeReceiptUploadError, validateReceiptImageFile } from '@/utils/receiptFile'
 import { apiFailureMessage, extractApiFailure } from '@/lib/apiError'
+import {
+  captureUserScopeEpoch,
+  isCurrentUserScope,
+  isUserScopeStaleError,
+  UserScopeStaleError,
+  throwIfUserScopeStale,
+} from '@/stores/resetUserScopedState'
 
 export type CreatePaymentQrProfilePayload = CreatePaymentQrProfileRequest
 export type UpdatePaymentQrProfilePayload = UpdatePaymentQrProfileRequest
+export type BillTerminalCode = 'ERR_BILL_EXPIRED_410' | 'ERR_BILL_CLOSED_410'
+
+interface BillTerminalState {
+  code: BillTerminalCode
+  message: string
+}
+
+class GuestBillRequestStaleError extends Error {
+  constructor() {
+    super('Guest bill request changed while this operation was in flight')
+    this.name = 'GuestBillRequestStaleError'
+  }
+}
 
 export const useBillStore = defineStore('bill', () => {
   const bill = ref<Bill | null>(null)
@@ -36,10 +56,15 @@ export const useBillStore = defineStore('bill', () => {
   const guestSummary = ref<GuestBillSummary | null>(null)
   const paymentProfiles = ref<PaymentQrProfile[]>([])
   const participantToken = ref<string | null>(null)
+  const guestShareToken = ref<string | null>(null)
+  const ownerTerminalState = ref<BillTerminalState | null>(null)
+  const guestTerminalState = ref<BillTerminalState | null>(null)
   const loading = ref(false)
   const uploading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
+  let ownerBillFetchGeneration = 0
+  let guestBillFetchGeneration = 0
 
   const shareUrl = computed(() => {
     if (!bill.value?.shareToken) return ''
@@ -47,6 +72,7 @@ export const useBillStore = defineStore('bill', () => {
   })
 
   async function createFromReceipt(file: File): Promise<Bill> {
+    const scope = captureUserScopeEpoch()
     uploading.value = true
     error.value = null
 
@@ -57,34 +83,51 @@ export const useBillStore = defineStore('bill', () => {
       }
 
       const response = await createFromReceiptContract({ file })
+      throwIfUserScopeStale(scope)
       bill.value = response.data
       return bill.value
     } catch (requestError: unknown) {
+      if (isUserScopeStaleError(requestError)) throw requestError
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
       error.value = extractError(requestError, 'Bill creation failed')
       throw requestError
     } finally {
-      uploading.value = false
+      if (isCurrentUserScope(scope)) uploading.value = false
     }
   }
 
   async function fetchBill(id: string): Promise<Bill> {
+    const scope = captureUserScopeEpoch()
+    const generation = ++ownerBillFetchGeneration
+    if (bill.value?.id !== id) {
+      bill.value = null
+      saving.value = false
+    }
     loading.value = true
     error.value = null
+    ownerTerminalState.value = null
     try {
       const response = await getBillContract(id)
+      throwIfUserScopeStale(scope)
+      throwIfOwnerBillRequestStale(id, generation)
       bill.value = response.data
       return bill.value
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'Failed to load bill')
+      if (isUserScopeStaleError(requestError) || isGuestRequestStaleError(requestError)) throw requestError
+      if (!isCurrentUserScope(scope)) throw new UserScopeStaleError()
+      throwIfOwnerBillRequestStale(id, generation)
+      ownerTerminalState.value = billTerminalState(requestError)
+      error.value = ownerTerminalState.value?.message ?? extractError(requestError, 'Failed to load bill')
       throw requestError
     } finally {
-      loading.value = false
+      if (isCurrentUserScope(scope) && generation === ownerBillFetchGeneration) loading.value = false
     }
   }
 
   async function fetchParticipants(id: string): Promise<void> {
+    const scope = captureUserScopeEpoch()
     const response = await getParticipantsContract(id)
-    if (bill.value && bill.value.id === id) {
+    if (isCurrentUserScope(scope) && bill.value && bill.value.id === id) {
       bill.value.participants = response.data
       const latestVersion = response.data[0]?.allocationVersion
       if (latestVersion !== undefined) {
@@ -94,6 +137,8 @@ export const useBillStore = defineStore('bill', () => {
   }
 
   async function markPaid(billId: string, participantId: string, isPaid: boolean): Promise<void> {
+    const scope = captureUserScopeEpoch()
+    const ownerGeneration = ownerBillFetchGeneration
     const expectedAllocationVersion = bill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before updating paid status')
@@ -106,6 +151,7 @@ export const useBillStore = defineStore('bill', () => {
         isPaid,
         expectedAllocationVersion
       })
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       if (bill.value?.id === billId) {
         bill.value.allocationVersion = response.data.allocationVersion
         const index = bill.value.participants.findIndex(p => p.id === participantId)
@@ -114,15 +160,19 @@ export const useBillStore = defineStore('bill', () => {
         }
       }
     } catch (requestError: unknown) {
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       await refetchOnStaleBill(billId, requestError)
-      error.value = extractError(requestError, 'Failed to update paid status')
+      if (!isCurrentOwnerBill(scope, billId)) return
+      error.value = billMutationError(requestError, 'Failed to update paid status')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentOwnerBill(scope, billId)) saving.value = false
     }
   }
 
   async function setBillPaymentProfile(billId: string, paymentQrProfileId: string | null): Promise<void> {
+    const scope = captureUserScopeEpoch()
+    const ownerGeneration = ownerBillFetchGeneration
     const expectedAllocationVersion = bill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before updating payment QR')
@@ -134,86 +184,124 @@ export const useBillStore = defineStore('bill', () => {
         paymentQrProfileId: paymentQrProfileId ?? undefined,
         expectedAllocationVersion
       })
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       bill.value = response.data
     } catch (requestError: unknown) {
+      if (!isCurrentOwnerMutation(scope, billId, ownerGeneration)) return
       await refetchOnStaleBill(billId, requestError)
-      error.value = extractError(requestError, 'Failed to update payment QR')
+      if (!isCurrentOwnerBill(scope, billId)) return
+      error.value = billMutationError(requestError, 'Failed to update payment QR')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentOwnerBill(scope, billId)) saving.value = false
     }
   }
 
   async function fetchPaymentProfiles(): Promise<void> {
-    const response = await listPaymentProfilesContract()
-    paymentProfiles.value = response.data
+    const scope = captureUserScopeEpoch()
+    try {
+      const response = await listPaymentProfilesContract()
+      if (!isCurrentUserScope(scope)) return
+      paymentProfiles.value = response.data
+    } catch (requestError: unknown) {
+      if (!isCurrentUserScope(scope)) return
+      error.value = extractError(requestError, 'Failed to load payment QR profiles')
+      throw requestError
+    }
   }
 
   async function createPaymentProfile(payload: CreatePaymentQrProfilePayload): Promise<void> {
+    const scope = captureUserScopeEpoch()
     saving.value = true
     error.value = null
     try {
       const response = await createPaymentProfileContract(payload)
+      if (!isCurrentUserScope(scope)) return
       const profile = response.data
       paymentProfiles.value = [profile, ...paymentProfiles.value.filter(p => p.id !== profile.id)]
     } catch (requestError: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = extractError(requestError, 'Failed to save payment QR')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentUserScope(scope)) saving.value = false
     }
   }
 
   async function updatePaymentProfile(id: string, payload: UpdatePaymentQrProfilePayload): Promise<void> {
+    const scope = captureUserScopeEpoch()
     saving.value = true
     error.value = null
     try {
       const response = await updatePaymentProfileContract(id, payload)
+      if (!isCurrentUserScope(scope)) return
       const index = paymentProfiles.value.findIndex(p => p.id === id)
       if (index >= 0) {
         paymentProfiles.value[index] = response.data
       }
     } catch (requestError: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = extractError(requestError, 'Failed to update payment QR')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentUserScope(scope)) saving.value = false
     }
   }
 
   async function deletePaymentProfile(id: string): Promise<void> {
+    const scope = captureUserScopeEpoch()
     saving.value = true
     error.value = null
     try {
       await deletePaymentProfileContract(id)
+      if (!isCurrentUserScope(scope)) return
       paymentProfiles.value = paymentProfiles.value.filter(p => p.id !== id)
     } catch (requestError: unknown) {
+      if (!isCurrentUserScope(scope)) return
       error.value = extractError(requestError, 'Failed to delete payment QR')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentUserScope(scope)) saving.value = false
     }
   }
 
   async function fetchGuestBill(shareToken: string): Promise<GuestBill> {
+    if (guestShareToken.value !== shareToken) {
+      resetGuestBill()
+      saving.value = false
+    }
+    const generation = ++guestBillFetchGeneration
+    guestShareToken.value = shareToken
     loading.value = true
     error.value = null
+    guestTerminalState.value = null
     participantToken.value = loadParticipantToken(shareToken)
     try {
-      const refreshedBill = await refreshGuestBillSnapshot(shareToken)
+      const refreshedBill = await refreshGuestBillSnapshot(shareToken, generation)
       if (participantToken.value) {
-        await fetchGuestSummary(shareToken)
+        await fetchGuestSummary(shareToken, generation)
       }
+      throwIfGuestBillRequestStale(shareToken, generation)
       return refreshedBill
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'This bill split is unavailable')
+      if (isGuestRequestStaleError(requestError)) throw requestError
+      throwIfGuestBillRequestStale(shareToken, generation)
+      guestTerminalState.value = billTerminalState(requestError)
+      clearGuestCapabilityIfPermanent(shareToken, requestError)
+      error.value = guestTerminalState.value?.message ?? extractError(requestError, 'This bill split is unavailable')
       throw requestError
     } finally {
-      loading.value = false
+      if (isCurrentGuestBillRequest(shareToken, generation)) loading.value = false
     }
   }
 
   async function joinGuestBill(shareToken: string, displayName: string): Promise<void> {
+    if (guestShareToken.value !== shareToken) {
+      resetGuestBill()
+      guestShareToken.value = shareToken
+      participantToken.value = loadParticipantToken(shareToken)
+    }
+    const generation = guestBillFetchGeneration
     saving.value = true
     error.value = null
     const operationKey = ensureJoinOperationKey(shareToken)
@@ -223,22 +311,34 @@ export const useBillStore = defineStore('bill', () => {
         { displayName },
         { 'Idempotency-Key': operationKey }
       )
+      if (!isCurrentGuestBillRequest(shareToken, generation)) return
       participantToken.value = response.data.participantToken
       guestSummary.value = response.data.summary
       localStorage.setItem(participantTokenKey(shareToken), response.data.participantToken)
       localStorage.removeItem(joinOperationKey(shareToken))
     } catch (requestError: unknown) {
-      error.value = extractError(requestError, 'Failed to join bill')
+      if (!isCurrentGuestBillRequest(shareToken, generation)) return
+      const failure = extractApiFailure(requestError)
+      if (failure.code === 'ERR_BILL_JOIN_IDEMPOTENCY_CONFLICT_409') {
+        error.value = 'This join attempt is already tied to another name. Use the existing participant session if available, or reload the link before trying again.'
+      } else {
+        guestTerminalState.value = billTerminalState(requestError)
+        clearGuestCapabilityIfPermanent(shareToken, requestError)
+        error.value = guestTerminalState.value?.message ?? extractError(requestError, 'Failed to join bill')
+      }
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentGuestBillRequest(shareToken, generation)) saving.value = false
     }
   }
 
   async function selectGuestItems(shareToken: string, itemIds: string[]): Promise<void> {
+    const generation = guestBillFetchGeneration
+    if (!isCurrentGuestBillRequest(shareToken, generation)) return
     if (!participantToken.value) {
       throw new Error('Join the bill before selecting items')
     }
+    const requestParticipantToken = participantToken.value
     const expectedAllocationVersion = guestSummary.value?.allocationVersion ?? guestBill.value?.allocationVersion
     if (expectedAllocationVersion === undefined) {
       throw new Error('Load the latest bill before selecting items')
@@ -247,43 +347,106 @@ export const useBillStore = defineStore('bill', () => {
     error.value = null
     try {
       const response = await selectGuestItemsContract(shareToken, {
-        participantToken: participantToken.value,
+        participantToken: requestParticipantToken,
         itemIds,
         expectedAllocationVersion
       })
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
       guestSummary.value = response.data
       await refreshGuestBillSnapshot(shareToken).catch(() => undefined)
     } catch (requestError: unknown) {
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
       await refetchGuestOnStaleBill(shareToken, requestError)
-      error.value = extractError(requestError, 'Failed to update selected items')
+      if (!isCurrentGuestBillRequest(shareToken, generation) || participantToken.value !== requestParticipantToken) return
+      guestTerminalState.value = billTerminalState(requestError)
+      clearGuestCapabilityIfPermanent(shareToken, requestError)
+      error.value = guestTerminalState.value?.message ?? billMutationError(requestError, 'Failed to update selected items')
       throw requestError
     } finally {
-      saving.value = false
+      if (isCurrentGuestBillRequest(shareToken, generation) && participantToken.value === requestParticipantToken) saving.value = false
     }
   }
 
-  async function refreshGuestBillSnapshot(shareToken: string): Promise<GuestBill> {
+  async function refreshGuestBillSnapshot(
+    shareToken: string,
+    generation = guestBillFetchGeneration,
+  ): Promise<GuestBill> {
     const response = await getGuestBillContract(shareToken)
-    guestBill.value = response.data
-    return guestBill.value
+    if (isCurrentGuestBillRequest(shareToken, generation)) {
+      guestBill.value = response.data
+    }
+    return response.data
   }
 
-  async function fetchGuestSummary(shareToken: string): Promise<void> {
+  async function fetchGuestSummary(
+    shareToken: string,
+    generation = guestBillFetchGeneration,
+  ): Promise<void> {
     if (!participantToken.value) return
-    const response = await getGuestSummaryContract(shareToken, { 'X-Participant-Token': participantToken.value })
-    guestSummary.value = response.data
+    const requestParticipantToken = participantToken.value
+    const response = await getGuestSummaryContract(shareToken, { 'X-Participant-Token': requestParticipantToken })
+    if (isCurrentGuestBillRequest(shareToken, generation) && participantToken.value === requestParticipantToken) {
+      guestSummary.value = response.data
+    }
   }
 
   function resetOwnerBill() {
+    ownerBillFetchGeneration += 1
     bill.value = null
+    ownerTerminalState.value = null
     error.value = null
   }
 
   function resetGuestBill() {
+    guestBillFetchGeneration += 1
     guestBill.value = null
     guestSummary.value = null
     participantToken.value = null
+    guestShareToken.value = null
+    guestTerminalState.value = null
     error.value = null
+  }
+
+  function resetAuthenticatedState() {
+    ownerBillFetchGeneration += 1
+    bill.value = null
+    paymentProfiles.value = []
+    loading.value = false
+    uploading.value = false
+    saving.value = false
+    error.value = null
+    ownerTerminalState.value = null
+    resetGuestBill()
+  }
+
+  function isCurrentGuestBillRequest(shareToken: string, generation: number): boolean {
+    return guestShareToken.value === shareToken && generation === guestBillFetchGeneration
+  }
+
+  function throwIfGuestBillRequestStale(shareToken: string, generation: number): void {
+    if (!isCurrentGuestBillRequest(shareToken, generation)) {
+      throw new GuestBillRequestStaleError()
+    }
+  }
+
+  function isGuestRequestStaleError(error: unknown): error is GuestBillRequestStaleError {
+    return error instanceof GuestBillRequestStaleError
+  }
+
+  function throwIfOwnerBillRequestStale(id: string, generation: number): void {
+    if (generation !== ownerBillFetchGeneration || (bill.value !== null && bill.value.id !== id)) {
+      throw new UserScopeStaleError()
+    }
+  }
+
+  function isCurrentOwnerMutation(scope: number, billId: string, generation: number): boolean {
+    return isCurrentUserScope(scope) &&
+      generation === ownerBillFetchGeneration &&
+      bill.value?.id === billId
+  }
+
+  function isCurrentOwnerBill(scope: number, billId: string): boolean {
+    return isCurrentUserScope(scope) && bill.value?.id === billId
   }
 
   function participantTokenKey(shareToken: string) {
@@ -320,6 +483,49 @@ export const useBillStore = defineStore('bill', () => {
     }
   }
 
+  function billMutationError(requestError: unknown, fallback: string): string {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_STALE_409') {
+      return 'This bill changed before your update was saved. Review the latest split, then try again.'
+    }
+    if (failure.code === 'ERR_BILL_PAID_ALLOCATION_CONFLICT_409') {
+      return 'This split includes a participant already marked paid. Mark them unpaid before changing allocations.'
+    }
+    return extractError(requestError, fallback)
+  }
+
+  function billTerminalState(requestError: unknown): BillTerminalState | null {
+    const failure = extractApiFailure(requestError)
+    if (failure.code === 'ERR_BILL_EXPIRED_410') {
+      return {
+        code: 'ERR_BILL_EXPIRED_410',
+        message: 'This bill split has expired. The link can be reviewed only where already available; new guest updates are disabled.',
+      }
+    }
+    if (failure.code === 'ERR_BILL_CLOSED_410') {
+      return {
+        code: 'ERR_BILL_CLOSED_410',
+        message: 'This bill split is closed. New joins and allocation changes are disabled.',
+      }
+    }
+    return null
+  }
+
+  function clearGuestCapabilityForShareToken(shareToken: string): void {
+    if (participantToken.value && guestShareToken.value === shareToken) {
+      participantToken.value = null
+    }
+    localStorage.removeItem(participantTokenKey(shareToken))
+    localStorage.removeItem(joinOperationKey(shareToken))
+  }
+
+  function clearGuestCapabilityIfPermanent(shareToken: string, requestError: unknown): void {
+    const failure = extractApiFailure(requestError)
+    if (guestTerminalState.value || failure.status === 403 || failure.status === 404) {
+      clearGuestCapabilityForShareToken(shareToken)
+    }
+  }
+
   function extractError(requestError: unknown, fallback: string): string {
     if (requestError && typeof requestError === 'object' && 'response' in requestError) {
       const failure = extractApiFailure(requestError)
@@ -340,6 +546,9 @@ export const useBillStore = defineStore('bill', () => {
     guestSummary,
     paymentProfiles,
     participantToken,
+    guestShareToken,
+    ownerTerminalState,
+    guestTerminalState,
     loading,
     uploading,
     saving,
@@ -359,6 +568,7 @@ export const useBillStore = defineStore('bill', () => {
     selectGuestItems,
     fetchGuestSummary,
     resetOwnerBill,
-    resetGuestBill
+    resetGuestBill,
+    resetAuthenticatedState
   }
 })

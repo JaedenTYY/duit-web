@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AddTransactionModal from './AddTransactionModal.vue'
 
 const { store, merchantActions } = vi.hoisted(() => ({
@@ -33,6 +33,10 @@ describe('AddTransactionModal', () => {
     merchantActions.forgetMerchantCategoryPreference.mockResolvedValue(undefined)
     store.createTransaction.mockResolvedValue({})
     store.updateTransaction.mockResolvedValue({})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('defaults the remember checkbox to false and sends its value in a create payload', async () => {
@@ -133,6 +137,8 @@ describe('AddTransactionModal', () => {
     })
 
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(wrapper.find('input[placeholder="e.g. Starbucks..."]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Merchant name is fixed')
     await wrapper.findAll('select')[1].setValue('transport')
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
     await wrapper.get('form').trigger('submit')
@@ -143,6 +149,69 @@ describe('AddTransactionModal', () => {
     expect(store.updateTransaction).toHaveBeenCalledWith('transaction-1', expect.objectContaining({
       rememberMerchantCategory: false,
     }))
+  })
+
+  it('ignores stale merchant categorisation responses that no longer match the current merchant', async () => {
+    vi.useFakeTimers()
+    let resolveSlow!: (value: unknown) => void
+    let resolveFast!: (value: unknown) => void
+    merchantActions.categoriseMerchant.mockImplementation((merchant: string) => new Promise((resolve) => {
+      if (merchant === 'Slow Merchant') resolveSlow = resolve
+      if (merchant === 'Fast Merchant') resolveFast = resolve
+    }))
+    const wrapper = mount(AddTransactionModal)
+
+    await wrapper.get('input[placeholder="e.g. Starbucks..."]').setValue('Slow Merchant')
+    await vi.advanceTimersByTimeAsync(500)
+    await wrapper.get('input[placeholder="e.g. Starbucks..."]').setValue('Fast Merchant')
+    await vi.advanceTimersByTimeAsync(500)
+
+    resolveFast({
+      source: 'SYSTEM_MERCHANT',
+      categoryId: 'transport',
+      confidence: 'HIGH',
+    })
+    await flushPromises()
+    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+
+    resolveSlow({
+      source: 'SYSTEM_MERCHANT',
+      categoryId: 'food',
+      confidence: 'HIGH',
+    })
+    await flushPromises()
+
+    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use 🍔 Food & Dining category"]').exists()).toBe(false)
+  })
+
+  it('provides dialog semantics, closes on Escape when idle, and restores trigger focus on unmount', async () => {
+    const trigger = document.createElement('button')
+    trigger.textContent = 'Open transaction dialog'
+    document.body.append(trigger)
+    trigger.focus()
+    const wrapper = mount(AddTransactionModal, { attachTo: document.body })
+    await flushPromises()
+
+    const dialog = wrapper.get('[role="dialog"]')
+    expect(dialog.attributes('aria-modal')).toBe('true')
+    expect(dialog.attributes('aria-labelledby')).toBe('transaction-dialog-title')
+    expect(dialog.element.contains(document.activeElement)).toBe(true)
+    const focusable = dialog.findAll('button, input, select')
+      .filter((item) => item.attributes('disabled') === undefined)
+    expect(document.activeElement).toBe(focusable[0].element)
+
+    await dialog.trigger('keydown', { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(focusable[focusable.length - 1].element)
+    await dialog.trigger('keydown', { key: 'Tab' })
+    expect(document.activeElement).toBe(focusable[0].element)
+
+    await dialog.trigger('keydown', { key: 'Escape' })
+    expect(wrapper.emitted('close')).toBeTruthy()
+
+    wrapper.unmount()
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
   })
 
   it('forgets through the owner-scoped endpoint and refreshes the suggestion', async () => {

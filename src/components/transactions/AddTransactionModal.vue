@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useTransactionStore } from '@/stores/transaction'
 import type { Transaction, CategorisationResult } from '@/types'
 import { logger } from '@/utils/logger'
@@ -15,6 +15,7 @@ import {
   createTransactionOperationIdentity,
   transactionOperationExpired,
 } from '@/utils/transactionOperation'
+import { useDialogFocusManagement } from '@/composables/useDialogFocusManagement'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -55,17 +56,29 @@ const canRememberMerchantCategory = computed(() => {
 })
 
 const categorisation = ref<CategorisationResult | null>(null)
+const dialogRef = ref<HTMLElement | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout>
+let categorisationGeneration = 0
+
+useDialogFocusManagement(dialogRef, {
+  onEscape: requestClose,
+  canClose: () => !store.submitting,
+})
 
 async function fetchCategorisation(name: string) {
-  if (!name.trim()) {
+  const requestedMerchant = name.trim()
+  const generation = ++categorisationGeneration
+  if (!requestedMerchant) {
     categorisation.value = null
     return
   }
   try {
-    categorisation.value = await categoriseMerchant(name)
+    const result = await categoriseMerchant(requestedMerchant)
+    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
+    categorisation.value = result
     categorisationStatus.value = ''
   } catch (err) {
+    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
     categorisationStatus.value = 'Could not refresh the merchant category suggestion.'
     logger.error('Failed to fetch merchant categorisation', err)
   }
@@ -97,6 +110,11 @@ onMounted(() => {
   if (merchantName.value) {
     fetchCategorisation(merchantName.value)
   }
+})
+
+onUnmounted(() => {
+  clearTimeout(debounceTimer)
+  categorisationGeneration += 1
 })
 
 async function forgetPreference(merchantId: string) {
@@ -162,21 +180,36 @@ function applyCurrentTransaction(current: Transaction) {
   expectedVersion.value = current.version
   rememberMerchantCategory.value = false
 }
+
+function requestClose() {
+  if (store.submitting) return
+  emit('close')
+}
 </script>
 
 <template>
   <div 
     class="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/80 backdrop-blur-sm"
-    @click.self="emit('close')"
+    @click.self="requestClose"
   >
     <!-- Bottom Sheet Container -->
-    <div class="fixed bottom-0 w-full max-w-2xl bg-white rounded-t-[3rem] border-t border-slate-200 p-8 pt-12 pb-14 shadow-2xl shadow-slate-200/50 transform transition-transform animate-slide-up">
+    <div
+      ref="dialogRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transaction-dialog-title"
+      tabindex="-1"
+      class="fixed bottom-0 w-full max-w-2xl bg-white rounded-t-[3rem] border-t border-slate-200 p-8 pt-12 pb-14 shadow-2xl shadow-slate-200/50 transform transition-transform animate-slide-up"
+    >
       <!-- Drag Handle -->
       <div class="w-14 h-1.5 bg-slate-700/50 rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
       <div class="flex justify-between items-center mb-10">
         <div>
-          <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
+          <h2
+            id="transaction-dialog-title"
+            class="text-3xl font-bold text-slate-900 tracking-tight"
+          >
             {{ isEditing ? 'Edit Spending' : 'Track Spending' }}
           </h2>
           <p class="text-slate-400 font-medium">
@@ -184,8 +217,11 @@ function applyCurrentTransaction(current: Transaction) {
           </p>
         </div>
         <button
+          type="button"
           class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"
-          @click="emit('close')"
+          :disabled="store.submitting"
+          aria-label="Close transaction dialog"
+          @click="requestClose"
         >
           <svg
             class="w-6 h-6"
@@ -274,12 +310,24 @@ function applyCurrentTransaction(current: Transaction) {
           <div class="space-y-2">
             <label class="premium-label">Merchant Name</label>
             <input
+              v-if="!isEditing"
               v-model="merchantName"
               type="text"
               maxlength="255"
               placeholder="e.g. Starbucks..."
               class="premium-input"
             >
+            <div
+              v-else
+              class="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4"
+            >
+              <p class="break-words text-sm font-black text-slate-900">
+                {{ merchantName || 'No merchant recorded' }}
+              </p>
+              <p class="mt-1 text-xs font-semibold text-slate-500">
+                Merchant name is fixed for existing transactions because the current API does not accept merchant edits.
+              </p>
+            </div>
           </div>
 
           <div class="space-y-2">

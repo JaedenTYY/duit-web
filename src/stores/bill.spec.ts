@@ -5,11 +5,13 @@ import { useBillStore } from './bill'
 import {
   getBill,
   markPaid,
+  setPaymentQrProfile,
 } from '@/api/generated/bill-controller/bill-controller'
 import {
   getGuestBill,
   join,
   selectItems,
+  summary as getGuestSummary,
 } from '@/api/generated/guest-bill-controller/guest-bill-controller'
 import type {
   BillResponse,
@@ -190,6 +192,271 @@ describe('bill split mutation integrity', () => {
     })
     expect(getBill).toHaveBeenCalledWith(ownerBill.id)
   })
+
+  it('shows actionable guidance for paid allocation conflicts without auto-retrying', async () => {
+    vi.mocked(getBill).mockResolvedValue({ data: asGeneratedBill(ownerBill), meta: meta() })
+    vi.mocked(markPaid).mockRejectedValue(apiError('ERR_BILL_PAID_ALLOCATION_CONFLICT_409', 409, 'Paid participant conflict'))
+    const store = useBillStore()
+    await store.fetchBill(ownerBill.id)
+
+    await expect(store.markPaid(ownerBill.id, 'participant-id', true)).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+
+    expect(store.error).toContain('already marked paid')
+    expect(getBill).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves guest display-name context for join idempotency conflicts', async () => {
+    vi.mocked(join).mockRejectedValue(apiError('ERR_BILL_JOIN_IDEMPOTENCY_CONFLICT_409', 409, 'Idempotency conflict'))
+    const store = useBillStore()
+
+    await expect(store.joinGuestBill(SHARE_TOKEN, 'Guest A')).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+
+    expect(store.error).toContain('join attempt is already tied to another name')
+    expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBe(JOIN_KEY)
+  })
+
+  it('models expired guest bill as terminal and clears only the current share-token capability', async () => {
+    localStorage.setItem(`duit_guest_participant_${SHARE_TOKEN}`, PARTICIPANT_TOKEN)
+    localStorage.setItem(`duit_guest_join_operation_${SHARE_TOKEN}`, JOIN_KEY)
+    localStorage.setItem('duit_guest_participant_other-share', 'other-token')
+    vi.mocked(getGuestBill).mockRejectedValue(apiError('ERR_BILL_EXPIRED_410', 410, 'Bill expired'))
+    const store = useBillStore()
+
+    await expect(store.fetchGuestBill(SHARE_TOKEN)).rejects.toMatchObject({
+      response: { status: 410 },
+    })
+
+    expect(store.guestTerminalState?.code).toBe('ERR_BILL_EXPIRED_410')
+    expect(store.participantToken).toBeNull()
+    expect(localStorage.getItem(`duit_guest_participant_${SHARE_TOKEN}`)).toBeNull()
+    expect(localStorage.getItem(`duit_guest_join_operation_${SHARE_TOKEN}`)).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_other-share')).toBe('other-token')
+  })
+
+  it('keeps the newer owner bill when an older owner fetch resolves late', async () => {
+    const slowA = createDeferred<{ data: BillResponse; meta: ReturnType<typeof meta> }>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'USER_A_BILL' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'USER_B_BILL' })
+    vi.mocked(getBill).mockImplementation((id) => {
+      if (id === 'bill-a') return slowA.promise
+      return Promise.resolve({ data: billB, meta: meta() })
+    })
+    const store = useBillStore()
+
+    const requestA = store.fetchBill('bill-a').catch(() => undefined)
+    await store.fetchBill('bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('USER_B_BILL')
+
+    slowA.resolve({ data: billA, meta: meta() })
+    await requestA
+
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('USER_B_BILL')
+    expect(store.error).toBeNull()
+    expect(store.ownerTerminalState).toBeNull()
+    expect(store.loading).toBe(false)
+  })
+
+  it('does not let a late terminal response for guest token A contaminate active token B', async () => {
+    const slowA = createDeferred<{ data: GuestBillResponse; meta: ReturnType<typeof meta> }>()
+    localStorage.setItem('duit_guest_participant_token-a', 'participant-a')
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => {
+      if (shareToken === 'token-a') return slowA.promise
+      return Promise.resolve({
+        data: asGeneratedGuestBill({ ...guestBill, merchantName: 'TOKEN_B_ACTIVE_BILL' }),
+        meta: meta(),
+      })
+    })
+    vi.mocked(getGuestSummary).mockResolvedValue({
+      data: asGeneratedGuestSummary({ ...guestSummary, displayName: 'Guest B' }),
+      meta: meta(),
+    })
+    const store = useBillStore()
+
+    const requestA = store.fetchGuestBill('token-a').catch(() => undefined)
+    await store.fetchGuestBill('token-b')
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_ACTIVE_BILL')
+    expect(store.participantToken).toBe('participant-b')
+
+    slowA.reject(apiError('ERR_BILL_EXPIRED_410', 410, 'Token A expired'))
+    await requestA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_ACTIVE_BILL')
+    expect(store.guestTerminalState).toBeNull()
+    expect(store.error).toBeNull()
+    expect(store.participantToken).toBe('participant-b')
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBe('participant-a')
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+    expect(store.loading).toBe(false)
+  })
+
+  it('ignores a delayed guest join response after the active share token changes', async () => {
+    const delayedJoin = createDeferred<{
+      data: {
+        participantToken: string
+        summary: GuestBillSummaryResponse
+      }
+      meta: ReturnType<typeof meta>
+    }>()
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestBill({
+        ...guestBill,
+        merchantName: shareToken === 'token-a' ? 'TOKEN_A_BILL' : 'TOKEN_B_BILL',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(getGuestSummary).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestSummary({
+        ...guestSummary,
+        displayName: shareToken === 'token-a' ? 'Guest A' : 'Guest B',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(join).mockReturnValue(delayedJoin.promise)
+    const store = useBillStore()
+
+    await store.fetchGuestBill('token-a')
+    const joinA = store.joinGuestBill('token-a', 'Guest A')
+    expect(store.saving).toBe(true)
+
+    await store.fetchGuestBill('token-b')
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.saving).toBe(false)
+
+    delayedJoin.resolve({
+      data: {
+        participantToken: 'participant-a-from-late-join',
+        summary: asGeneratedGuestSummary({ ...guestSummary, displayName: 'Late Guest A' }),
+      },
+      meta: meta(),
+    })
+    await joinA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.error).toBeNull()
+    expect(store.guestTerminalState).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBeNull()
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+  })
+
+  it('ignores a delayed guest selection failure after the active share token changes', async () => {
+    const delayedSelection = createDeferred<{ data: GuestBillSummaryResponse; meta: ReturnType<typeof meta> }>()
+    localStorage.setItem('duit_guest_participant_token-a', 'participant-a')
+    localStorage.setItem('duit_guest_participant_token-b', 'participant-b')
+    vi.mocked(getGuestBill).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestBill({
+        ...guestBill,
+        merchantName: shareToken === 'token-a' ? 'TOKEN_A_BILL' : 'TOKEN_B_BILL',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(getGuestSummary).mockImplementation((shareToken) => Promise.resolve({
+      data: asGeneratedGuestSummary({
+        ...guestSummary,
+        displayName: shareToken === 'token-a' ? 'Guest A' : 'Guest B',
+      }),
+      meta: meta(),
+    }))
+    vi.mocked(selectItems).mockReturnValue(delayedSelection.promise)
+    const store = useBillStore()
+
+    await store.fetchGuestBill('token-a')
+    const selectionA = store.selectGuestItems('token-a', ['item-a'])
+    expect(store.saving).toBe(true)
+
+    await store.fetchGuestBill('token-b')
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.saving).toBe(false)
+
+    delayedSelection.reject(apiError('ERR_BILL_EXPIRED_410', 410, 'Token A expired'))
+    await selectionA
+
+    expect(store.guestShareToken).toBe('token-b')
+    expect(store.guestBill?.merchantName).toBe('TOKEN_B_BILL')
+    expect(store.guestSummary?.displayName).toBe('Guest B')
+    expect(store.participantToken).toBe('participant-b')
+    expect(store.error).toBeNull()
+    expect(store.guestTerminalState).toBeNull()
+    expect(store.saving).toBe(false)
+    expect(localStorage.getItem('duit_guest_participant_token-a')).toBe('participant-a')
+    expect(localStorage.getItem('duit_guest_participant_token-b')).toBe('participant-b')
+  })
+
+  it('does not refetch or contaminate bill B when an old mark-paid mutation for bill A becomes stale', async () => {
+    const staleMarkPaid = createDeferred<never>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'BILL_A' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'BILL_B' })
+    vi.mocked(getBill).mockImplementation((id) => Promise.resolve({
+      data: id === 'bill-a' ? billA : billB,
+      meta: meta(),
+    }))
+    vi.mocked(markPaid).mockReturnValue(staleMarkPaid.promise)
+    const store = useBillStore()
+
+    await store.fetchBill('bill-a')
+    const markPaidA = store.markPaid('bill-a', 'participant-a', true)
+    expect(store.saving).toBe(true)
+
+    await store.fetchBill('bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.saving).toBe(false)
+
+    staleMarkPaid.reject(staleBillConflict())
+    await markPaidA
+
+    expect(getBill).toHaveBeenCalledTimes(2)
+    expect(getBill).toHaveBeenNthCalledWith(1, 'bill-a')
+    expect(getBill).toHaveBeenNthCalledWith(2, 'bill-b')
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.error).toBeNull()
+    expect(store.ownerTerminalState).toBeNull()
+    expect(store.loading).toBe(false)
+    expect(store.saving).toBe(false)
+  })
+
+  it('ignores a delayed payment QR assignment after the active owner bill changes', async () => {
+    const delayedAssignment = createDeferred<{ data: BillResponse; meta: ReturnType<typeof meta> }>()
+    const billA = asGeneratedBill({ ...ownerBill, id: 'bill-a', merchantName: 'BILL_A' })
+    const billB = asGeneratedBill({ ...ownerBill, id: 'bill-b', merchantName: 'BILL_B' })
+    vi.mocked(getBill).mockImplementation((id) => Promise.resolve({
+      data: id === 'bill-a' ? billA : billB,
+      meta: meta(),
+    }))
+    vi.mocked(setPaymentQrProfile).mockReturnValue(delayedAssignment.promise)
+    const store = useBillStore()
+
+    await store.fetchBill('bill-a')
+    const assignmentA = store.setBillPaymentProfile('bill-a', 'profile-a')
+    await store.fetchBill('bill-b')
+
+    delayedAssignment.resolve({ data: { ...billA, merchantName: 'LATE_BILL_A' }, meta: meta() })
+    await assignmentA
+
+    expect(store.bill?.id).toBe('bill-b')
+    expect(store.bill?.merchantName).toBe('BILL_B')
+    expect(store.error).toBeNull()
+    expect(store.saving).toBe(false)
+  })
 })
 
 function meta() {
@@ -212,14 +479,15 @@ function asGeneratedGuestSummary(value: GuestBillSummary): GuestBillSummaryRespo
 }
 
 function staleBillConflict() {
+  return apiError('ERR_BILL_STALE_409', 409, 'Bill changed')
+}
+
+function apiError(code: string, status: number, message: string) {
   return {
     response: {
-      status: 409,
+      status,
       data: {
-        error: {
-          code: 'ERR_BILL_STALE_409',
-          message: 'Bill changed',
-        },
+        error: { code, message },
       },
     },
   }
@@ -241,4 +509,14 @@ function createMemoryStorage(): Storage {
       values.set(key, value)
     },
   }
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'link' | 'check' | 'settings' | 'logout' | 'user'
+export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'mail' | 'link' | 'check' | 'settings' | 'logout' | 'user'
 
 withDefaults(defineProps<{
   name: AppIconName
@@ -87,6 +87,20 @@ withDefaults(defineProps<{
       <path
         stroke-linecap="round"
         d="M8 7h8M8 11h8M8 15h4"
+      />
+    </g>
+    <g v-else-if="name === 'mail'">
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="14"
+        rx="2.5"
+      />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="m4.5 7 6.25 5.1a2 2 0 0 0 2.5 0L19.5 7"
       />
     </g>
     <g v-else-if="name === 'link'">

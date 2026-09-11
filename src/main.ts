@@ -11,6 +11,7 @@ import {
   configureSessionLifecycle,
   initializeSession,
 } from '@/lib/sessionCoordinator'
+import { registerUserScopedCacheResetter } from '@/stores/resetUserScopedState'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -26,6 +27,7 @@ const queryClient = new QueryClient({
 app.use(pinia)
 
 useAuthStore(pinia)
+registerUserScopedCacheResetter(() => queryClient.clear())
 configureSessionLifecycle()
 const sessionBootstrap = initializeSession()
 

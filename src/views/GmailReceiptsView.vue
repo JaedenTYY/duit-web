@@ -30,6 +30,13 @@ async function sync() {
     categoryOverrides[extraction.id] = extraction.suggestedCategoryId ?? ''
   }
 }
+
+async function confirmExtraction(extraction: EmailExtraction) {
+  const confirmed = await store.confirm(extraction.id, categoryOverrides[extraction.id] || undefined)
+  if (confirmed) {
+    await transactionStore.reconcileAfterFinancialMutation({ refreshTransactions: true })
+  }
+}
 </script>
 
 <template>
@@ -235,7 +242,7 @@ async function sync() {
                 type="button"
                 class="min-h-11 flex-1 rounded-2xl bg-blue-600 px-4 py-3 font-black text-white disabled:opacity-50"
                 :disabled="store.actionIds.has(extraction.id)"
-                @click="store.confirm(extraction.id, categoryOverrides[extraction.id] || undefined)"
+                @click="confirmExtraction(extraction)"
               >
                 Confirm
               </button>

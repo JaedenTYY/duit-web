@@ -6,6 +6,7 @@ import AppIcon from '@/components/shared/AppIcon.vue'
 
 const props = defineProps<{
   transaction: Transaction
+  deleting?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -96,6 +97,8 @@ const sourceLabel = computed(() => {
       <button 
         class="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-500 transition hover:bg-red-600 hover:text-white active:scale-90"
         aria-label="Delete transaction"
+        :disabled="props.deleting"
+        :aria-busy="props.deleting ? 'true' : undefined"
         @click.stop="emit('delete', transaction)"
       >
         <svg

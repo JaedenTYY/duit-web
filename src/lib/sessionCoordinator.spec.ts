@@ -7,8 +7,19 @@ const transportMock = vi.hoisted(() => ({
   refreshAccessToken: vi.fn(),
   revokeRefreshSession: vi.fn(),
 }))
+const routerMock = vi.hoisted(() => ({
+  replace: vi.fn(async () => undefined),
+  currentRoute: {
+    value: {
+      name: 'settings',
+      fullPath: '/settings',
+      meta: {},
+    },
+  },
+}))
 
 vi.mock('@/lib/authTransport', () => transportMock)
+vi.mock('@/router', () => ({ default: routerMock }))
 
 const SESSION: AuthResponse = {
   token: 'memory-access-token',
@@ -40,6 +51,12 @@ describe('session refresh coordination', () => {
     })
     transportMock.refreshAccessToken.mockResolvedValue(SESSION)
     transportMock.revokeRefreshSession.mockResolvedValue(undefined)
+    routerMock.replace.mockResolvedValue(undefined)
+    routerMock.currentRoute.value = {
+      name: 'settings',
+      fullPath: '/settings',
+      meta: {},
+    }
   })
 
   afterEach(async () => {
@@ -82,12 +99,22 @@ describe('session refresh coordination', () => {
     transportMock.refreshAccessToken.mockRejectedValue(new Error('unavailable'))
     const coordinator = await import('./sessionCoordinator')
     const { useAuthStore } = await import('@/stores/auth')
+    useAuthStore().setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
 
     await expect(coordinator.refreshSessionSingleFlight()).rejects.toThrow('unavailable')
 
     expect(transportMock.refreshAccessToken).toHaveBeenCalledTimes(1)
     expect(useAuthStore().bootstrapStatus).toBe('anonymous')
     expect(transportMock.clearCsrfToken).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => {
+      expect(routerMock.replace).toHaveBeenCalledWith({
+        name: 'login',
+        query: {
+          reason: 'session-expired',
+          redirect: '/settings',
+        },
+      })
+    })
   })
 
   it('propagates logout without persisting either token', async () => {
@@ -96,13 +123,35 @@ describe('session refresh coordination', () => {
     const store = useAuthStore()
     store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
 
-    await coordinator.logoutSession()
+    await expect(coordinator.logoutSession()).resolves.toEqual({ revoked: true })
 
     expect(transportMock.revokeRefreshSession).toHaveBeenCalledTimes(1)
     expect(store.token).toBeNull()
     expect(FakeBroadcastChannel.messages).toContainEqual(
       expect.objectContaining({ type: 'anonymous', reason: 'logout' })
     )
+  })
+
+  it('terminates local UI session even when logout revoke fails', async () => {
+    transportMock.revokeRefreshSession.mockRejectedValueOnce(new Error('revoke failed'))
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+    store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
+
+    await expect(coordinator.logoutSession()).resolves.toEqual({ revoked: false })
+
+    expect(store.token).toBeNull()
+    expect(store.user).toBeNull()
+    await vi.waitFor(() => {
+      expect(routerMock.replace).toHaveBeenCalledWith({
+        name: 'login',
+        query: {
+          reason: 'logout-local',
+          redirect: '/settings',
+        },
+      })
+    })
   })
 
   it('accepts a successful refresh from another tab in memory only', async () => {
@@ -136,6 +185,9 @@ describe('session refresh coordination', () => {
     expect(store.token).toBeNull()
     expect(store.sessionExpired).toBe(true)
     expect(transportMock.clearCsrfToken).toHaveBeenCalled()
+    await vi.waitFor(() => {
+      expect(routerMock.replace).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('broadcasts account deletion without password token or request data', async () => {

@@ -10,6 +10,10 @@ import type {
   ReceiptExtractionResponse,
   TransactionResponse,
 } from '@/api/generated/model'
+import {
+  isUserScopeStaleError,
+  resetUserScopedFrontendState,
+} from '@/stores/resetUserScopedState'
 
 vi.mock('@/api/generated/receipt-controller/receipt-controller', () => ({
   confirmExtraction: vi.fn(),
@@ -110,6 +114,41 @@ describe('receipt store generated contract behavior', () => {
     expectTypeOf<ConfirmExtractionRequest['amount']>().toEqualTypeOf<string>()
     expectTypeOf<ConfirmExtractionRequest['fxRate']>().toEqualTypeOf<string | undefined>()
   })
+
+  it('does not return a stale confirmed transaction for caller-side cache reconciliation', async () => {
+    const extraction = generatedReceiptExtraction()
+    const transaction = generatedTransaction({ id: 'tx-user-a' })
+    const deferred = createDeferred<{ data: TransactionResponse; meta: ReturnType<typeof meta> }>()
+    vi.mocked(uploadReceipt).mockResolvedValue({ data: extraction, meta: meta() })
+    vi.mocked(confirmExtraction).mockReturnValue(deferred.promise)
+    const store = useReceiptStore()
+    const recordCreatedTransaction = vi.fn()
+    const reconcileAfterFinancialMutation = vi.fn()
+    await store.uploadReceipt(new File(['receipt'], 'receipt.png', { type: 'image/png' }))
+
+    const caller = store.confirmExtraction({
+      extractionId: extraction.extractionId,
+      amount: '12.3400',
+      currency: 'MYR',
+      occurredAt: '2026-08-11T00:00:00.000Z',
+      rememberMerchantCategory: false,
+    }).then(async (created) => {
+      recordCreatedTransaction(created)
+      await reconcileAfterFinancialMutation()
+    }).catch((error: unknown) => {
+      if (!isUserScopeStaleError(error)) throw error
+    })
+
+    resetUserScopedFrontendState('user-switch')
+    deferred.resolve({ data: transaction, meta: meta() })
+    await caller
+
+    expect(recordCreatedTransaction).not.toHaveBeenCalled()
+    expect(reconcileAfterFinancialMutation).not.toHaveBeenCalled()
+    expect(store.extraction).toBeNull()
+    expect(store.error).toBeNull()
+    expect(store.confirming).toBe(false)
+  })
 })
 
 function generatedReceiptExtraction(overrides: Partial<ReceiptExtractionResponse> = {}): ReceiptExtractionResponse {
@@ -167,3 +206,13 @@ function apiError(code: string, message: string) {
 }
 
 const REQUEST_ID = '44444444-4444-4444-8444-444444444444'
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}

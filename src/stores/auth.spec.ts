@@ -6,6 +6,9 @@ import {
   SESSION_EXPIRY_SAFETY_SKEW_MS,
   useAuthStore,
 } from './auth'
+import { useInsightStore } from '@/stores/insight'
+import { captureUserScopeEpoch } from '@/stores/resetUserScopedState'
+import { useTransactionStore } from '@/stores/transaction'
 
 const NOW = new Date('2026-07-27T00:00:00.000Z')
 const USER: User = {
@@ -14,6 +17,11 @@ const USER: User = {
   fullName: 'Example User',
   preferredCurrency: 'MYR',
   createdAt: NOW.toISOString(),
+}
+const OTHER_USER: User = {
+  ...USER,
+  id: '6e51fe8c-306d-463c-9c76-dd5368bfa5ab',
+  email: 'other@example.test',
 }
 
 describe('memory-only authentication state', () => {
@@ -91,6 +99,36 @@ describe('memory-only authentication state', () => {
     expect(store.isAuthenticated).toBe(true)
   })
 
+  it('preserves same-user feature state and epoch during safety-window automatic refresh', async () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    const transactions = useTransactionStore()
+    const refresh = vi.fn(async () => {
+      store.setSession(
+        'successor',
+        USER,
+        new Date(NOW.getTime() + 120_000).toISOString()
+      )
+    })
+    store.configureRefresh(refresh)
+    store.setSession(
+      'access-token',
+      USER,
+      new Date(NOW.getTime() + 60_000).toISOString()
+    )
+    insights.insights = [{ id: 'insight-a', content: { headline: 'same user insight' } } as never]
+    transactions.transactions = [{ id: 'tx-a', merchantName: 'same user merchant' } as never]
+    const epochBeforeRefresh = captureUserScopeEpoch()
+
+    await vi.advanceTimersByTimeAsync(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(store.token).toBe('successor')
+    expect(insights.insights).toHaveLength(1)
+    expect(transactions.transactions).toHaveLength(1)
+    expect(captureUserScopeEpoch()).toBe(epochBeforeRefresh)
+  })
+
   it('setting a new session replaces the old expiry timer', async () => {
     const store = useAuthStore()
     const refresh = vi.fn(async () => undefined)
@@ -102,6 +140,33 @@ describe('memory-only authentication state', () => {
 
     expect(refresh).not.toHaveBeenCalled()
     expect(store.token).toBe('second')
+  })
+
+  it('does not reset user-scoped feature state during a same-user token refresh', () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    insights.insights = [{ id: 'insight-a', title: 'same user cache' } as never]
+    const epochAfterLogin = captureUserScopeEpoch()
+
+    store.setSession('second', USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    expect(insights.insights).toHaveLength(1)
+    expect(captureUserScopeEpoch()).toBe(epochAfterLogin)
+  })
+
+  it('resets user-scoped feature state before accepting a different user identity', () => {
+    const store = useAuthStore()
+    const insights = useInsightStore()
+    store.setSession('first', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    insights.insights = [{ id: 'insight-a', title: 'USER_A_PRIVATE_INSIGHT' } as never]
+    const epochAfterUserA = captureUserScopeEpoch()
+
+    store.setSession('second', OTHER_USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    expect(store.user?.id).toBe(OTHER_USER.id)
+    expect(insights.insights).toEqual([])
+    expect(captureUserScopeEpoch()).toBe(epochAfterUserA + 1)
   })
 
   it('rechecks expiry when the tab becomes visible', () => {
