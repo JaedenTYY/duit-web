@@ -17,43 +17,19 @@ const emit = defineEmits<{
 }>()
 </script>
 
-<template>
-  <aside class="sticky bottom-3 z-30 min-w-0 rounded-[1.75rem] border border-white/20 bg-slate-950/95 px-4 py-4 text-white shadow-2xl shadow-blue-900/20 backdrop-blur-xl sm:bottom-4 sm:px-5">
-    <div class="flex flex-col gap-3">
-      <div class="grid min-w-0 grid-cols-2 gap-3 text-xs font-semibold text-slate-300 sm:grid-cols-4">
-        <div class="flex min-w-0 flex-col">
-          <span class="text-slate-400">Items</span>
-          <span class="break-words text-sm text-white">{{ formatCurrency(subtotal, currency) }}</span>
-        </div>
-        <div class="flex min-w-0 flex-col">
-          <span class="text-slate-400">Tax</span>
-          <span class="break-words text-sm text-white">{{ formatCurrency(tax, currency) }}</span>
-        </div>
-        <div class="flex min-w-0 flex-col">
-          <span class="text-slate-400">Service</span>
-          <span class="break-words text-sm text-white">{{ formatCurrency(service, currency) }}</span>
-        </div>
-        <div class="flex min-w-0 flex-col items-end">
-          <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">Total owed</span>
-          <span class="break-words text-right text-lg font-black text-white">{{ formatCurrency(total, currency) }}</span>
-        </div>
-      </div>
-      
-      <div class="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-xs font-medium leading-5 text-slate-400 sm:max-w-xs">
-          Duit calculates your share but does not process payment.
-        </p>
-        
-        <button
-          v-if="actionLabel"
-          type="button"
-          :disabled="disabled || loading"
-          class="min-h-11 w-full shrink-0 rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
-          @click="emit('submit')"
-        >
-          {{ loading ? 'Saving...' : actionLabel }}
-        </button>
-      </div>
-    </div>
-  </aside>
-</template>
+<template><aside class="split-total"><div class="split-total-main"><span>Your share <small>Includes tax and service</small></span><strong>{{ formatCurrency(total, currency) }}</strong></div><details><summary>See breakdown</summary><dl><div><dt>Items</dt><dd>{{ formatCurrency(subtotal, currency) }}</dd></div><div><dt>Tax</dt><dd>{{ formatCurrency(tax, currency) }}</dd></div><div><dt>Service</dt><dd>{{ formatCurrency(service, currency) }}</dd></div></dl></details><button v-if="actionLabel" type="button" :disabled="disabled || loading" @click="emit('submit')">{{ loading ? 'Saving…' : actionLabel }}</button><p>Duit records your share. Pay through your own bank or wallet.</p></aside></template>
+<style scoped>
+.split-total { position:fixed; z-index:30; left:0; right:0; bottom:0; max-width:620px; margin:auto; padding:15px 20px calc(15px + env(safe-area-inset-bottom)); border:1px solid var(--rule); border-bottom:0; border-radius:16px 16px 0 0; background:#fff; box-shadow:0 -8px 30px rgb(28 27 25 / 8%); }
+.split-total-main { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.split-total-main span { font-size:14px; font-weight:600; }
+.split-total-main small { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:400; }
+.split-total-main strong { font-size:23px; font-weight:600; font-variant-numeric:tabular-nums; }
+.split-total details { margin:8px 0; color:var(--muted); font-size:12px; }
+.split-total summary { cursor:pointer; }
+.split-total dl { margin:7px 0; }
+.split-total dl div { display:flex; justify-content:space-between; padding:3px 0; }
+.split-total dd { margin:0; }
+.split-total button { width:100%; min-height:48px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; }
+.split-total button:disabled { opacity:.5; }
+.split-total p { margin:7px 0 0; color:var(--muted); font-size:11px; text-align:center; }
+</style>

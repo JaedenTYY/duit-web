@@ -42,62 +42,23 @@ function submit() {
 </script>
 
 <template>
-  <form
-    class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm"
-    @submit.prevent="submit"
-  >
-    <div>
-      <h2 class="text-xl font-black text-slate-900">
-        Scan receipt
-      </h2>
-      <p class="mt-1 text-sm leading-6 text-slate-500">
-        Upload a receipt image to create an item-level split.
-      </p>
-    </div>
-
-    <label class="mt-6 flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/50">
-      <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-        <svg
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-          />
-        </svg>
-      </div>
-      <input
-        type="file"
-        :accept="RECEIPT_IMAGE_ACCEPT"
-        class="sr-only"
-        @change="selectFile"
-      >
-      <span class="text-sm font-bold text-slate-900">
-        {{ selectedFile ? selectedFile.name : 'Choose receipt image' }}
-      </span>
-      <span class="mt-1 text-xs font-semibold text-slate-500">
-        JPEG, PNG, or WebP. Max 10 MB.
-      </span>
-    </label>
-
-    <div
-      v-if="validationError"
-      class="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
-    >
-      {{ validationError }}
-    </div>
-
-    <button
-      type="submit"
-      :disabled="!selectedFile || uploading || !!validationError"
-      class="mt-6 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
-    >
-      {{ uploading ? 'Reading receipt...' : 'Create split' }}
-    </button>
+  <form class="bill-upload" @submit.prevent="submit">
+    <h2>Add a receipt</h2><p>Take a photo or choose an image. You can review the result before sharing.</p>
+    <label class="bill-drop"><input type="file" :accept="RECEIPT_IMAGE_ACCEPT" class="sr-only" @change="selectFile"><span class="bill-upload-icon" aria-hidden="true">↥</span><strong>{{ selectedFile ? selectedFile.name : 'Choose receipt image' }}</strong><small>JPEG, PNG, or WebP · up to 10 MB</small></label>
+    <p v-if="validationError" class="bill-upload-error" role="alert">{{ validationError }}</p>
+    <button type="submit" :disabled="!selectedFile || uploading || !!validationError">{{ uploading ? 'Reading receipt…' : 'Create split' }}</button>
   </form>
 </template>
+<style scoped>
+.bill-upload { padding:24px; border:1px solid var(--rule); border-radius:16px; background:#fff; }
+.bill-upload h2 { margin:0; font-size:19px; }
+.bill-upload > p { margin:7px 0 22px; color:var(--muted); font-size:13px; line-height:20px; }
+.bill-drop { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:200px; padding:20px; border:1px dashed #B6B1A7; border-radius:12px; background:var(--paper); cursor:pointer; text-align:center; }
+.bill-drop:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+.bill-upload-icon { display:grid; place-items:center; width:42px; height:42px; margin-bottom:14px; border-radius:10px; background:var(--accent-tint); color:var(--accent); font-size:27px; }
+.bill-drop strong { max-width:100%; overflow-wrap:anywhere; font-size:14px; font-weight:600; }
+.bill-drop small { margin-top:5px; color:var(--muted); font-size:12px; }
+.bill-upload button { width:100%; min-height:52px; margin-top:20px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; }
+.bill-upload button:disabled { opacity:.45; }
+.bill-upload-error { color:#A34437 !important; }
+</style>

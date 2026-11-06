@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
-import { gsap } from 'gsap'
 import { RECEIPT_IMAGE_ACCEPT, validateReceiptImageFile } from '@/utils/receiptFile'
 
 const emit = defineEmits<{
@@ -16,7 +15,6 @@ withDefaults(defineProps<{
 const isDragging = ref(false)
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
-const previewContainer = ref<HTMLElement | null>(null)
 const validationError = ref<string | null>(null)
 
 function handleFileChange(event: Event) {
@@ -47,16 +45,6 @@ function selectFile(file: File) {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = URL.createObjectURL(file)
 
-  setTimeout(() => {
-    if (previewContainer.value) {
-      gsap.from(previewContainer.value, {
-        scale: 0.96,
-        opacity: 0,
-        duration: 0.3,
-        ease: 'power2.out'
-      })
-    }
-  }, 0)
 }
 
 function removeFile() {
@@ -85,118 +73,5 @@ onUnmounted(() => {
 })
 </script>
 
-<template>
-  <div class="space-y-5">
-    <div
-      v-if="!selectedFile"
-      class="relative group"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
-      @drop.prevent="handleDrop"
-    >
-      <input
-        type="file"
-        :accept="RECEIPT_IMAGE_ACCEPT"
-        class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-        @change="handleFileChange"
-      >
-      <div
-        class="rounded-[2rem] border-2 border-dashed p-6 text-center transition-all duration-300 sm:p-10"
-        :class="isDragging ? 'border-blue-500 bg-blue-50' : 'border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50 group-hover:border-blue-300'"
-      >
-        <div class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-9 w-9"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-        </div>
-        <h3 class="text-xl font-black tracking-tight text-slate-950">
-          Add a receipt photo
-        </h3>
-        <p class="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-slate-600">
-          Take a clear picture or choose an image from your phone. Duit will extract the spending details.
-        </p>
-        <div class="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200">
-          Choose image
-        </div>
-        <p class="mx-auto mt-3 max-w-xs text-xs font-bold text-slate-500">
-          JPEG, PNG, or WebP only. Max 10 MB.
-        </p>
-      </div>
-    </div>
-
-    <div
-      v-if="validationError"
-      class="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"
-    >
-      {{ validationError }}
-    </div>
-
-    <div
-      v-else
-      ref="previewContainer"
-      class="space-y-4"
-    >
-      <div class="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50">
-        <img
-          :src="previewUrl ?? undefined"
-          class="mx-auto h-72 w-full object-contain"
-          alt="Receipt preview"
-        >
-        <button
-          class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-red-600 shadow-sm transition hover:bg-red-50"
-          aria-label="Remove selected receipt"
-          @click="removeFile"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="flex min-w-0 items-center justify-between gap-4">
-          <div class="min-w-0">
-            <p class="truncate text-sm font-black text-slate-950">
-              {{ selectedFile?.name }}
-            </p>
-            <p class="mt-1 text-xs font-semibold text-slate-500">
-              {{ selectedFile ? formatSize(selectedFile.size) : '' }}
-            </p>
-          </div>
-          <button
-            class="min-h-11 shrink-0 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-            @click="handleScan"
-          >
-            {{ actionLabel }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+<template><div class="receipt-upload"><div v-if="!selectedFile" class="receipt-drop" :class="{ dragging: isDragging }" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop"><label><input type="file" :accept="RECEIPT_IMAGE_ACCEPT" @change="handleFileChange"><span class="receipt-camera" aria-hidden="true">▣</span><strong>Choose receipt image</strong><small>Take a photo or select one from your phone</small></label></div><p v-if="validationError" role="alert" class="receipt-validation">{{ validationError }}</p><div v-if="selectedFile" class="receipt-preview"><img :src="previewUrl ?? undefined" alt="Receipt preview"><div><span><strong>{{ selectedFile.name }}</strong><small>{{ formatSize(selectedFile.size) }}</small></span><button type="button" @click="removeFile">Remove</button></div><button type="button" class="receipt-continue" @click="handleScan">{{ actionLabel }}</button></div><p class="receipt-file-help">JPEG, PNG, or WebP · up to 10 MB</p></div></template>
+<style scoped>.receipt-drop{border:1px dashed #B6B1A7;border-radius:12px;background:var(--paper)}.receipt-drop.dragging{border-color:var(--accent);background:var(--accent-tint)}.receipt-drop label{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:210px;cursor:pointer;text-align:center}.receipt-drop input{position:absolute;width:1px;height:1px;opacity:0}.receipt-drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}.receipt-camera{display:grid;place-items:center;width:48px;height:48px;margin-bottom:16px;border-radius:11px;background:var(--accent-tint);color:var(--accent);font-size:26px}.receipt-drop strong{font-size:14px;font-weight:600}.receipt-drop small{margin-top:5px;color:var(--muted);font-size:12px}.receipt-file-help{margin:12px 0 0;color:var(--muted);font-size:12px;text-align:center}.receipt-validation{padding:12px;border-radius:9px;background:#FBE4E1;color:#8D1D18;font-size:13px}.receipt-preview>img{display:block;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--rule);border-radius:10px;background:var(--paper)}.receipt-preview>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}.receipt-preview span{min-width:0}.receipt-preview strong,.receipt-preview small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.receipt-preview strong{font-size:13px}.receipt-preview small{color:var(--muted);font-size:12px}.receipt-preview>div button{min-height:44px;border:0;background:transparent;color:#A34437;font-size:13px}.receipt-continue{width:100%;min-height:50px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:600}</style>

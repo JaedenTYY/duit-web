@@ -1,11 +1,11 @@
 <script setup lang="ts">
-export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'mail' | 'link' | 'check' | 'settings' | 'logout' | 'user'
+export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'mail' | 'link' | 'check' | 'settings' | 'logout' | 'user' | 'plus'
 
 withDefaults(defineProps<{
   name: AppIconName
   strokeWidth?: number
 }>(), {
-  strokeWidth: 2.25
+  strokeWidth: 1.75
 })
 </script>
 
@@ -120,6 +120,11 @@ withDefaults(defineProps<{
       stroke-linecap="round"
       stroke-linejoin="round"
       d="m5 12 4.5 4.5L19 7"
+    />
+    <path
+      v-else-if="name === 'plus'"
+      stroke-linecap="round"
+      d="M12 5v14M5 12h14"
     />
     <g v-else-if="name === 'settings'">
       <circle

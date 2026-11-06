@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { gsap } from 'gsap'
 import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
@@ -22,7 +21,6 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-const formContainer = ref<HTMLElement | null>(null)
 const {
   categoriseMerchant,
   forgetMerchantCategoryPreference,
@@ -111,15 +109,6 @@ watch(currency, (next, previous) => {
 })
 
 onMounted(() => {
-  if (formContainer.value) {
-    gsap.from(formContainer.value, {
-      y: 18,
-      opacity: 0,
-      duration: 0.35,
-      ease: 'power2.out'
-    })
-  }
-
   if (merchantName.value) {
     fetchCategorisation(merchantName.value)
   }
@@ -156,7 +145,6 @@ function formatReviewField(field: string) {
 
 <template>
   <div
-    ref="formContainer"
     class="space-y-5"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -300,7 +288,7 @@ function formatReviewField(field: string) {
             :key="cat.id"
             :value="cat.id"
           >
-            {{ cat.icon }} {{ cat.name }}
+            {{ cat.name }}
           </option>
         </select>
 
@@ -375,10 +363,25 @@ function formatReviewField(field: string) {
 
 <style scoped>
 .receipt-label {
-  @apply mb-1 block px-1 text-xs font-black uppercase tracking-wider text-slate-500;
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .receipt-input {
-  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #D2CEC5;
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 400;
 }
+.receipt-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+form button[type="submit"] { border-radius: 9px; background: var(--accent); box-shadow: none; font-weight: 600; }
+form button[type="button"] { border-radius: 9px; box-shadow: none; font-weight: 600; }
 </style>

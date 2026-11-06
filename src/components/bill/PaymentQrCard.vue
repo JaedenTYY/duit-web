@@ -6,46 +6,4 @@ defineProps<{
 }>()
 </script>
 
-<template>
-  <section class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-black text-slate-900">
-      Payment QR
-    </h2>
-
-    <div
-      v-if="profile"
-      class="mt-5"
-    >
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p class="text-base font-black text-slate-900">
-            {{ profile.displayName }}
-          </p>
-          <p class="mt-1 text-[10px] font-black uppercase tracking-widest text-blue-500">
-            {{ profile.provider }}
-          </p>
-        </div>
-      </div>
-
-      <img
-        v-if="profile.qrImageUrl"
-        :src="profile.qrImageUrl"
-        alt="Payment QR"
-        class="mt-5 aspect-square w-full max-w-64 rounded-3xl border-2 border-slate-100 object-contain shadow-sm"
-      >
-      <p
-        v-else-if="profile.qrPayload"
-        class="mt-5 break-all rounded-2xl bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-600 border border-slate-100"
-      >
-        {{ profile.qrPayload }}
-      </p>
-    </div>
-
-    <p
-      v-else
-      class="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm font-semibold leading-6 text-slate-500"
-    >
-      No payment QR selected yet.
-    </p>
-  </section>
-</template>
+<template><section class="payment-qr"><h2>Payment details</h2><div v-if="profile"><p><strong>{{ profile.displayName }}</strong><small>{{ profile.provider }}</small></p><img v-if="profile.qrImageUrl" :src="profile.qrImageUrl" alt="Payment QR provided by the bill owner"><p v-else-if="profile.qrPayload" class="payment-note">{{ profile.qrPayload }}</p></div><p v-else class="payment-empty">The bill owner has not added payment details yet.</p></section></template><style scoped>.payment-qr{padding:18px;border:1px solid var(--rule);border-radius:12px;background:#fff}.payment-qr h2{margin:0 0 14px;font-size:16px}.payment-qr p{margin:0;font-size:14px}.payment-qr strong,.payment-qr small{display:block}.payment-qr small{margin-top:3px;color:var(--muted);font-size:12px}.payment-qr img{display:block;width:min(220px,100%);height:auto;margin:16px auto;border:1px solid var(--rule);border-radius:8px}.payment-note{margin-top:12px!important;overflow-wrap:anywhere;color:var(--muted)}.payment-empty{color:var(--muted);font-size:13px!important;line-height:19px}</style>

@@ -30,7 +30,7 @@ async function renderQr() {
       margin: 1,
       width: 220,
       color: {
-        dark: '#0f172a',
+        dark: '#0E5A52',
         light: '#ffffff'
       }
     })
@@ -64,56 +64,4 @@ onMounted(renderQr)
 watch(() => props.shareUrl, renderQr)
 </script>
 
-<template>
-  <section class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-xl font-black text-slate-900">
-          Share with guests
-        </h2>
-        <p class="mt-1 text-sm leading-6 text-slate-500">
-          Friends scan this QR or open the link to join without an account.
-        </p>
-      </div>
-    </div>
-
-    <div class="mt-6 flex flex-col items-center gap-6 sm:flex-row">
-      <div
-        class="flex h-48 w-48 shrink-0 items-center justify-center rounded-3xl border-2 border-slate-100 bg-white p-3 shadow-inner"
-      >
-        <img
-          v-if="qrDataUrl"
-          :src="qrDataUrl"
-          alt="QR code for the guest bill share link"
-          class="h-full w-full"
-        >
-        <p
-          v-else-if="qrLoading"
-          class="text-center text-sm font-bold text-slate-500"
-        >
-          Generating QR…
-        </p>
-        <p
-          v-else
-          class="text-center text-xs font-bold leading-5 text-slate-500"
-        >
-          {{ qrError || 'Share link QR will appear when the bill link is ready.' }}
-        </p>
-      </div>
-      <div class="min-w-0 flex-1 w-full">
-        <div class="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 border border-slate-100">
-          <p class="truncate text-sm font-semibold text-slate-600">
-            {{ shareUrl }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="mt-4 w-full rounded-2xl bg-slate-900 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 active:scale-95"
-          @click="copyLink"
-        >
-          {{ copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Copy failed' : 'Copy share link' }}
-        </button>
-      </div>
-    </div>
-  </section>
-</template>
+<template><section class="share-card"><h2>Invite people</h2><p>Guests can open this link or scan the code. No account needed.</p><div class="share-inner"><div class="share-qr"><img v-if="qrDataUrl" :src="qrDataUrl" alt="QR code for the guest bill share link"><span v-else>{{ qrLoading ? 'Preparing QR…' : qrError || 'QR appears when link is ready.' }}</span></div><div class="share-actions"><p class="share-url">{{ shareUrl }}</p><button type="button" :disabled="!shareUrl" @click="copyLink">{{ copyState === 'copied' ? 'Link copied' : copyState === 'error' ? 'Try copying again' : 'Copy invite link' }}</button></div></div></section></template><style scoped>.share-card{padding:20px;border:1px solid var(--rule);border-radius:14px;background:#fff}.share-card h2{margin:0;font-size:17px}.share-card>p{margin:6px 0 18px;color:var(--muted);font-size:13px;line-height:19px}.share-inner{display:flex;align-items:center;gap:18px}.share-qr{display:grid;place-items:center;width:120px;height:120px;flex:none;padding:7px;border:1px solid var(--rule);border-radius:9px}.share-qr img{width:100%;height:100%}.share-qr span{color:var(--muted);font-size:11px;text-align:center}.share-actions{min-width:0;flex:1}.share-url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}.share-actions button{width:100%;min-height:44px;margin-top:12px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-size:13px;font-weight:600}.share-actions button:disabled{opacity:.5}@media(max-width:420px){.share-inner{align-items:stretch;flex-direction:column}.share-qr{margin:auto}}</style>

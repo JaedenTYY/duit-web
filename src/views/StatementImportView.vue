@@ -271,7 +271,7 @@ function money(row: StatementRow) {
                     :key="category.id"
                     :value="category.id"
                   >
-                    {{ category.icon }} {{ category.name }}
+                    {{ category.name }}
                   </option>
                 </select>
                 <p
@@ -353,7 +353,7 @@ function money(row: StatementRow) {
                   :key="category.id"
                   :value="category.id"
                 >
-                  {{ category.icon }} {{ category.name }}
+                  {{ category.name }}
                 </option>
               </select>
               <p
