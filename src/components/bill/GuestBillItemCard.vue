@@ -14,55 +14,14 @@ const emit = defineEmits<{
 }>()
 </script>
 
-<template>
-  <button
-    type="button"
-    class="flex min-h-24 w-full min-w-0 items-center justify-between gap-4 rounded-3xl border-2 p-4 text-left transition-all duration-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-    :class="selected ? 'border-transparent bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-500/30' : 'border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50 hover:shadow-md'"
-    :disabled="disabled"
-    @click="emit('toggle', item.id)"
-  >
-    <span class="min-w-0 flex-1">
-      <span
-        class="block break-words text-base font-bold transition-colors"
-        :class="selected ? 'text-white' : 'text-slate-900'"
-      >{{ item.name }}</span>
-      <span
-        class="mt-1 block break-words text-sm font-semibold transition-colors"
-        :class="selected ? 'text-blue-100' : 'text-slate-500'"
-      >
-        {{ item.quantity }} x {{ formatCurrency(item.unitPrice, currency) }}
-      </span>
-      <span
-        v-if="item.claimantCount > 0"
-        class="mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
-        :class="selected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
-      >
-        Shared by {{ item.claimantCount }}
-      </span>
-    </span>
-    <span class="flex min-w-0 shrink items-center gap-3">
-      <span
-        class="min-w-0 break-words text-right text-lg font-black transition-colors"
-        :class="selected ? 'text-white' : 'text-slate-900'"
-      >{{ formatCurrency(item.lineTotal, currency) }}</span>
-      <span
-        class="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300"
-        :class="selected ? 'bg-white text-blue-600 shadow-sm scale-110' : 'border-2 border-slate-200 bg-slate-50 text-slate-300 scale-100'"
-      >
-        <svg
-          v-if="selected"
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="3"
-          d="M5 13l4 4L19 7"
-        /></svg>
-      </span>
-    </span>
-  </button>
-</template>
+<template><button type="button" class="guest-item" :class="{ chosen: selected }" :disabled="disabled" :aria-pressed="selected" @click="emit('toggle', item.id)"><span class="guest-check" aria-hidden="true">{{ selected ? '✓' : '' }}</span><span class="guest-item-info"><strong>{{ item.name }}</strong><small>{{ item.quantity }} × {{ formatCurrency(item.unitPrice, currency) }}<span v-if="item.claimantCount > 0"> · Shared by {{ item.claimantCount }}</span></small></span><b>{{ formatCurrency(item.lineTotal, currency) }}</b></button></template>
+<style scoped>
+.guest-item { display:flex; align-items:center; gap:12px; width:100%; min-height:68px; padding:12px 0; border:0; border-bottom:1px solid var(--rule); background:transparent; color:var(--ink); text-align:left; }
+.guest-item:disabled { opacity:.5; }
+.guest-check { display:grid; place-items:center; width:22px; height:22px; flex:none; border:1.5px solid #AAA69D; border-radius:6px; color:#fff; font-size:14px; }
+.guest-item.chosen .guest-check { border-color:var(--accent); background:var(--accent); }
+.guest-item-info { display:flex; flex:1; flex-direction:column; min-width:0; gap:3px; }
+.guest-item-info strong { font-size:14px; font-weight:600; }
+.guest-item-info small { color:var(--muted); font-size:12px; }
+.guest-item b { white-space:nowrap; font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+</style>

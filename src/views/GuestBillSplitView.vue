@@ -10,7 +10,6 @@ import GuestBillItemCard from '@/components/bill/GuestBillItemCard.vue'
 import LoadingSkeleton from '@/components/bill/LoadingSkeleton.vue'
 import PaymentQrCard from '@/components/bill/PaymentQrCard.vue'
 import SplitTotalBar from '@/components/bill/SplitTotalBar.vue'
-import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 import { addDecimalStrings } from '@/utils/financialDecimal'
 
 const route = useRoute()
@@ -88,117 +87,30 @@ async function saveSelection() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 px-4 py-5 text-slate-700">
-    <div class="mx-auto max-w-2xl space-y-6 pb-28">
-      <header class="rounded-[2rem] border border-slate-800 bg-slate-950 p-5 text-white shadow-xl shadow-slate-300/40 sm:p-6">
-        <div class="flex items-start gap-4">
-          <FriendlyAvatar
-            tone="blue"
-            size="sm"
-          />
-          <div class="min-w-0">
-            <p class="text-xs font-black uppercase tracking-widest text-blue-300">
-              Duit split
-            </p>
-            <h1 class="mt-2 truncate text-2xl font-black tracking-tight">
-              {{ currentGuestBill?.merchantName || 'Shared bill' }}
-            </h1>
-            <p
-              v-if="currentGuestBill"
-              class="mt-2 text-sm font-semibold leading-6 text-slate-300"
-            >
-              Total {{ formatCurrency(currentGuestBill.totalAmount, currentGuestBill.currency) }} · Expires {{ new Date(currentGuestBill.expiresAt).toLocaleDateString() }}
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <ErrorBanner :message="error" />
-      <ErrorBanner :message="terminalMessage" />
-      <LoadingSkeleton v-if="loading && !currentGuestBill && !guestTerminalState" />
-
-      <template v-else-if="currentGuestBill">
-        <form
-          v-if="!participantToken"
-          class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-          @submit.prevent="joinBill"
-        >
-          <h2 class="text-xl font-black text-slate-900">
-            Join this split
-          </h2>
-          <p class="mt-1 text-sm leading-6 text-slate-500">
-            Enter the name your friend should see on their participant list.
-          </p>
-          <input
-            v-model="displayName"
-            required
-            maxlength="120"
-            class="mt-6 w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-base font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
-            placeholder="Your name"
-          >
-          <button
-            type="submit"
-            :disabled="saving || !displayName.trim() || isTerminalBill"
-            class="mt-4 w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
-          >
-            {{ saving ? 'Joining...' : 'Join bill' }}
-          </button>
-        </form>
-
-        <section
-          v-else
-          class="space-y-6"
-        >
-          <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 class="text-xl font-black text-slate-900">
-              Select your items
-            </h2>
-            <p class="mt-1 text-sm leading-6 text-slate-500">
-              Tap every receipt line you shared or consumed. This is a whole-line split; saving sends the complete replacement selection.
-            </p>
-            <p class="mt-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-blue-700">
-              Before saving, the item subtotal is only a preview. Duit will replace it with the authoritative split, tax, service and reconciliation after the backend recalculates.
-            </p>
-          </div>
-
-          <div class="space-y-3">
-            <GuestBillItemCard
-              v-for="item in currentGuestBill.items"
-              :key="item.id"
-              :item="item"
-              :currency="currentGuestBill.currency"
-              :selected="selectedItemIds.has(item.id)"
-              :disabled="isTerminalBill || saving"
-              @toggle="toggleItem"
-            />
-          </div>
-
-          <PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? currentGuestBill.paymentQrProfile ?? null" />
-
-          <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
-            Remaining / unallocated amount:
-            <span class="font-black text-slate-950">{{ formatCurrency(unallocatedTotal, currentGuestBill.currency) }}</span>
-          </div>
-
-          <SplitTotalBar
-            :currency="currentGuestBill.currency"
-            :subtotal="totalBarValues.subtotal"
-            :tax="totalBarValues.tax"
-            :service="totalBarValues.service"
-            :total="totalBarValues.total"
-            :disabled="saving || isTerminalBill || !participantToken"
-            :loading="saving"
-            action-label="Save items"
-            @submit="saveSelection"
-          />
-        </section>
-      </template>
-
-      <EmptyState
-        v-else-if="!loading"
-        title="Bill unavailable"
-        message="This split link may be invalid or expired."
-      />
-    </div>
-  </main>
+  <main class="guest-page"><div class="guest-wrap"><header class="guest-head"><p class="guest-brand">duit<span>.</span> <small>shared bill</small></p><h1>{{ currentGuestBill?.merchantName || 'Shared bill' }}</h1><p v-if="currentGuestBill">{{ formatCurrency(currentGuestBill.totalAmount, currentGuestBill.currency) }} total · Expires {{ new Date(currentGuestBill.expiresAt).toLocaleDateString('en-MY') }}</p></header>
+    <ErrorBanner :message="error" /><ErrorBanner :message="terminalMessage" /><LoadingSkeleton v-if="loading && !currentGuestBill && !guestTerminalState" />
+    <template v-else-if="currentGuestBill">
+      <form v-if="!participantToken" class="guest-join" @submit.prevent="joinBill"><h2>Join this split</h2><p>Enter the name your friend will recognise. You do not need an account.</p><label for="guest-name">Your name</label><input id="guest-name" v-model="displayName" required maxlength="120" autocomplete="name" placeholder="e.g. Aina"><button type="submit" :disabled="saving || !displayName.trim() || isTerminalBill">{{ saving ? 'Joining…' : 'Continue' }}</button></form>
+      <section v-else><div class="guest-section-title"><h2>Choose your items</h2><p>Tap the items that are yours. Shared items are split between the people who select them.</p></div><div class="guest-items"><GuestBillItemCard v-for="item in currentGuestBill.items" :key="item.id" :item="item" :currency="currentGuestBill.currency" :selected="selectedItemIds.has(item.id)" :disabled="isTerminalBill || saving" @toggle="toggleItem" /></div><div class="guest-payment"><PaymentQrCard :profile="guestSummary?.paymentQrProfile ?? currentGuestBill.paymentQrProfile ?? null" /><p>Unassigned on this bill: {{ formatCurrency(unallocatedTotal, currentGuestBill.currency) }}</p></div><SplitTotalBar :currency="currentGuestBill.currency" :subtotal="totalBarValues.subtotal" :tax="totalBarValues.tax" :service="totalBarValues.service" :total="totalBarValues.total" :disabled="saving || isTerminalBill || !participantToken" :loading="saving" action-label="Save my items" @submit="saveSelection" /></section>
+    </template><EmptyState v-else-if="!loading" title="Bill unavailable" message="This split link may be invalid or expired." /></div></main>
 </template>
+<style scoped>
+.guest-page { min-height:100dvh; background:var(--paper); color:var(--ink); }
+.guest-wrap { max-width:620px; margin:auto; padding:28px 20px 160px; }
+.guest-head { margin-bottom:28px; }
+.guest-brand { margin:0 0 32px; color:var(--accent); font-size:24px; font-weight:700; letter-spacing:-.06em; }
+.guest-brand span { color:#D9A23A; }
+.guest-brand small { margin-left:8px; color:var(--muted); font-size:12px; font-weight:400; letter-spacing:0; }
+.guest-head h1 { margin:0; font-size:28px; }
+.guest-head > p:last-child { margin:8px 0 0; color:var(--muted); font-size:13px; }
+.guest-join { padding:24px; border:1px solid var(--rule); border-radius:14px; background:#fff; }
+.guest-join h2,.guest-section-title h2 { margin:0; font-size:19px; }
+.guest-join p,.guest-section-title p { margin:7px 0 22px; color:var(--muted); font-size:13px; line-height:20px; }
+.guest-join label { display:block; margin-bottom:7px; font-size:13px; font-weight:600; }
+.guest-join input { width:100%; min-height:52px; padding:12px; border:1px solid #D2CEC5; border-radius:10px; background:#fff; }
+.guest-join button { width:100%; min-height:52px; margin-top:16px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; }
+.guest-join button:disabled { opacity:.5; }
+.guest-items { border-top:1px solid var(--rule); }
+.guest-payment { margin-top:24px; }
+.guest-payment > p { color:var(--muted); font-size:12px; }
+</style>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
 
 defineProps<{
   eyebrow: string
@@ -19,58 +18,4 @@ const emit = defineEmits<{
 }>()
 </script>
 
-<template>
-  <section class="pointer-events-auto w-full max-w-xl rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-slate-950/20 sm:p-7">
-    <div class="mb-5 flex items-center justify-between gap-4">
-      <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
-        {{ progress }}
-      </p>
-      <button
-        type="button"
-        class="min-h-10 rounded-2xl px-3 text-sm font-black text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-        @click="emit('skip')"
-      >
-        Skip
-      </button>
-    </div>
-
-    <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
-      <FriendlyAvatar
-        :tone="tone"
-        size="lg"
-      />
-      <div class="min-w-0">
-        <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-          {{ eyebrow }}
-        </p>
-        <h2
-          id="onboarding-title"
-          class="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl"
-        >
-          {{ title }}
-        </h2>
-        <p class="mt-3 text-base font-medium leading-7 text-slate-600">
-          {{ description }}
-        </p>
-      </div>
-    </div>
-
-    <div class="mt-7 grid grid-cols-[0.8fr_1.2fr] gap-3">
-      <button
-        type="button"
-        class="min-h-11 rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-        :disabled="backDisabled"
-        @click="emit('back')"
-      >
-        Back
-      </button>
-      <button
-        type="button"
-        class="min-h-11 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"
-        @click="emit('next')"
-      >
-        {{ isLast ? 'Finish' : primaryLabel }}
-      </button>
-    </div>
-  </section>
-</template>
+<template><section class="walkthrough"><div class="walkthrough-top"><span>{{ progress }}</span><button type="button" @click="emit('skip')">Skip</button></div><p class="walkthrough-eyebrow">{{ eyebrow }}</p><h2 id="onboarding-title">{{ title }}</h2><p class="walkthrough-description">{{ description }}</p><div class="walkthrough-actions"><button type="button" :disabled="backDisabled" @click="emit('back')">Back</button><button type="button" @click="emit('next')">{{ isLast ? 'Finish' : primaryLabel }}</button></div></section></template><style scoped>.walkthrough{pointer-events:auto;width:100%;max-width:460px;padding:24px;border-radius:16px;background:#fff;box-shadow:0 12px 40px rgb(28 27 25 / 15%)}.walkthrough-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}.walkthrough-top span{color:var(--accent);font-size:12px;font-weight:600}.walkthrough-top button{min-height:44px;border:0;background:transparent;color:var(--muted);font-size:13px}.walkthrough-eyebrow{margin:0 0 6px;color:var(--accent);font-size:12px;font-weight:600}.walkthrough h2{margin:0;font-size:23px}.walkthrough-description{margin:10px 0 26px;color:var(--muted);font-size:14px;line-height:22px}.walkthrough-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.walkthrough-actions button{min-height:48px;border:1px solid var(--rule);border-radius:9px;background:#fff;color:var(--ink);font-size:14px;font-weight:600}.walkthrough-actions button:disabled{opacity:.4}.walkthrough-actions button:last-child{border-color:var(--accent);background:var(--accent);color:#fff}</style>

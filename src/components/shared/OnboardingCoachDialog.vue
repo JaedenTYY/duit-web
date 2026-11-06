@@ -24,7 +24,7 @@ const emit = defineEmits<{
   <Teleport to="body">
     <div
       v-if="open"
-      class="pointer-events-none fixed inset-0 z-[100] flex items-end bg-slate-950/45 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
+      class="pointer-events-none fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 px-3 pb-3 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="onboarding-title"

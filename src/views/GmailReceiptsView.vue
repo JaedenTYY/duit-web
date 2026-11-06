@@ -224,7 +224,7 @@ async function confirmExtraction(extraction: EmailExtraction) {
                   :key="category.id"
                   :value="category.id"
                 >
-                  {{ category.icon }} {{ category.name }}
+                  {{ category.name }}
                 </option>
               </select>
             </label>

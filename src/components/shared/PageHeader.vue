@@ -6,32 +6,4 @@ defineProps<{
 }>()
 </script>
 
-<template>
-  <header class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-7">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
-      <div class="min-w-0">
-        <p
-          v-if="eyebrow"
-          class="text-xs font-black uppercase text-emerald-600"
-        >
-          {{ eyebrow }}
-        </p>
-        <h1 class="mt-1 text-2xl font-black text-slate-950 sm:text-4xl">
-          {{ title }}
-        </h1>
-        <p
-          v-if="description"
-          class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500 sm:text-base"
-        >
-          {{ description }}
-        </p>
-      </div>
-      <div
-        v-if="$slots.actions"
-        class="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center"
-      >
-        <slot name="actions" />
-      </div>
-    </div>
-  </header>
-</template>
+<template><header class="page-heading"><div><p v-if="eyebrow" class="page-eyebrow">{{ eyebrow }}</p><h1>{{ title }}</h1><p v-if="description" class="page-description">{{ description }}</p></div><div v-if="$slots.actions" class="page-actions"><slot name="actions" /></div></header></template><style scoped>.page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}.page-heading h1{margin:0;font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.02em}.page-eyebrow{margin:0 0 4px;color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}.page-description{margin:6px 0 0;max-width:610px;color:var(--muted);font-size:13px;line-height:19px;font-weight:400}.page-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:600px){.page-heading{flex-direction:column}.page-heading h1{font-size:28px}.page-actions{width:100%}}</style>

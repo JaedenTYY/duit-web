@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import ReceiptUploadModal from '@/components/receipt/ReceiptUploadModal.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
-import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 
 const showUpload = ref(false)
 
@@ -11,88 +10,4 @@ function handleUploadSuccess() {
 }
 </script>
 
-<template>
-  <div class="space-y-6 pb-20">
-    <PageHeader
-      eyebrow="Import center"
-      title="Choose how to add spending"
-      description="All import options are visible here. Duit keeps every import reviewable before it becomes a transaction."
-    >
-      <template #actions>
-        <button
-          type="button"
-          class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
-          @click="showUpload = true"
-        >
-          Scan receipt
-        </button>
-      </template>
-    </PageHeader>
-
-    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-      <FeatureActionCard
-        title="Scan receipt"
-        description="Upload a receipt photo and let Google Vision plus Gemini draft the transaction."
-        status="Image upload"
-        icon="camera"
-        tone="mint"
-        action-label="Start scan"
-        @click="showUpload = true"
-      />
-      <FeatureActionCard
-        title="Import statement"
-        description="Upload a PDF bank statement, review parsed rows, and import only eligible debit expenses."
-        status="PDF review"
-        icon="card"
-        tone="sky"
-        to="/statements"
-        action-label="Open"
-      />
-      <FeatureActionCard
-        title="Gmail eReceipts"
-        description="Connect Gmail read-only, sync receipt emails, and confirm each extraction before import."
-        status="Email review"
-        icon="mail"
-        tone="coral"
-        to="/gmail"
-        action-label="Review"
-      />
-      <FeatureActionCard
-        title="Split bill"
-        description="Turn one receipt into a guest-friendly bill claim flow for your group."
-        status="Shared expense"
-        icon="users"
-        tone="amber"
-        to="/split-bill"
-        action-label="Split"
-      />
-      <FeatureActionCard
-        title="Weekly insights"
-        description="Review your seven-day spending signal and unlock one practical insight."
-        status="Review"
-        icon="insights"
-        tone="sky"
-        to="/insights"
-        action-label="Check"
-      />
-    </section>
-
-    <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="text-xs font-black uppercase text-amber-600">
-        Why this screen exists
-      </p>
-      <h2 class="mt-2 text-2xl font-black text-slate-950">
-        Import methods should be visible, predictable, and reversible.
-      </h2>
-      <p class="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-500">
-        HCI principle: users should not need to remember where features are. Receipt uploads, Gmail receipts, bank statements, bill splitting, and insight review are grouped by task.
-      </p>
-    </section>
-
-    <ReceiptUploadModal
-      v-if="showUpload"
-      @close="showUpload = false"
-      @success="handleUploadSuccess"
-    />
-  </div>
-</template>
+<template><div class="import-page"><PageHeader title="Import spending" description="Bring spending into Duit and check the details before saving." /><section class="import-group"><button type="button" class="import-row" @click="showUpload = true"><span class="import-icon" aria-hidden="true">▣</span><span><strong>Scan receipt</strong><small>Add an expense from a photo.</small></span><b>›</b></button><RouterLink to="/statements" class="import-row"><span class="import-icon" aria-hidden="true">≡</span><span><strong>Import statement</strong><small>Review eligible expenses from a PDF.</small></span><b>›</b></RouterLink><RouterLink to="/gmail" class="import-row"><span class="import-icon" aria-hidden="true">✉</span><span><strong>Gmail eReceipts</strong><small>Review receipt emails before adding them.</small></span><b>›</b></RouterLink></section><p class="import-note">You can edit or remove an expense after it is saved.</p><ReceiptUploadModal v-if="showUpload" @close="showUpload = false" @success="handleUploadSuccess" /></div></template><style scoped>.import-page{max-width:700px}.import-group{padding:0 16px;border-radius:16px;background:#fff}.import-row{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:12px 0;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);text-align:left;text-decoration:none}.import-row:last-child{border-bottom:0}.import-icon{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:10px;background:var(--accent-tint);color:var(--accent);font-size:20px}.import-row span:nth-child(2){display:flex;flex:1;flex-direction:column;gap:4px}.import-row strong{font-size:14px;font-weight:600}.import-row small,.import-note{color:var(--muted);font-size:12px;line-height:18px}.import-row b{color:var(--accent);font-size:22px;font-weight:400}.import-note{margin:16px 0}</style>

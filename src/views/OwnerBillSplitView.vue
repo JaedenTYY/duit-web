@@ -12,7 +12,6 @@ import ParticipantStatusCard from '@/components/bill/ParticipantStatusCard.vue'
 import PaymentQrCard from '@/components/bill/PaymentQrCard.vue'
 import QRShareCard from '@/components/bill/QRShareCard.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
-import StatCard from '@/components/shared/StatCard.vue'
 
 const route = useRoute()
 const billStore = useBillStore()
@@ -93,220 +92,49 @@ async function applyPaymentProfile() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-8 pb-28">
-    <PageHeader
-      eyebrow="Bill split"
-      :title="currentBill?.merchantName || 'Receipt split'"
-      :description="currentBill ? `Expires ${new Date(currentBill.expiresAt).toLocaleString()}` : 'Review receipt items, share the guest link, and track settlement.'"
-    />
-
-    <ErrorBanner :message="error" />
-    <ErrorBanner :message="terminalMessage" />
-    <LoadingSkeleton v-if="loading && !currentBill && !ownerTerminalState" />
-
+  <div class="owner-page">
+    <PageHeader eyebrow="Your split" :title="currentBill?.merchantName || 'Receipt split'" :description="currentBill ? `Expires ${new Date(currentBill.expiresAt).toLocaleDateString('en-MY')}` : 'Review items, share the link, and track payments.'" />
+    <ErrorBanner :message="error" /><ErrorBanner :message="terminalMessage" /><LoadingSkeleton v-if="loading && !currentBill && !ownerTerminalState" />
     <template v-else-if="currentBill">
-      <section class="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Subtotal"
-          :value="formatCurrency(currentBill.subtotal, currentBill.currency)"
-          tone="slate"
-        />
-        <StatCard
-          label="Tax"
-          :value="formatCurrency(currentBill.taxAmount, currentBill.currency)"
-          tone="blue"
-        />
-        <StatCard
-          label="Service"
-          :value="formatCurrency(currentBill.serviceCharge, currentBill.currency)"
-          tone="amber"
-        />
-        <div class="rounded-[2rem] border border-transparent bg-gradient-to-br from-slate-800 to-slate-950 p-5 shadow-lg shadow-slate-900/20">
-          <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
-            Total
-          </p>
-          <p class="mt-2 truncate text-2xl font-black text-white">
-            {{ formatCurrency(currentBill.totalAmount, currentBill.currency) }}
-          </p>
+      <div class="owner-grid">
+        <div>
+          <section class="owner-summary"><p>Bill total</p><strong>{{ formatCurrency(currentBill.totalAmount, currentBill.currency) }}</strong><div><span>Subtotal {{ formatCurrency(currentBill.subtotal, currentBill.currency) }}</span><span>Tax {{ formatCurrency(currentBill.taxAmount, currentBill.currency) }}</span><span>Service {{ formatCurrency(currentBill.serviceCharge, currentBill.currency) }}</span></div></section>
+          <section class="owner-section owner-people"><div class="owner-heading"><h2>People</h2><button type="button" :disabled="isTerminalBill" @click="billStore.fetchParticipants(currentBill.id)">Refresh</button></div><EmptyState v-if="currentBill.participants.length === 0" title="No guests yet" message="Share the link and guests will appear after they join." /><div v-else class="owner-list"><ParticipantStatusCard v-for="participant in currentBill.participants" :key="participant.id" :participant="participant" :currency="currentBill.currency" :saving="saving || isTerminalBill" @toggle-paid="togglePaid" /></div></section>
+          <section class="owner-section owner-items"><h2>Receipt items</h2><div class="owner-list"><BillItemCard v-for="item in currentBill.items" :key="item.id" :item="item" :currency="currentBill.currency" /></div></section>
         </div>
-      </section>
-
-      <section class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
-            Allocation revision
-          </p>
-          <p class="mt-2 text-2xl font-black text-slate-950">
-            #{{ currentBill.allocationVersion }}
-          </p>
+        <div><QRShareCard :share-url="shareUrl" /><section class="owner-section owner-allocation"><h2>Allocation</h2><dl><div><dt>Not yet assigned</dt><dd>{{ formatCurrency(currentBill.unallocatedTotal, currentBill.currency) }}</dd></div><div><dt>Version</dt><dd>{{ currentBill.allocationVersion }}</dd></div></dl><p v-if="hasReconciliation">Receipt adjustment: {{ formatCurrency(currentBill.lineAdjustment, currentBill.currency) }} on items and {{ formatCurrency(currentBill.totalAdjustment, currentBill.currency) }} on total.</p></section>
+          <details class="owner-payment"><summary>Payment details</summary><p>Duit shows payment details you provide. It does not process payments.</p><PaymentQrCard :profile="selectedProfile" /><label for="owner-qr-select">Choose saved payment QR</label><div class="owner-payment-action"><select id="owner-qr-select" v-model="selectedProfileId"><option value="">No QR selected</option><option v-for="profile in paymentProfiles" :key="profile.id" :value="profile.id">{{ profile.displayName }} · {{ profile.provider }}</option></select><button type="button" :disabled="saving || isTerminalBill" @click="applyPaymentProfile">Apply</button></div><form @submit.prevent="savePaymentProfile"><h3>Add your payment details</h3><label for="owner-qr-name">Display name</label><input id="owner-qr-name" v-model="displayName" required placeholder="Your name"><label for="owner-qr-provider">Provider</label><input id="owner-qr-provider" v-model="provider" required placeholder="DuitNow"><label for="owner-qr-image">Your QR image URL</label><input id="owner-qr-image" v-model="qrImageUrl" placeholder="Paste an image URL"><label for="owner-qr-note">Payment note</label><input id="owner-qr-note" v-model="qrPayload" placeholder="Optional note"><label class="owner-checkbox"><input v-model="isDefault" type="checkbox"> Make default</label><button type="submit" :disabled="saving || (!qrImageUrl && !qrPayload)">Save payment details</button></form></details>
         </div>
-        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
-            Remaining / unallocated
-          </p>
-          <p class="mt-2 text-2xl font-black text-slate-950">
-            {{ formatCurrency(currentBill.unallocatedTotal, currentBill.currency) }}
-          </p>
-        </div>
-        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-black uppercase tracking-widest text-slate-400">
-            Fully allocated
-          </p>
-          <p class="mt-2 text-2xl font-black text-slate-950">
-            {{ currentBill.unallocatedTotal === '0.0000' ? 'Yes' : 'No' }}
-          </p>
-        </div>
-      </section>
-
-      <section
-        v-if="hasReconciliation"
-        class="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900"
-      >
-        <p class="text-xs font-black uppercase tracking-widest text-amber-700">
-          Receipt reconciliation
-        </p>
-        <p class="mt-2">
-          Line subtotal reconciliation:
-          <span class="font-black">{{ formatCurrency(currentBill.lineAdjustment, currentBill.currency) }}</span>.
-          Grand-total reconciliation:
-          <span class="font-black">{{ formatCurrency(currentBill.totalAdjustment, currentBill.currency) }}</span>.
-        </p>
-      </section>
-
-      <QRShareCard :share-url="shareUrl" />
-
-      <section class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <div class="space-y-4">
-          <h2 class="text-xl font-black text-slate-900">
-            Receipt items
-          </h2>
-          <div class="grid min-w-0 gap-3 sm:grid-cols-2">
-            <BillItemCard
-              v-for="item in currentBill.items"
-              :key="item.id"
-              :item="item"
-              :currency="currentBill.currency"
-            />
-          </div>
-        </div>
-
-        <div class="space-y-4">
-          <PaymentQrCard :profile="selectedProfile" />
-
-          <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 class="text-xl font-black text-slate-900">
-              Select payment QR
-            </h2>
-            <div class="mt-5 flex flex-col gap-3 sm:flex-row">
-              <select
-                v-model="selectedProfileId"
-                class="min-w-0 flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
-              >
-                <option value="">
-                  No QR selected
-                </option>
-                <option
-                  v-for="profile in paymentProfiles"
-                  :key="profile.id"
-                  :value="profile.id"
-                >
-                  {{ profile.displayName }} · {{ profile.provider }}
-                </option>
-              </select>
-              <button
-                type="button"
-                :disabled="saving || isTerminalBill"
-                class="rounded-2xl bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-40"
-                @click="applyPaymentProfile"
-              >
-                Apply
-              </button>
-            </div>
-          </section>
-
-          <form
-            class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-            @submit.prevent="savePaymentProfile"
-          >
-            <h2 class="text-xl font-black text-slate-900">
-              Add payment QR
-            </h2>
-            <div class="mt-5 space-y-4">
-              <input
-                v-model="displayName"
-                required
-                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
-                placeholder="Display name"
-              >
-              <input
-                v-model="provider"
-                required
-                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
-                placeholder="Provider (e.g. DuitNow)"
-              >
-              <input
-                v-model="qrImageUrl"
-                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
-                placeholder="QR image URL"
-              >
-              <input
-                v-model="qrPayload"
-                class="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none transition-colors focus:border-blue-500 focus:bg-white"
-                placeholder="QR payload or payment note"
-              >
-              <label class="flex items-center gap-3 text-sm font-bold text-slate-600">
-                <input
-                  v-model="isDefault"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
-                >
-                Make default
-              </label>
-              <button
-                type="submit"
-                :disabled="saving || (!qrImageUrl && !qrPayload)"
-                class="w-full rounded-2xl bg-blue-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-500 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
-              >
-                Save QR profile
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section class="space-y-4">
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-xl font-black text-slate-900">
-            Participants
-          </h2>
-          <button
-            type="button"
-            class="min-h-11 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 border border-slate-200"
-            :disabled="isTerminalBill"
-            @click="billStore.fetchParticipants(currentBill.id)"
-          >
-            Refresh
-          </button>
-        </div>
-        <EmptyState
-          v-if="currentBill.participants.length === 0"
-          title="No guests yet"
-          message="Share the QR link and participants will appear here after they join."
-        />
-        <div
-          v-else
-          class="grid min-w-0 gap-4 md:grid-cols-2"
-        >
-          <ParticipantStatusCard
-            v-for="participant in currentBill.participants"
-            :key="participant.id"
-            :participant="participant"
-            :currency="currentBill.currency"
-            :saving="saving || isTerminalBill"
-            @toggle-paid="togglePaid"
-          />
-        </div>
-      </section>
+      </div>
     </template>
   </div>
 </template>
+<style scoped>
+.owner-page { max-width:1060px; padding-bottom:60px; }
+.owner-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:40px; }
+.owner-summary { padding:26px; border-radius:16px; background:var(--accent); color:#fff; }
+.owner-summary p { margin:0 0 5px; color:#D8E9E3; font-size:13px; }
+.owner-summary strong { font-size:clamp(32px,4vw,42px); line-height:1.15; font-weight:600; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.owner-summary div { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:20px; color:#D8E9E3; font-size:12px; }
+.owner-section { margin-top:28px; }
+.owner-section h2 { margin:0 0 12px; font-size:17px; }
+.owner-heading { display:flex; justify-content:space-between; align-items:center; }
+.owner-heading button { min-height:44px; border:0; background:transparent; color:var(--accent); font-size:13px; font-weight:600; }
+.owner-list { border-top:1px solid var(--rule); }
+.owner-allocation dl { margin:0; border-top:1px solid var(--rule); }
+.owner-allocation dl div { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--rule); font-size:13px; }
+.owner-allocation dt,.owner-allocation p { color:var(--muted); }
+.owner-allocation dd { margin:0; font-weight:600; }
+.owner-allocation p { font-size:12px; line-height:18px; }
+.owner-payment { margin-top:28px; padding:16px; border:1px solid var(--rule); border-radius:12px; background:#fff; }
+.owner-payment summary { cursor:pointer; font-size:15px; font-weight:600; }
+.owner-payment p { color:var(--muted); font-size:13px; line-height:19px; }
+.owner-payment label { display:block; margin:15px 0 6px; font-size:13px; font-weight:600; }
+.owner-payment input:not([type=checkbox]),.owner-payment select { width:100%; min-height:46px; padding:10px; border:1px solid var(--rule); border-radius:9px; background:#fff; font-size:14px; }
+.owner-payment-action { display:flex; gap:8px; }
+.owner-payment-action button,.owner-payment form button { min-height:46px; padding:0 16px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:13px; font-weight:600; }
+.owner-payment form h3 { margin:24px 0 0; font-size:15px; }
+.owner-payment .owner-checkbox { display:flex; align-items:center; gap:8px; font-weight:400; }
+.owner-payment form button { width:100%; margin-top:12px; }
+@media(max-width:800px){.owner-grid{display:flex;flex-direction:column;gap:0}.owner-grid>div{display:contents}.owner-summary{order:0;margin:0 -20px;border-radius:0;padding:24px 20px}.owner-grid :deep(.share-card){order:1;margin-top:24px}.owner-people{order:2}.owner-items{order:3}.owner-allocation{order:4}.owner-payment{order:5}}
+</style>
