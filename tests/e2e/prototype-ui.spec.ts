@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-for (const width of [360, 390, 1280]) {
+for (const width of [360, 390, 1280, 1440, 1920]) {
   test(`reference navigation and Activity work at ${width}px`, async ({ page }) => {
     page.on('pageerror', error => { throw error })
     await page.setViewportSize({ width, height: 900 })
@@ -29,6 +29,26 @@ for (const width of [360, 390, 1280]) {
     await page.goto('/dashboard')
     const month = new Intl.DateTimeFormat('en-MY', { month: 'long', timeZone: 'Asia/Kuala_Lumpur' }).format(new Date())
     await expect(page.getByRole('heading', { name: month, exact: true })).toBeVisible()
+    const home = page.locator('.duit-home-page')
+    const sidebar = page.locator('.desktop-sidebar')
+    const bottomNav = page.locator('.mobile-navigation')
+    if (width >= 1280) {
+      await expect(sidebar).toBeVisible()
+      await expect(bottomNav).toBeHidden()
+      const sidebarBounds = (await sidebar.boundingBox())!
+      const homeBounds = (await home.boundingBox())!
+      const leftGutter = homeBounds.x - (sidebarBounds.x + sidebarBounds.width)
+      const rightGutter = width - (homeBounds.x + homeBounds.width)
+      expect(leftGutter).toBeGreaterThan(0)
+      expect(Math.abs(leftGutter - rightGutter)).toBeLessThan(1)
+      await expect(page.getByLabel('Search activity', { exact: true })).toBeVisible()
+      await expect(page.locator('.home-grid')).toHaveCSS('grid-template-columns', /^\S+ \S+$/)
+    } else {
+      await expect(sidebar).toBeHidden()
+      await expect(bottomNav).toBeVisible()
+      await expect(page.getByLabel('Search activity', { exact: true })).toBeHidden()
+      await expect(page.locator('.home-grid')).toHaveCSS('grid-template-columns', /^\S+$/)
+    }
     const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await noOverflow()
     await page.screenshot({ path: `/private/tmp/duit-home-${width}.png`, fullPage: true })
@@ -42,7 +62,7 @@ for (const width of [360, 390, 1280]) {
     await expect(page.getByRole('button', { name: 'View GrabFood transaction' })).toBeVisible()
     await expect(page.getByText('A very long merchant name', { exact: false })).toHaveCount(0)
     await page.getByRole('combobox', { name: 'Source' }).selectOption('manual')
-    await expect(page.getByRole('status')).toContainText('0 matching loaded transactions')
+    await expect(page.getByRole('status')).toContainText('Showing 0 of 2 loaded transactions')
     await noOverflow()
     await page.getByRole('button', { name: 'Add spending', exact: true }).filter({ visible: true }).click()
     await page.getByRole('button', { name: /Scan a receipt/ }).click()

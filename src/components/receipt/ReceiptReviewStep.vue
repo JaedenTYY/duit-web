@@ -1,14 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import type { ReceiptExtractionResponse, Category, CategorisationResult } from '@/types'
+import type {
+  ReceiptExtractionResponse,
+  Category,
+  CategorisationResult,
+} from '@/types'
 import type { ConfirmExtractionPayload } from '@/stores/receipt'
 import { formatCurrency } from '@/utils/currency'
 import { logger } from '@/utils/logger'
 import CategorySuggestion from '../transactions/CategorySuggestion.vue'
 import { useMerchantCategorisation } from '@/composables/useMerchantCategorisation'
 import type { ConfirmExtractionRequestCurrency } from '@/api/generated/model'
-import { normalizeDecimalInput, validateAmountInput, validateFxRateInput } from '@/utils/financialDecimal'
-import { dateOnlyToLocalDateTimeInput, instantToLocalDateTimeInput, localDateTimeInputToInstant } from '@/utils/localDateTime'
+import {
+  normalizeDecimalInput,
+  validateAmountInput,
+  validateFxRateInput,
+} from '@/utils/financialDecimal'
+import {
+  dateOnlyToLocalDateTimeInput,
+  instantToLocalDateTimeInput,
+  localDateTimeInputToInstant,
+} from '@/utils/localDateTime'
 
 const props = defineProps<{
   extraction: ReceiptExtractionResponse
@@ -21,10 +33,8 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-const {
-  categoriseMerchant,
-  forgetMerchantCategoryPreference,
-} = useMerchantCategorisation()
+const { categoriseMerchant, forgetMerchantCategoryPreference } =
+  useMerchantCategorisation()
 
 const amount = ref(props.extraction.extractedData.total)
 const currency = ref(props.extraction.extractedData.currency)
@@ -43,9 +53,11 @@ const occurredAt = ref(
 )
 
 const showFxRate = computed(() => currency.value !== 'MYR')
-const fieldsNeedingReview = computed(() => props.extraction.extractedData.fieldsNeedingReview ?? [])
-const canRememberMerchantCategory = computed(() =>
-  merchantName.value.trim().length > 0 && categoryId.value.length > 0
+const fieldsNeedingReview = computed(
+  () => props.extraction.extractedData.fieldsNeedingReview ?? []
+)
+const canRememberMerchantCategory = computed(
+  () => merchantName.value.trim().length > 0 && categoryId.value.length > 0
 )
 
 const categorisation = ref<CategorisationResult | null>(null)
@@ -62,11 +74,19 @@ async function fetchCategorisation(name: string) {
   }
   try {
     const result = await categoriseMerchant(requestedMerchant)
-    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
+    if (
+      generation !== categorisationGeneration ||
+      merchantName.value.trim() !== requestedMerchant
+    )
+      return
     categorisation.value = result
     categorisationStatus.value = ''
   } catch (err) {
-    if (generation !== categorisationGeneration || merchantName.value.trim() !== requestedMerchant) return
+    if (
+      generation !== categorisationGeneration ||
+      merchantName.value.trim() !== requestedMerchant
+    )
+      return
     categorisation.value = null
     logger.error('Failed to fetch merchant categorisation', err)
   }
@@ -76,9 +96,11 @@ async function forgetPreference(merchantId: string) {
   try {
     await forgetMerchantCategoryPreference(merchantId)
     await fetchCategorisation(merchantName.value)
-    categorisationStatus.value = 'Saved merchant category forgotten. The category selected for this receipt was kept.'
+    categorisationStatus.value =
+      'Saved merchant category forgotten. The category selected for this receipt was kept.'
   } catch (err) {
-    categorisationStatus.value = 'Could not forget the saved merchant category. It is still unchanged.'
+    categorisationStatus.value =
+      'Could not forget the saved merchant category. It is still unchanged.'
     logger.error('Failed to forget merchant category preference', err)
   }
 }
@@ -144,10 +166,10 @@ function formatReviewField(field: string) {
 </script>
 
 <template>
-  <div
-    class="space-y-5"
-  >
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+  <div class="space-y-5">
+    <div
+      class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+    >
       <div>
         <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
           Review before saving
@@ -161,10 +183,16 @@ function formatReviewField(field: string) {
         :class="{
           'bg-emerald-50 text-emerald-700': extraction.confidence === 'high',
           'bg-amber-50 text-amber-700': extraction.confidence === 'medium',
-          'bg-red-50 text-red-700': extraction.confidence === 'low'
+          'bg-red-50 text-red-700': extraction.confidence === 'low',
         }"
       >
-        {{ extraction.confidence === 'high' ? 'High confidence' : extraction.confidence === 'medium' ? 'Review carefully' : 'Verify fields' }}
+        {{
+          extraction.confidence === 'high'
+            ? 'High confidence'
+            : extraction.confidence === 'medium'
+              ? 'Review carefully'
+              : 'Verify fields'
+        }}
       </div>
     </div>
 
@@ -172,9 +200,7 @@ function formatReviewField(field: string) {
       v-if="fieldsNeedingReview.length > 0"
       class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
     >
-      <p class="font-black">
-        Please verify these fields before saving:
-      </p>
+      <p class="font-black">Please verify these fields before saving:</p>
       <div class="mt-2 flex flex-wrap gap-2">
         <span
           v-for="field in fieldsNeedingReview"
@@ -190,7 +216,9 @@ function formatReviewField(field: string) {
       v-if="extraction.extractedData.lineItems.length > 0"
       class="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4"
     >
-      <div class="mb-3 flex justify-between px-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <div
+        class="mb-3 flex justify-between px-1 text-[10px] font-black uppercase tracking-widest text-slate-400"
+      >
         <span>Item</span>
         <span>Total</span>
       </div>
@@ -208,15 +236,15 @@ function formatReviewField(field: string) {
               {{ item.qty }} x {{ formatCurrency(item.unitPrice, currency) }}
             </p>
           </div>
-          <span class="shrink-0 text-sm font-black tabular-nums text-slate-950">{{ formatCurrency(item.lineTotal, currency) }}</span>
+          <span
+            class="shrink-0 text-sm font-black tabular-nums text-slate-950"
+            >{{ formatCurrency(item.lineTotal, currency) }}</span
+          >
         </div>
       </div>
     </div>
 
-    <form
-      class="space-y-4"
-      @submit.prevent="handleConfirm"
-    >
+    <form class="space-y-4" @submit.prevent="handleConfirm">
       <p
         v-if="financialError"
         role="alert"
@@ -234,14 +262,11 @@ function formatReviewField(field: string) {
             autocomplete="off"
             required
             class="receipt-input"
-          >
+          />
         </div>
         <div>
           <label class="receipt-label">Currency</label>
-          <select
-            v-model="currency"
-            class="receipt-input px-3"
-          >
+          <select v-model="currency" class="receipt-input px-3">
             <option>MYR</option>
             <option>SGD</option>
             <option>IDR</option>
@@ -260,7 +285,7 @@ function formatReviewField(field: string) {
           autocomplete="off"
           required
           class="receipt-input"
-        >
+        />
       </div>
 
       <div>
@@ -270,24 +295,14 @@ function formatReviewField(field: string) {
           type="text"
           placeholder="e.g. Kopitiam"
           class="receipt-input"
-        >
+        />
       </div>
 
       <div>
         <label class="receipt-label">Category</label>
-        <select
-          v-model="categoryId"
-          required
-          class="receipt-input bg-white"
-        >
-          <option value="">
-            Select category
-          </option>
-          <option
-            v-for="cat in categories"
-            :key="cat.id"
-            :value="cat.id"
-          >
+        <select v-model="categoryId" required class="receipt-input bg-white">
+          <option value="">Select category</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">
             {{ cat.name }}
           </option>
         </select>
@@ -317,17 +332,15 @@ function formatReviewField(field: string) {
           v-model="rememberMerchantCategory"
           type="checkbox"
           class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span
+          >Use this category for future transactions from this merchant</span
         >
-        <span>Use this category for future transactions from this merchant</span>
       </label>
 
       <div>
         <label class="receipt-label">Description</label>
-        <input
-          v-model="description"
-          type="text"
-          class="receipt-input"
-        >
+        <input v-model="description" type="text" class="receipt-input" />
       </div>
 
       <div>
@@ -337,7 +350,7 @@ function formatReviewField(field: string) {
           type="datetime-local"
           required
           class="receipt-input bg-white"
-        >
+        />
       </div>
 
       <div class="grid grid-cols-[0.8fr_1.2fr] gap-3 pt-2">
@@ -374,14 +387,26 @@ function formatReviewField(field: string) {
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
-  border: 1px solid #D2CEC5;
+  border: 1px solid #d2cec5;
   border-radius: 9px;
   background: white;
   color: var(--ink);
   font-size: 14px;
   font-weight: 400;
 }
-.receipt-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-form button[type="submit"] { border-radius: 9px; background: var(--accent); box-shadow: none; font-weight: 600; }
-form button[type="button"] { border-radius: 9px; box-shadow: none; font-weight: 600; }
+.receipt-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+form button[type='submit'] {
+  border-radius: 9px;
+  background: var(--accent);
+  box-shadow: none;
+  font-weight: 600;
+}
+form button[type='button'] {
+  border-radius: 9px;
+  box-shadow: none;
+  font-weight: 600;
+}
 </style>

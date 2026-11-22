@@ -8,15 +8,57 @@ export default {
   theme: {
     extend: {
       colors: {
+        paper: '#F7F5F0',
+        surface: '#FFFFFF',
+        sunken: '#EFECE5',
+        line: {
+          DEFAULT: '#E4E0D7',
+          strong: '#D6D1C6',
+        },
+        ink: {
+          DEFAULT: '#1C1B19',
+          2: '#57534C',
+          3: '#6E6A62',
+        },
+        pandan: {
+          DEFAULT: '#0E5A52',
+          deep: '#0A4540',
+          tint: '#E2EEEA',
+        },
+        saffron: {
+          DEFAULT: '#D9A23A',
+          tint: '#FBF0D9',
+        },
+        positive: {
+          DEFAULT: '#2E7048',
+          tint: '#E4F1E8',
+        },
+        caution: {
+          DEFAULT: '#8F5B00',
+          tint: '#FAEFD6',
+        },
+        unusual: {
+          DEFAULT: '#A3421A',
+          tint: '#F9E6DC',
+        },
+        cat: {
+          food: '#C9772E',
+          shopping: '#A0566E',
+          groceries: '#4C8466',
+          transport: '#3F6C98',
+          bills: '#4F4778',
+          fun: '#6B5A1A',
+          other: '#B5AFA4',
+        },
         duit: {
-          primary: "#0E5A52",
-          dark: "#1C1B19",
-          mid: "#57534C",
-          light: "#E2EEEA",
-          success: "#2E7048",
-          warning: "#8F5B00",
-          danger: "#B3261E",
-          purple: "#7468A0",
+          primary: '#0E5A52',
+          dark: '#1C1B19',
+          mid: '#57534C',
+          light: '#E2EEEA',
+          success: '#2E7048',
+          warning: '#8F5B00',
+          danger: '#B3261E',
+          purple: '#7468A0',
         },
         slate: {
           50: '#F7F5F0', 100: '#EFECE5', 200: '#E4E0D7', 300: '#D6D1C6',

@@ -79,7 +79,7 @@ test('receipt review confirmation adds the generated transaction to the feed', a
     buffer: Buffer.from('receipt image bytes'),
   })
   await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: /Add an expense/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: /Add an expense/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Review receipt details' })).toBeVisible()
   await expect(page.getByPlaceholder('e.g. Kopitiam')).toHaveValue('Receipt Cafe')
@@ -166,15 +166,15 @@ test('bill owner and guest split lifecycle uses guest idempotency and external s
   await page.screenshot({ path: '/private/tmp/duit-owner-split.png', fullPage: true })
 
   await page.goto('/guest/bills/share-token-1')
-  await expect(page.getByRole('heading', { name: 'Join this split' })).toBeVisible()
-  await page.getByPlaceholder('e.g. Aina').fill('Alex')
+  await expect(page.getByRole('heading', { name: 'Which one is you?' })).toBeVisible()
+  await page.getByLabel('Your name').fill('Alex')
   await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByText('Choose your items')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'What did you have?' })).toBeVisible()
   await page.screenshot({ path: '/private/tmp/duit-guest-split.png', fullPage: true })
   expect(joinIdempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
 
   await page.getByRole('button', { name: /Nasi lemak/ }).click()
-  await page.getByRole('button', { name: 'Save my items' }).click()
+  await page.getByRole('button', { name: 'Confirm my share' }).click()
   await expect(page.locator('.split-total-main')).toContainText('Your share')
   expect(selectPayload).toMatchObject({
     participantToken: 'participant-token-1',

@@ -22,24 +22,32 @@ watch(
   () => store.upload,
   (upload) => {
     selectedIds.value = new Set(
-      upload?.rows
-        .filter(isImportableExpense)
-        .map((row) => row.id) ?? [],
+      upload?.rows.filter(isImportableExpense).map((row) => row.id) ?? []
     )
     for (const row of upload?.rows ?? []) {
       categoryOverrides[row.id] = row.suggestedCategoryId ?? ''
     }
   },
-  { immediate: true },
+  { immediate: true }
 )
 
-const pendingRows = computed(() => store.upload?.rows.filter((row) => row.status === 'pending') ?? [])
-const selectedTotal = computed(() => addDecimalStrings(
-  pendingRows.value.filter(row => selectedIds.value.has(row.id)).map(row => row.amount),
-))
+const pendingRows = computed(
+  () => store.upload?.rows.filter((row) => row.status === 'pending') ?? []
+)
+const selectedTotal = computed(() =>
+  addDecimalStrings(
+    pendingRows.value
+      .filter((row) => selectedIds.value.has(row.id))
+      .map((row) => row.amount)
+  )
+)
 
 function isImportableExpense(row: StatementRow) {
-  return row.status === 'pending' && row.direction === 'debit' && row.currency === 'MYR'
+  return (
+    row.status === 'pending' &&
+    row.direction === 'debit' &&
+    row.currency === 'MYR'
+  )
 }
 
 async function handleFile(event: Event) {
@@ -78,7 +86,9 @@ async function confirmImport() {
     }))
   try {
     await store.confirmRows(rows)
-    await transactionStore.reconcileAfterFinancialMutation({ refreshTransactions: true })
+    await transactionStore.reconcileAfterFinancialMutation({
+      refreshTransactions: true,
+    })
   } catch {
     // Store exposes the API error.
   }
@@ -113,35 +123,31 @@ function money(row: StatementRow) {
       description="Upload a statement, review every parsed row, then import only the transactions you choose."
     />
 
-    <ErrorBanner
-      class="mb-6"
-      :message="store.error"
-    />
-    <ErrorBanner
-      class="mb-6"
-      :message="store.refreshError"
-    />
+    <ErrorBanner class="mb-6" :message="store.error" />
+    <ErrorBanner class="mb-6" :message="store.refreshError" />
 
     <section
       v-if="!store.upload"
       class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white p-6 text-center shadow-sm md:p-12"
     >
-      <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+      <div
+        class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700"
+      >
         <svg
           class="h-8 w-8"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6"
-        /></svg>
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M7 3h7l5 5v13H7V3zm7 0v6h5M10 13h6m-6 4h6"
+          />
+        </svg>
       </div>
-      <h2 class="text-xl font-bold text-slate-900">
-        Choose a PDF statement
-      </h2>
+      <h2 class="text-xl font-bold text-slate-900">Choose a PDF statement</h2>
       <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
         Maximum 10 MB. Raw PDF text is discarded after draft rows are created.
       </p>
@@ -158,7 +164,7 @@ function money(row: StatementRow) {
         accept="application/pdf,.pdf"
         class="hidden"
         @change="handleFile"
-      >
+      />
       <button
         type="button"
         class="mt-6 min-h-11 rounded-2xl bg-blue-600 px-6 py-3 font-black text-white shadow-lg shadow-blue-200 disabled:opacity-60"
@@ -174,22 +180,23 @@ function money(row: StatementRow) {
         v-if="store.result"
         class="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-6"
       >
-        <h2 class="text-lg font-bold text-emerald-800">
-          Import complete
-        </h2>
+        <h2 class="text-lg font-bold text-emerald-800">Import complete</h2>
         <p class="mt-1 text-sm text-emerald-700">
           {{ store.result.importedCount }} transactions imported and
           {{ store.result.skippedCount }} rows skipped.
         </p>
       </section>
 
-      <div class="mb-6 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div
+        class="mb-6 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+      >
         <div class="min-w-0">
           <p class="truncate font-black text-slate-900">
             {{ store.upload.fileName }}
           </p>
           <p class="text-sm text-slate-500">
-            {{ store.upload.rows.length }} parsed rows · {{ selectedIds.size }} selected
+            {{ store.upload.rows.length }} parsed rows ·
+            {{ selectedIds.size }} selected
           </p>
         </div>
         <button
@@ -197,26 +204,26 @@ function money(row: StatementRow) {
           class="min-h-10 rounded-2xl px-3 text-sm font-black text-slate-500 hover:bg-red-50 hover:text-red-600"
           @click="store.discardUpload"
         >
-          {{ store.upload.status === 'pending' ? 'Discard draft' : 'Import another' }}
+          {{
+            store.upload.status === 'pending'
+              ? 'Discard draft'
+              : 'Import another'
+          }}
         </button>
       </div>
 
-      <div class="hidden overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm md:block">
+      <div
+        class="hidden overflow-x-auto rounded-[2rem] border border-slate-200 bg-white shadow-sm min-[1080px]:block"
+      >
         <table class="w-full text-left">
-          <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+          <thead
+            class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"
+          >
             <tr>
-              <th class="p-4">
-                Import
-              </th>
-              <th class="p-4">
-                Transaction
-              </th>
-              <th class="p-4">
-                Category
-              </th>
-              <th class="p-4 text-right">
-                Amount
-              </th>
+              <th class="p-4">Import</th>
+              <th class="p-4">Transaction</th>
+              <th class="p-4">Category</th>
+              <th class="p-4 text-right">Amount</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -232,7 +239,7 @@ function money(row: StatementRow) {
                   :checked="selectedIds.has(row.id)"
                   :disabled="!isImportableExpense(row)"
                   @change="toggle(row)"
-                >
+                />
               </td>
               <td class="p-4">
                 <p class="max-w-xs truncate font-semibold text-slate-900">
@@ -263,9 +270,7 @@ function money(row: StatementRow) {
                   class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                   :disabled="row.status !== 'pending'"
                 >
-                  <option value="">
-                    No category
-                  </option>
+                  <option value="">No category</option>
                   <option
                     v-for="category in transactionStore.categories"
                     :key="category.id"
@@ -284,18 +289,24 @@ function money(row: StatementRow) {
               <td class="p-4 text-right">
                 <p
                   class="font-bold"
-                  :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'"
+                  :class="
+                    row.direction === 'credit'
+                      ? 'text-emerald-600'
+                      : 'text-slate-900'
+                  "
                 >
                   {{ row.direction === 'credit' ? '+' : '−' }}{{ money(row) }}
                 </p>
-                <span class="text-xs uppercase text-slate-400">{{ row.status }}</span>
+                <span class="text-xs uppercase text-slate-400">{{
+                  row.status
+                }}</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="space-y-4 md:hidden">
+      <div class="space-y-4 min-[1080px]:hidden">
         <article
           v-for="row in store.upload.rows"
           :key="row.id"
@@ -309,14 +320,18 @@ function money(row: StatementRow) {
               :checked="selectedIds.has(row.id)"
               :disabled="!isImportableExpense(row)"
               @change="toggle(row)"
-            >
+            />
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-3">
                 <p class="min-w-0 truncate font-black text-slate-900">
                   {{ row.merchantName }}
                 </p>
                 <p
-                  :class="row.direction === 'credit' ? 'text-emerald-600' : 'text-slate-900'"
+                  :class="
+                    row.direction === 'credit'
+                      ? 'text-emerald-600'
+                      : 'text-slate-900'
+                  "
                   class="shrink-0 text-right font-black tabular-nums"
                 >
                   {{ row.direction === 'credit' ? '+' : '−' }}{{ money(row) }}
@@ -345,9 +360,7 @@ function money(row: StatementRow) {
                 class="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                 :disabled="row.status !== 'pending'"
               >
-                <option value="">
-                  No category
-                </option>
+                <option value="">No category</option>
                 <option
                   v-for="category in transactionStore.categories"
                   :key="category.id"
@@ -369,12 +382,10 @@ function money(row: StatementRow) {
 
       <div
         v-if="store.upload.status === 'pending'"
-        class="sticky bottom-24 mt-8 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between md:bottom-4"
+        class="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] mt-8 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between min-[861px]:bottom-4"
       >
         <div>
-          <p class="text-sm text-slate-500">
-            Selected debit total
-          </p>
+          <p class="text-sm text-slate-500">Selected debit total</p>
           <p class="text-xl font-bold text-slate-900">
             {{ formatCurrency(selectedTotal, 'MYR') }}
           </p>
@@ -385,7 +396,9 @@ function money(row: StatementRow) {
           :disabled="selectedIds.size === 0 || store.confirming"
           @click="confirmImport"
         >
-          {{ store.confirming ? 'Importing…' : `Import ${selectedIds.size} rows` }}
+          {{
+            store.confirming ? 'Importing…' : `Import ${selectedIds.size} rows`
+          }}
         </button>
       </div>
     </template>

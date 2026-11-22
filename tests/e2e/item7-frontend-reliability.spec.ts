@@ -3,7 +3,7 @@ import { expect, test, type Browser, type Page, type Route } from '@playwright/t
 const userA = authUser('user-a', 'a@example.test', 'User A')
 const userB = authUser('user-b', 'b@example.test', 'User B')
 
-test('cross-user insight cache is cleared before a second user sees delayed data', async ({ page }) => {
+test('cross-user category summary cache is cleared before a second user sees delayed data', async ({ page }) => {
   let activeUser: typeof userA | typeof userB | null = null
   let releaseUserBInsights!: () => void
   const userBInsightsGate = new Promise<void>((resolve) => {
@@ -26,16 +26,15 @@ test('cross-user insight cache is cleared before a second user sees delayed data
       activeUser = null
       return route.fulfill(ok({}))
     }
-    if (path === '/insights') {
+    if (path === '/transactions/summary/monthly') {
       if (activeUser?.id === userB.id) await userBInsightsGate
       return route.fulfill(ok(activeUser?.id === userB.id
-        ? [insight('user-b-insight', 'USER_B_PRIVATE_INSIGHT')]
-        : [insight('user-a-insight', 'USER_A_PRIVATE_INSIGHT')]))
+        ? privateSummary('USER_B_PRIVATE_CATEGORY')
+        : privateSummary('USER_A_PRIVATE_CATEGORY')))
     }
     if (path === '/anomalies') return route.fulfill(ok([]))
     if (path === '/categories') return route.fulfill(ok([]))
     if (path === '/transactions') return route.fulfill(ok(emptyTransactionPage()))
-    if (path === '/transactions/summary/monthly') return route.fulfill(ok(monthlySummary()))
     if (path === '/gmail/status') return route.fulfill(ok(gmailDisconnected()))
     if (path.startsWith('/payment-qr-profiles') || path.startsWith('/bills') || path.startsWith('/statements')) {
       return route.fulfill(ok([]))
@@ -46,24 +45,24 @@ test('cross-user insight cache is cleared before a second user sees delayed data
   await startAtLogin(page)
   await submitLogin(page, userA.email)
   await spaNavigate(page, '/insights')
-  await expect(page.getByRole('heading', { name: 'USER_A_PRIVATE_INSIGHT' })).toBeVisible()
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY', { exact: true })).toBeVisible()
 
   await spaNavigate(page, '/settings')
-  await page.getByRole('button', { name: /Log out/ }).click()
+  await page.getByRole('button', { name: /Sign out/ }).click()
   await expect(page).toHaveURL(/\/login/)
 
   await submitLogin(page, userB.email)
   await spaNavigate(page, '/insights')
 
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
-  await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_CATEGORY')).toHaveCount(0)
 
   releaseUserBInsights()
-  await expect(page.getByRole('heading', { name: 'USER_B_PRIVATE_INSIGHT' })).toBeVisible()
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_CATEGORY', { exact: true })).toBeVisible()
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
 })
 
-test('in-flight user A insight response cannot commit after user B logs in within the same SPA runtime', async ({ page }) => {
+test('in-flight user A category summary response cannot commit after user B logs in within the same SPA runtime', async ({ page }) => {
   let activeUser: typeof userA | typeof userB | null = null
   let releaseUserAInsights!: () => void
   let releaseUserBInsights!: () => void
@@ -90,22 +89,21 @@ test('in-flight user A insight response cannot commit after user B logs in withi
       activeUser = null
       return route.fulfill(ok({}))
     }
-    if (path === '/insights') {
+    if (path === '/transactions/summary/monthly') {
       const requestOwnerAtRequestStart = activeUser?.id
       if (requestOwnerAtRequestStart === userA.id) {
         await userAInsightsGate
-        return route.fulfill(ok([insight('user-a-insight', 'USER_A_PRIVATE_INSIGHT')]))
+        return route.fulfill(ok(privateSummary('USER_A_PRIVATE_CATEGORY')))
       }
       if (requestOwnerAtRequestStart === userB.id) {
         await userBInsightsGate
-        return route.fulfill(ok([insight('user-b-insight', 'USER_B_PRIVATE_INSIGHT')]))
+        return route.fulfill(ok(privateSummary('USER_B_PRIVATE_CATEGORY')))
       }
       return route.fulfill(ok([]))
     }
     if (path === '/anomalies') return route.fulfill(ok([]))
     if (path === '/categories') return route.fulfill(ok([]))
     if (path === '/transactions') return route.fulfill(ok(emptyTransactionPage()))
-    if (path === '/transactions/summary/monthly') return route.fulfill(ok(monthlySummary()))
     if (path === '/gmail/status') return route.fulfill(ok(gmailDisconnected()))
     if (path.startsWith('/payment-qr-profiles') || path.startsWith('/bills') || path.startsWith('/statements')) {
       return route.fulfill(ok([]))
@@ -116,25 +114,25 @@ test('in-flight user A insight response cannot commit after user B logs in withi
   await startAtLogin(page)
   await submitLogin(page, userA.email)
   await spaNavigate(page, '/insights')
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
 
   await spaNavigate(page, '/settings')
-  await page.getByRole('button', { name: /Log out/ }).click()
+  await page.getByRole('button', { name: /Sign out/ }).click()
   await expect(page).toHaveURL(/\/login/)
 
   await submitLogin(page, userB.email)
   await spaNavigate(page, '/insights')
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
-  await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_CATEGORY')).toHaveCount(0)
 
   releaseUserAInsights()
   await page.waitForTimeout(100)
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
-  await expect(page.getByText('USER_B_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_CATEGORY')).toHaveCount(0)
 
   releaseUserBInsights()
-  await expect(page.getByRole('heading', { name: 'USER_B_PRIVATE_INSIGHT' })).toBeVisible()
-  await expect(page.getByText('USER_A_PRIVATE_INSIGHT')).toHaveCount(0)
+  await expect(page.getByText('USER_B_PRIVATE_CATEGORY', { exact: true })).toBeVisible()
+  await expect(page.getByText('USER_A_PRIVATE_CATEGORY')).toHaveCount(0)
 })
 
 test('owner bill with long content has no horizontal page overflow at audited mobile widths', async ({ page }) => {
@@ -287,30 +285,10 @@ function authResponse(user: ReturnType<typeof authUser>) {
   }
 }
 
-function insight(id: string, title: string) {
+function privateSummary(categoryName: string) {
   return {
-    id,
-    title,
-    periodStart: '2026-08-01',
-    periodEnd: '2026-08-07',
-    generatedAt: '2026-08-08T00:00:00Z',
-    content: {
-      headline: title,
-      summary: title,
-      totalSpent: '12.0000',
-      currency: 'MYR',
-      comparisonPercentage: 0,
-      spendingTrend: { direction: 'STABLE' },
-      recommendation: 'Review spending signals.',
-      recommendations: ['Review spending signals.'],
-      positiveNote: 'Records are up to date.',
-      riskLevel: 'LOW',
-      topCategories: [],
-      topMerchants: [],
-      largestTransactions: [],
-      findings: [],
-      unusualIncreases: [],
-    },
+    totalSpend: '12.0000', currency: 'MYR', transactionCount: 1,
+    byCategory: [{ categoryName, total: '12.0000', percentage: '100', count: 1 }],
   }
 }
 

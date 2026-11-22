@@ -8,8 +8,177 @@ import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
 const anomalyStore = useAnomalyStore()
 const { anomalies, loading, resolvingIds, error } = storeToRefs(anomalyStore)
 const expanded = ref<string | null>(null)
-onMounted(() => { void anomalyStore.fetchAnomalies() })
-async function resolve(id: string, action: 'confirm' | 'dismiss') { try { await anomalyStore.resolveAnomaly(id, action); expanded.value = null } catch { /* Store displays the error. */ } }
+onMounted(() => {
+  void anomalyStore.fetchAnomalies()
+})
+async function resolve(id: string, action: 'confirm' | 'dismiss') {
+  try {
+    await anomalyStore.resolveAnomaly(id, action)
+    expanded.value = null
+  } catch {
+    /* Store displays the error. */
+  }
+}
 </script>
-<template><div class="anomaly-list"><LoadingSkeleton v-if="loading && !anomalies.length" :rows="2" variant="list" /><ErrorBanner v-if="error" :message="error" action-label="Try again" @action="anomalyStore.fetchAnomalies" /><p v-if="!loading && !anomalies.length && !error" class="anomaly-empty">Nothing unusual needs a review right now.</p><article v-for="alert in anomalies" :id="`alert-${alert.id}`" :key="alert.id" class="anomaly-row"><button type="button" class="anomaly-open" :aria-expanded="expanded === alert.id" @click="expanded = expanded === alert.id ? null : alert.id"><span class="anomaly-mark" aria-hidden="true">!</span><span class="anomaly-info"><strong>{{ alert.merchantName || 'Transaction' }}</strong><small>{{ alert.status === 'pending' ? 'Unusual for you' : alert.status === 'confirmed' ? 'Reviewed' : 'Expected' }} · {{ alert.categoryName }}</small></span><b>{{ formatCurrency(alert.amount, alert.currency) }}</b></button><div v-if="expanded === alert.id" class="anomaly-detail"><p>{{ alert.explanation }}</p><p class="anomaly-disclaimer">This is based on your past spending patterns. It is not a fraud determination.</p><div v-if="alert.status === 'pending'" class="anomaly-actions"><button type="button" :disabled="resolvingIds.has(alert.id)" @click="resolve(alert.id, 'dismiss')">This was expected</button><button type="button" :disabled="resolvingIds.has(alert.id)" @click="resolve(alert.id, 'confirm')">Keep flagged</button></div></div></article></div></template>
-<style scoped>.anomaly-list{border-top:1px solid var(--rule)}.anomaly-empty{margin:0;padding:18px 0;color:var(--muted);font-size:13px}.anomaly-row{border-bottom:1px solid var(--rule)}.anomaly-open{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 0;border:0;background:transparent;color:var(--ink);text-align:left}.anomaly-mark{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:10px;background:#FAEFD6;color:#806327;font-weight:600}.anomaly-info{display:flex;flex:1;flex-direction:column;min-width:0;gap:3px}.anomaly-info strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}.anomaly-info small{color:var(--muted);font-size:12px}.anomaly-open b{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}.anomaly-detail{padding:0 0 16px 50px}.anomaly-detail p{margin:0 0 8px;color:var(--muted);font-size:13px;line-height:20px}.anomaly-detail .anomaly-disclaimer{font-size:11px}.anomaly-actions{display:flex;gap:8px;margin-top:14px}.anomaly-actions button{min-height:42px;padding:0 11px;border:1px solid var(--rule);border-radius:9px;background:#fff;color:var(--accent);font-size:12px;font-weight:600}.anomaly-actions button:last-child{background:var(--accent);border-color:var(--accent);color:#fff}.anomaly-actions button:disabled{opacity:.5}</style>
+<template>
+  <div class="anomaly-list">
+    <LoadingSkeleton
+      v-if="loading && !anomalies.length"
+      :rows="2"
+      variant="list"
+    /><ErrorBanner
+      v-if="error"
+      :message="error"
+      action-label="Try again"
+      @action="anomalyStore.fetchAnomalies"
+    />
+    <p v-if="!loading && !anomalies.length && !error" class="anomaly-empty">
+      Nothing unusual needs a review right now.
+    </p>
+    <article
+      v-for="alert in anomalies"
+      :id="`alert-${alert.id}`"
+      :key="alert.id"
+      class="anomaly-row"
+    >
+      <button
+        type="button"
+        class="anomaly-open"
+        :aria-expanded="expanded === alert.id"
+        @click="expanded = expanded === alert.id ? null : alert.id"
+      >
+        <span class="anomaly-mark" aria-hidden="true">!</span
+        ><span class="anomaly-info"
+          ><strong>{{ alert.merchantName || 'Transaction' }}</strong
+          ><small
+            >{{
+              alert.status === 'pending'
+                ? 'Unusual for you'
+                : alert.status === 'confirmed'
+                  ? 'Reviewed'
+                  : 'Expected'
+            }}
+            · {{ alert.categoryName }}</small
+          ></span
+        ><b>{{ formatCurrency(alert.amount, alert.currency) }}</b>
+      </button>
+      <div v-if="expanded === alert.id" class="anomaly-detail">
+        <p>{{ alert.explanation }}</p>
+        <p class="anomaly-disclaimer">
+          This is based on your past spending patterns. It is not a fraud
+          determination.
+        </p>
+        <div v-if="alert.status === 'pending'" class="anomaly-actions">
+          <button
+            type="button"
+            :disabled="resolvingIds.has(alert.id)"
+            @click="resolve(alert.id, 'dismiss')"
+          >
+            This was expected</button
+          ><button
+            type="button"
+            :disabled="resolvingIds.has(alert.id)"
+            @click="resolve(alert.id, 'confirm')"
+          >
+            Keep flagged
+          </button>
+        </div>
+      </div>
+    </article>
+  </div>
+</template>
+<style scoped>
+.anomaly-list {
+  border-top: 1px solid var(--rule);
+}
+.anomaly-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.anomaly-row {
+  border-bottom: 1px solid var(--rule);
+}
+.anomaly-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.anomaly-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  background: #faefd6;
+  color: #806327;
+  font-weight: 600;
+}
+.anomaly-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+.anomaly-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+.anomaly-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.anomaly-open b {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.anomaly-detail {
+  padding: 0 0 16px 50px;
+}
+.anomaly-detail p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.anomaly-detail .anomaly-disclaimer {
+  font-size: 11px;
+}
+.anomaly-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.anomaly-actions button {
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.anomaly-actions button:last-child {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.anomaly-actions button:disabled {
+  opacity: 0.5;
+}
+</style>
