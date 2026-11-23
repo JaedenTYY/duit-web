@@ -25,24 +25,22 @@
     "sbom:all": "npm run sbom:prepare && npm sbom --sbom-format=cyclonedx > build/reports/sbom/duit-web-all.cdx.json"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.2",
+    "@capacitor/android": "^8.4.3",
     "@capacitor/core": "^8.4.2",
-    "@capacitor/ios": "^8.4.2",
+    "@capacitor/ios": "^8.4.3",
     "@primeuix/themes": "2.0.3",
     "@tanstack/vue-query": "^5.0.0",
-    "@vee-validate/zod": "^4.12.5",
     "@vueuse/core": "^10.0.0",
-    "axios": "^1.18.1",
+    "axios": "^1.20.0",
     "chart.js": "^4.5.1",
     "gsap": "^3.12.0",
     "pinia": "^2.1.0",
     "primevue": "^4.0.0",
     "qrcode": "^1.5.4",
     "vee-validate": "^4.12.5",
-    "vue": "^3.4.0",
+    "vue": "^3.5.42",
     "vue-chartjs": "^5.3.3",
-    "vue-router": "^4.3.0",
-    "zod": "^3.22.4"
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
@@ -66,12 +64,12 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.9.3",
     "unplugin-icons": "^23.0.1",
-    "vite": "^8.1.5",
+    "vite": "^8.1.6",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.3.8"
   },
   "overrides": {
-    "brace-expansion": "5.0.9",
+    "brace-expansion": "5.0.12",
     "js-yaml": "4.3.2",
     "js-beautify": {
       "editorconfig": "3.0.2",

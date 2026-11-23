@@ -21,7 +21,7 @@ Dependency integrity, SBOMs, scanning, and update policy are documented in
 - Pinia for in-memory access-token and authenticated-user state
 - Orval-generated API clients from the backend OpenAPI contract
 - Axios with a shared bearer-token interceptor
-- vee-validate and zod for form validation
+- vee-validate for form validation
 - PrimeVue and Tailwind CSS for UI implementation
 - Playwright for browser smoke tests
 - Capacitor for Android and iOS native shells
@@ -37,7 +37,7 @@ flowchart LR
         App["Vue app shell"]
         Router["Vue Router"]
         Views["Route views"]
-        Forms["vee-validate + zod"]
+        Forms["vee-validate"]
         Query["Vue Query"]
         Store["Pinia client state"]
         Generated["Orval generated API"]
@@ -70,7 +70,7 @@ flowchart LR
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | Vue views/components | Rendering, interaction flow, local UI state | Persisted financial truth |
-| vee-validate/zod | Client-side input constraints before API calls | Authorization or final business validation |
+| vee-validate | Client-side input constraints before API calls | Authorization or final business validation |
 | Vue Query | Server state reads, mutations, cache invalidation | Browser-session authority |
 | Pinia | In-memory access token, authenticated user, client-only flags | Transactions, bills, receipts as independent truth |
 | Orval generated client | Typed endpoint functions from OpenAPI | Hand-written business rules |
@@ -92,7 +92,7 @@ the browser.
 sequenceDiagram
     actor User
     participant View as Login/Register View
-    participant Form as vee-validate + zod
+    participant Form as vee-validate
     participant Query as Vue Query Mutation
     participant Client as Orval API Function
     participant Axios as Axios Mutator
