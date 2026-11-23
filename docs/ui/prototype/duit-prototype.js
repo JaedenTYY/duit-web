@@ -71,7 +71,7 @@ const participants = [
 ]
 
 const state = {
-  view: location.hash.slice(1) || 'home',
+  view: 'home',
   sheet: null,
   toast: null,
   transactions: structuredClone(initialTransactions),
@@ -264,7 +264,12 @@ function onboarding() {
 
 function auth() { return `<div class="screen no-nav"><div class="auth-panel"><div class="brand-logo">du<span class="dot">ı</span>t</div><h1>${state.authMode==='login'?'Good to see you':'Create your Duit account'}</h1><p>Keep your spending clear and your shared bills simple.</p><label class="field"><span class="field-label">Email</span><input class="field-control" type="email" placeholder="you@example.com" autocomplete="email"></label><label class="field"><span class="field-label">Password</span><input class="field-control" type="password" placeholder="Your password" autocomplete="${state.authMode==='login'?'current-password':'new-password'}"></label><button type="button" class="button primary" data-action="auth-demo">${state.authMode==='login'?'Sign in':'Create account'}</button><button type="button" class="button tertiary" data-action="auth-toggle">${state.authMode==='login'?'New to Duit? Sign up':'Already have an account? Sign in'}</button><p class="prototype-note">Authentication preview only. This page does not submit credentials.</p></div></div>` }
 
-const screenFor = () => ({ home, activity, detail, scan, processing, review, splits, bill, guest, insights, 'insight-detail': insightDetail, progress, badges, notifications, onboarding, auth })[state.view]?.() || home()
+const screens = Object.freeze({ home, activity, detail, scan, processing, review, splits, bill, guest, insights, 'insight-detail': insightDetail, progress, badges, notifications, onboarding, auth })
+const validView = view => Object.hasOwn(screens, view)
+function screenFor() {
+  if (!validView(state.view)) return home()
+  return screens[state.view]()
+}
 
 function sheetContent() {
   if (!state.sheet) return ''
@@ -293,6 +298,7 @@ function render() {
 }
 
 function navigate(view) {
+  if (!validView(view)) return
   state.sheet = null
   state.view = view
   location.hash = view
@@ -370,9 +376,22 @@ document.addEventListener('click', async event => {
 
 document.addEventListener('input', event => {
   const input=event.target
-  if (input.dataset.model) { state[input.dataset.model]=input.value; if (input.dataset.model==='query') render() }
-  if (input.dataset.receipt) state.receipt[input.dataset.receipt]=input.value
+  if (!(input instanceof HTMLInputElement)) return
+  // Only form text fields may receive DOM values; never overwrite render state.
+  switch (input.dataset.model) {
+    case 'query': state.query=input.value; render(); break
+    case 'editDraft': state.editDraft=input.value; break
+    case 'guestName': state.guestName=input.value; break
+  }
+  switch (input.dataset.receipt) {
+    case 'merchant': state.receipt.merchant=input.value; break
+    case 'date': state.receipt.date=input.value; break
+    case 'amount': state.receipt.amount=input.value; break
+    case 'itemName': state.receipt.itemName=input.value; break
+  }
 })
 document.addEventListener('keydown', event => { if (event.key==='Escape' && state.sheet) { state.sheet=null; render() } })
-window.addEventListener('hashchange', () => { const view=location.hash.slice(1); if (view && view!==state.view) { state.view=view; state.sheet=null; render() } })
+window.addEventListener('hashchange', () => { const view=location.hash.slice(1); if (validView(view) && view!==state.view) { state.view=view; state.sheet=null; render() } })
+const initialView = location.hash.slice(1)
+if (validView(initialView)) state.view = initialView
 render()

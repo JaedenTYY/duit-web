@@ -2,7 +2,7 @@
 
 **Status:** design direction and Vue implementation, 3 November 2026.
 **Reference viewport:** 390 × 844 CSS pixels.
-**Prototype:** [`public/duit-prototype.html`](../../public/duit-prototype.html). Its example values and progress are illustrative. The Vue screens use server-backed values and do not show invented XP.
+**Prototype:** [`prototype/duit-prototype.html`](prototype/duit-prototype.html). Open the HTML file locally to explore it. These documentation assets are excluded from the production build. Its example values and progress are illustrative. The Vue screens use server-backed values and do not show invented XP.
 
 This direction follows the supplied *Duit — Design Direction.html* as the visual and interaction specification. The Vue app now uses its paper, pandan, Inter, grouped lists, bottom navigation, and focused flows. The app has server-backed monthly spending, transactions, insights, receipt extraction, and bill splitting. Payday cycles, comparative insights, and persisted progress require backend contracts before production rollout.
 
