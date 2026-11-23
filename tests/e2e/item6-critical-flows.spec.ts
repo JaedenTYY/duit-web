@@ -98,8 +98,9 @@ test('receipt review confirmation adds the generated transaction to the feed', a
   })
 })
 
-test('bill owner and guest split lifecycle uses guest idempotency and external settlement state', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+for (const width of [360, 390, 1280, 1440, 1920]) {
+test(`bill owner and guest split lifecycle uses guest idempotency and external settlement state at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 })
   let refreshActive = false
   let joined = false
   let selected = false
@@ -163,14 +164,16 @@ test('bill owner and guest split lifecycle uses guest idempotency and external s
   await expect(page).toHaveURL(/\/split-bill\/bill-1/)
   await expect(page.getByText('Dinner Table')).toBeVisible()
   await expect(page.getByText('No guests yet')).toBeVisible()
-  await page.screenshot({ path: '/private/tmp/duit-owner-split.png', fullPage: true })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('duit-owner-split.png'), fullPage: true })
 
   await page.goto('/guest/bills/share-token-1')
   await expect(page.getByRole('heading', { name: 'Which one is you?' })).toBeVisible()
   await page.getByLabel('Your name').fill('Alex')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('heading', { name: 'What did you have?' })).toBeVisible()
-  await page.screenshot({ path: '/private/tmp/duit-guest-split.png', fullPage: true })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('duit-guest-split.png'), fullPage: true })
   expect(joinIdempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
 
   await page.getByRole('button', { name: /Nasi lemak/ }).click()
@@ -192,6 +195,7 @@ test('bill owner and guest split lifecycle uses guest idempotency and external s
     expectedAllocationVersion: 1,
   })
 })
+}
 
 test('statement import selection imports only supported debit rows', async ({ page }) => {
   let refreshActive = false

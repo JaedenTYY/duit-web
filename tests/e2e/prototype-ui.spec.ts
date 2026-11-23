@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 for (const width of [360, 390, 1280, 1440, 1920]) {
-  test(`reference navigation and Activity work at ${width}px`, async ({ page }) => {
+  test(`reference navigation and Activity work at ${width}px`, async ({ page }, testInfo) => {
     page.on('pageerror', error => { throw error })
     await page.setViewportSize({ width, height: 900 })
     await page.addInitScript(() => localStorage.setItem('duit:onboardingCompleted', 'true'))
@@ -51,13 +51,13 @@ for (const width of [360, 390, 1280, 1440, 1920]) {
     }
     const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await noOverflow()
-    await page.screenshot({ path: `/private/tmp/duit-home-${width}.png`, fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`duit-home-${width}.png`), fullPage: true })
     const nav = page.getByRole('navigation', { name: 'Main navigation' }).filter({ visible: true })
     await nav.getByRole('link', { name: 'Activity', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
     await noOverflow()
     await expect(page.locator('.transaction-record').last()).toHaveCSS('opacity', '1')
-    await page.screenshot({ path: `/private/tmp/duit-ledger-${width}.png`, fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`duit-ledger-${width}.png`), fullPage: true })
     await page.getByLabel('Search loaded transactions').fill('GrabFood')
     await expect(page.getByRole('button', { name: 'View GrabFood transaction' })).toBeVisible()
     await expect(page.getByText('A very long merchant name', { exact: false })).toHaveCount(0)
@@ -73,6 +73,6 @@ for (const width of [360, 390, 1280, 1440, 1920]) {
     await expect(page.getByText('46.80', { exact: false }).first()).toBeVisible()
     expect(insightCalls).toBeGreaterThan(0)
     await noOverflow()
-    await page.screenshot({ path: `/private/tmp/duit-insights-${width}.png`, fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`duit-insights-${width}.png`), fullPage: true })
   })
 }
