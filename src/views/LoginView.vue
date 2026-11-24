@@ -2,8 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
-import { z } from 'zod'
 import {
   useLoginMutation,
   useRegisterMutation,
@@ -23,17 +21,6 @@ interface AuthFormValues {
   password: string
 }
 
-const loginSchema = z.object({
-  fullName: z.string(),
-  email: z.string().email('Enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
-})
-
-const registerSchema = loginSchema.extend({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
-})
-
 const mode = ref<Mode>(route.name === 'register' ? 'register' : 'login')
 const apiError = ref<ApiFailureDetails | null>(sessionExpiryFailure())
 const loginMutation = useLoginMutation()
@@ -47,9 +34,15 @@ const isSubmitting = computed(
 const submitDisabled = computed(
   () => isSubmitting.value || cooldown.active.value
 )
-const validationSchema = computed(() =>
-  toTypedSchema(isLogin.value ? loginSchema : registerSchema)
-)
+// Preserve the previous schema's email acceptance rules.
+const emailPattern = /^(?!\.)(?!.*\.\.)[A-Z0-9_'+.-]*[A-Z0-9_+-]@(?:[A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i
+const validationSchema = computed(() => ({
+  fullName: (value: string = '') => isLogin.value || value.length >= 2 || 'Full name must be at least 2 characters.',
+  email: (value: string = '') => emailPattern.test(value) || 'Enter a valid email address.',
+  password: (value: string = '') => isLogin.value
+    ? value.length >= 1 || 'Password is required.'
+    : value.length >= 8 || 'Password must be at least 8 characters.',
+}))
 
 const { defineField, errors, handleSubmit, resetForm } =
   useForm<AuthFormValues>({
