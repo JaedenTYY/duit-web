@@ -1,324 +1,691 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
-import type { TooltipItem } from 'chart.js'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTransactionStore } from '@/stores/transaction'
+import { useBillStore } from '@/stores/bill'
+import { useAnomalyStore } from '@/stores/anomaly'
+import { useInsightStore } from '@/stores/insight'
 import { formatCurrency } from '@/utils/currency'
-import EmptyState from '@/components/shared/EmptyState.vue'
-import ErrorBanner from '@/components/shared/ErrorBanner.vue'
-import HabitSummaryCard from '@/components/shared/HabitSummaryCard.vue'
-import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
-import FeatureActionCard from '@/components/shared/FeatureActionCard.vue'
 import { toPresentationNumber } from '@/utils/financialDecimal'
-import { currentReportingYearMonth } from '@/utils/localDateTime'
+import {
+  currentReportingYearMonth,
+  REPORTING_TIME_ZONE,
+} from '@/utils/localDateTime'
+import ErrorBanner from '@/components/shared/ErrorBanner.vue'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton.vue'
+import SpendingBreakdown from '@/components/shared/SpendingBreakdown.vue'
+import AppIcon from '@/components/shared/AppIcon.vue'
 
-ChartJS.register(ArcElement, Tooltip, Legend)
-
-const store = useTransactionStore()
+const router = useRouter()
+const transactions = useTransactionStore()
+const bills = useBillStore()
+const anomalies = useAnomalyStore()
+const insights = useInsightStore()
 
 const now = new Date()
-const { month, year } = currentReportingYearMonth(now)
+const { year, month } = currentReportingYearMonth(now)
+const period = new Intl.DateTimeFormat('en-MY', {
+  month: 'long',
+  timeZone: REPORTING_TIME_ZONE,
+}).format(now)
+const dayOfMonth = new Intl.DateTimeFormat('en-MY', {
+  day: 'numeric',
+  timeZone: REPORTING_TIME_ZONE,
+}).format(now)
+const totalDaysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
 
-onMounted(async () => {
-  await Promise.all([
-    store.fetchMonthlySummary(year, month),
-    store.fetchTransactions(true)
+const spentDisplay = computed(() => {
+  const summary = transactions.monthlySummary
+  return summary ? formatCurrency(summary.totalSpend, summary.currency) : null
+})
+
+const recent = computed(() => transactions.transactions.slice(0, 5))
+const pendingAnomalies = computed(() =>
+  anomalies.anomalies.filter((alert) => alert.status === 'pending')
+)
+const pendingAlert = computed(() => pendingAnomalies.value[0])
+const toReviewCount = computed(
+  () => pendingAnomalies.value.length + Number(Boolean(bills.bill))
+)
+const latestInsight = computed(() => insights.insights[0])
+const weeklyComparison = computed(() => {
+  const content = latestInsight.value?.content
+  if (!content?.spendingTrend) return []
+
+  const weeks = [
+    { label: 'Previous week', amount: content.spendingTrend.previousTotal },
+    { label: 'Reviewed week', amount: content.spendingTrend.currentTotal },
+  ]
+  const peak = Math.max(
+    ...weeks.map(({ amount }) => toPresentationNumber(amount))
+  )
+  if (peak <= 0) return []
+
+  return weeks.map(({ label, amount }) => ({
+    label,
+    total: formatCurrency(amount, content.currency),
+    height: Math.max(0, (toPresentationNumber(amount) / peak) * 100) + '%',
+  }))
+})
+
+const dateLabel = (value: string) =>
+  new Date(value).toLocaleDateString('en-MY', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: REPORTING_TIME_ZONE,
+  })
+
+const initials = (name: string | null | undefined) =>
+  (name?.trim() || 'TX')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+
+function avatarStyle(categoryName?: string | null) {
+  const category = (categoryName || '').toLowerCase()
+  if (category.includes('food') || category.includes('dining'))
+    return { background: '#f6e8da', color: '#8a4e17' }
+  if (category.includes('grocer'))
+    return { background: '#e4ede7', color: '#2f5e45' }
+  if (category.includes('shop'))
+    return { background: '#f2e6ea', color: '#7a3a50' }
+  if (category.includes('transp') || category.includes('grab'))
+    return { background: '#e3eaf2', color: '#2f527a' }
+  if (category.includes('bill') || category.includes('util'))
+    return { background: '#eae7f2', color: '#4f4778' }
+  return {}
+}
+
+const searchInput = ref<HTMLInputElement | null>(null)
+const search = ref('')
+function handleKeydown(event: KeyboardEvent) {
+  if (
+    event.key !== '/' ||
+    event.defaultPrevented ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    !searchInput.value?.offsetWidth ||
+    (event.target instanceof HTMLElement &&
+      event.target.closest(
+        'input, textarea, select, [contenteditable], [role="dialog"]'
+      ))
+  ) {
+    return
+  }
+  event.preventDefault()
+  searchInput.value.focus()
+}
+
+function handleSearchSubmit() {
+  const query = search.value.trim()
+  if (query) void router.push({ path: '/transactions', query: { q: query } })
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+  void Promise.allSettled([
+    transactions.fetchMonthlySummary(year, month),
+    transactions.fetchTransactions(true),
+    anomalies.fetchAnomalies(),
+    insights.fetchInsights(),
   ])
 })
-
-const monthName = computed(() => now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }))
-const categoriesToShow = computed(() => store.monthlySummary?.byCategory?.slice(0, 5) ?? [])
-const topCategory = computed(() => store.monthlySummary?.byCategory?.[0] ?? null)
-const recentTransactions = computed(() => store.transactions.slice(0, 4))
-const hasSummary = computed(() => store.monthlySummaryStatus === 'loaded' && store.monthlySummary)
-const summaryTotal = computed(() => hasSummary.value ? store.monthlySummary?.totalSpend ?? '0' : null)
-const completedTasks = computed(() => {
-  let count = 0
-  if (store.transactions.length > 0) count += 1
-  if (categoriesToShow.value.length > 0) count += 1
-  if (store.monthlySummary) count += 1
-  return count
-})
-
-const chartData = computed(() => {
-  if (!categoriesToShow.value.length) {
-    return {
-      labels: ['No data'],
-      datasets: [{ backgroundColor: ['#e2e8f0'], data: [1], borderWidth: 0 }]
-    }
-  }
-
-  return {
-    labels: categoriesToShow.value.map(category => category.categoryName),
-    datasets: [
-      {
-        backgroundColor: categoriesToShow.value.map(category => category.categoryColor || '#10b981'),
-        data: categoriesToShow.value.map(category => toPresentationNumber(category.total)),
-        borderWidth: 0,
-        hoverOffset: 8,
-        borderRadius: 6
-      }
-    ]
-  }
-})
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  cutout: '76%',
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.92)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      padding: 12,
-      displayColors: true,
-      callbacks: {
-        label: (context: TooltipItem<'doughnut'>) => ` RM ${Number(context.parsed).toFixed(2)}`
-      }
-    }
-  }
-}
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 </script>
 
 <template>
-  <div class="space-y-4 pb-8 sm:space-y-6 sm:pb-10">
-    <header class="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-8">
-        <p class="text-xs font-black uppercase text-emerald-600">
-          {{ monthName }}
+  <div class="duit-home-page">
+    <header class="home-header">
+      <div>
+        <h1>{{ period }}</h1>
+        <p class="home-caption">
+          Day {{ dayOfMonth }} of {{ totalDaysInMonth }} · Calendar month
         </p>
-        <h1 class="mt-3 max-w-3xl text-3xl font-black text-slate-950 sm:text-5xl">
-          Your money, clearly organized.
-        </h1>
-        <p class="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-500 sm:mt-4 sm:text-base sm:leading-7">
-          Start with the most common tasks: scan receipts, review transactions, split shared bills, and check weekly insights.
-        </p>
-        <div class="mt-5 flex flex-col gap-2.5 sm:mt-6 sm:flex-row sm:gap-3">
-          <RouterLink
-            to="/inbox"
-            class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
-          >
-            Import a receipt
-          </RouterLink>
-          <RouterLink
-            to="/insights"
-            class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
-          >
-            View insights
-          </RouterLink>
-        </div>
-      </section>
+      </div>
 
-      <HabitSummaryCard
-        :completion="(completedTasks / 3) * 100"
-        :completed-tasks="completedTasks"
-        :total-tasks="3"
-        :streak-days="4"
-        title="Weekly habits"
-        subtitle="Complete the three core actions to keep your records accurate."
-      />
+      <div class="home-header-actions">
+        <form
+          class="home-search"
+          role="search"
+          @submit.prevent="handleSearchSubmit"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            ref="searchInput"
+            v-model="search"
+            type="search"
+            aria-label="Search activity"
+            aria-keyshortcuts="/"
+            placeholder="Search activity  ( / )"
+          />
+        </form>
+
+        <RouterLink
+          to="/insights#anomalies"
+          class="home-notifications"
+          aria-label="Notifications"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a2 2 0 0 0 3.4 0"
+            />
+          </svg>
+          <span v-if="pendingAlert" aria-hidden="true" />
+        </RouterLink>
+      </div>
     </header>
 
-    <ErrorBanner :message="store.error" />
-    <ErrorBanner :message="store.monthlySummaryError" />
+    <ErrorBanner :message="transactions.error" />
+    <ErrorBanner :message="transactions.monthlySummaryError" />
 
-    <LoadingSkeleton
-      v-if="store.loading && (!store.monthlySummary || store.transactions.length === 0)"
-      :rows="4"
-    />
+    <div class="home-grid">
+      <div class="home-column">
+        <section class="home-spend" aria-labelledby="home-spend-title">
+          <h2 id="home-spend-title" class="home-caption">Spent so far</h2>
 
-    <template v-else>
-      <section class="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-4">
-        <FeatureActionCard
-          title="Scan a receipt"
-          description="Upload a receipt image and let Duit turn it into structured spending."
-          status="Most used"
-          icon="camera"
-          tone="mint"
-          to="/inbox"
-          action-label="Scan"
-        />
-        <FeatureActionCard
-          title="Split a bill"
-          description="Create a shared bill from a receipt and let everyone claim their items."
-          status="Group spending"
-          icon="users"
-          tone="amber"
-          to="/split-bill"
-          action-label="Split"
-        />
-        <FeatureActionCard
-          title="Check weekly insights"
-          description="Generate your weekly insight and learn what changed in your spending."
-          status="Review"
-          icon="insights"
-          tone="sky"
-          to="/insights"
-          action-label="Review"
-        />
-      </section>
+          <LoadingSkeleton
+            v-if="
+              transactions.monthlySummaryStatus === 'loading' && !spentDisplay
+            "
+            :rows="2"
+          />
+          <template v-else-if="spentDisplay">
+            <p class="home-amount num">
+              <span>{{ spentDisplay.split(' ')[0] }}</span>
+              {{ spentDisplay.split(' ').slice(1).join(' ') }}
+            </p>
+            <p class="home-caption">
+              {{ transactions.monthlySummary?.transactionCount }} transactions
+              recorded this month
+            </p>
+            <SpendingBreakdown
+              :categories="transactions.monthlySummary?.byCategory || []"
+              :currency="transactions.monthlySummary?.currency"
+            />
+          </template>
+        </section>
 
-      <section class="grid grid-cols-1 gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:gap-5">
-        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
-          <p class="text-xs font-black uppercase text-slate-400">
-            Monthly spend
-          </p>
-          <p class="mt-2 text-3xl font-black text-slate-950 sm:mt-3 sm:text-4xl">
-            {{ summaryTotal ? formatCurrency(summaryTotal, 'MYR') : 'Unavailable' }}
-          </p>
-          <p class="mt-2 text-sm font-semibold text-slate-500">
-            {{ store.monthlySummaryStatus === 'error' && !hasSummary
-              ? 'Monthly summary could not be loaded. Retry by refreshing this page.'
-              : `Top category: ${topCategory?.categoryName || 'not enough data yet'}` }}
-          </p>
-          <div class="mt-6 grid grid-cols-2 gap-3">
-            <div class="rounded-2xl bg-emerald-50 p-4">
-              <p class="text-xs font-black uppercase text-emerald-700">
-                Transactions
-              </p>
-              <p class="mt-1 text-2xl font-black text-slate-950">
-                {{ store.transactions.length }}
-              </p>
-            </div>
-            <div class="rounded-2xl bg-rose-50 p-4">
-              <p class="text-xs font-black uppercase text-rose-700">
-                Categories
-              </p>
-              <p class="mt-1 text-2xl font-black text-slate-950">
-                {{ categoriesToShow.length }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
-          <div class="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p class="text-xs font-black uppercase text-emerald-600">
-                Spending map
-              </p>
-              <h2 class="mt-1 text-2xl font-black text-slate-950">
-                Category ring
-              </h2>
-            </div>
+        <section class="home-section" aria-labelledby="home-review-title">
+          <h2 id="home-review-title" class="home-section-title">
+            To review
+            <span v-if="toReviewCount" class="home-count tag num">{{
+              toReviewCount
+            }}</span>
+          </h2>
+          <ErrorBanner :message="anomalies.error" />
+          <div v-if="toReviewCount" class="grp">
             <RouterLink
-              to="/transactions"
-              class="text-sm font-black text-emerald-600 hover:text-emerald-700"
+              v-if="pendingAlert"
+              to="/insights#anomalies"
+              class="row"
             >
-              Details
+              <span class="av home-alert-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 12h4l3-7 4 14 3-7h4"
+                  />
+                </svg>
+              </span>
+              <span class="rt">
+                <b>
+                  {{ pendingAlert.merchantName }} ·
+                  {{
+                    formatCurrency(pendingAlert.amount, pendingAlert.currency)
+                  }}
+                </b>
+                <span>Unusual for you</span>
+              </span>
+              <span class="home-link">Review</span>
+            </RouterLink>
+
+            <RouterLink
+              v-if="bills.bill"
+              :to="`/split-bill/${bills.bill.id}`"
+              class="row"
+            >
+              <span class="av home-tool-icon"><AppIcon name="users" /></span>
+              <span class="rt">
+                <b>{{ bills.bill.merchantName || 'Shared bill split' }}</b>
+                <span>View participants and settlement</span>
+              </span>
+              <span class="home-link">Open</span>
             </RouterLink>
           </div>
 
-          <div
-            v-if="categoriesToShow.length"
-            class="grid gap-4 md:grid-cols-[14rem_1fr] md:items-center md:gap-6"
-          >
-            <div class="relative mx-auto h-48 w-48 sm:h-56 sm:w-56">
-              <Doughnut
-                :data="chartData"
-                :options="chartOptions"
-              />
-              <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span class="text-xs font-black uppercase text-slate-400">Total</span>
-                <span class="mt-1 text-lg font-black text-slate-950">{{ summaryTotal ? formatCurrency(summaryTotal, 'MYR') : 'Unavailable' }}</span>
-              </div>
-            </div>
+          <LoadingSkeleton v-else-if="anomalies.loading" :rows="1" />
+          <p v-else-if="!anomalies.error" class="home-review-empty">
+            <AppIcon name="check" />
+            All caught up. Nothing needs you right now.
+          </p>
+        </section>
 
-            <div class="space-y-3">
-              <div
-                v-for="category in categoriesToShow"
-                :key="category.categoryId || category.categoryName"
-                class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3"
-              >
-                <div class="flex min-w-0 items-center gap-3">
-                  <span
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-lg"
-                    :style="{ backgroundColor: `${category.categoryColor || '#10b981'}18`, color: category.categoryColor || '#10b981' }"
-                  >
-                    {{ category.categoryIcon || '•' }}
-                  </span>
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-black text-slate-950">
-                      {{ category.categoryName }}
-                    </p>
-                    <p class="text-xs font-semibold text-slate-500">
-                      {{ toPresentationNumber(category.percentage).toFixed(1) }}%
-                    </p>
-                  </div>
+        <section class="home-section" aria-labelledby="home-recent-title">
+          <div class="home-section-heading">
+            <h2 id="home-recent-title" class="home-section-title">Recent</h2>
+            <RouterLink to="/transactions" class="home-link"
+              >See all activity</RouterLink
+            >
+          </div>
+          <div v-if="recent.length" class="grp">
+            <RouterLink
+              v-for="tx in recent"
+              :key="tx.id"
+              to="/transactions"
+              class="row"
+            >
+              <span class="av" :style="avatarStyle(tx.categoryName)">
+                {{ initials(tx.merchantName) }}
+              </span>
+              <span class="rt">
+                <b>{{ tx.merchantName || tx.description || 'Transaction' }}</b>
+                <span
+                  >{{ tx.categoryName || 'Uncategorised' }} ·
+                  {{ dateLabel(tx.occurredAt) }}</span
+                >
+              </span>
+              <span class="amt">{{
+                formatCurrency(tx.amount, tx.currency)
+              }}</span>
+            </RouterLink>
+          </div>
+
+          <LoadingSkeleton v-else-if="transactions.loading" :rows="2" />
+          <div v-else-if="!transactions.error" class="home-empty-card">
+            <p class="home-caption">No transactions recorded yet.</p>
+            <RouterLink to="/transactions?add=1" class="home-link"
+              >Add your first expense</RouterLink
+            >
+          </div>
+        </section>
+      </div>
+
+      <div class="home-column">
+        <section class="home-week" aria-labelledby="home-week-title">
+          <h2 id="home-week-title">Weekly review</h2>
+          <ErrorBanner :message="insights.error" />
+          <LoadingSkeleton
+            v-if="insights.loading && !latestInsight"
+            :rows="2"
+          />
+          <template v-else-if="latestInsight">
+            <p class="home-week-headline">
+              {{ latestInsight.content.headline }}
+            </p>
+            <p class="home-caption">{{ latestInsight.content.summary }}</p>
+            <ul
+              v-if="weeklyComparison.length"
+              class="home-week-chart"
+              aria-label="Weekly spending comparison"
+            >
+              <li v-for="week in weeklyComparison" :key="week.label">
+                <div class="home-week-track" aria-hidden="true">
+                  <div class="home-week-bar" :style="{ height: week.height }" />
                 </div>
-                <span class="shrink-0 text-sm font-black text-slate-950">{{ formatCurrency(category.total, 'MYR') }}</span>
-              </div>
-            </div>
-          </div>
-
-          <EmptyState
-            v-else-if="store.monthlySummaryStatus === 'error'"
-            title="Spending map unavailable"
-            message="Duit could not load the monthly summary. Refresh this page to retry."
-            tone="rose"
-          />
-
-          <EmptyState
-            v-else
-            title="No spending map yet"
-            message="Scan a receipt or import spending to unlock your category ring."
-            action-label="Open import"
-            tone="emerald"
-            @action="$router.push('/inbox')"
-          />
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:rounded-[2rem] sm:p-6">
-        <div class="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs font-black uppercase text-amber-600">
-              Activity feed
-            </p>
-            <h2 class="mt-1 text-2xl font-black text-slate-950">
-              Recent transactions
-            </h2>
-          </div>
-          <RouterLink
-            to="/transactions"
-            class="text-sm font-black text-emerald-600 hover:text-emerald-700"
-          >
-            View all
+                <span class="home-caption">{{ week.label }}</span>
+                <strong class="num">{{ week.total }}</strong>
+              </li>
+            </ul>
+          </template>
+          <p v-else-if="!insights.error" class="home-caption">
+            Record expenses to build your first weekly review.
+          </p>
+          <RouterLink to="/insights" class="home-link">
+            Open weekly review <span aria-hidden="true">→</span>
           </RouterLink>
-        </div>
+        </section>
 
-        <div
-          v-if="recentTransactions.length"
-          class="grid gap-3 md:grid-cols-2"
-        >
-          <div
-            v-for="transaction in recentTransactions"
-            :key="transaction.id"
-            class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4"
-          >
-            <div class="min-w-0">
-              <p class="truncate font-black text-slate-950">
-                {{ transaction.merchantName || transaction.description || 'Transaction' }}
-              </p>
-              <p class="truncate text-xs font-semibold text-slate-500">
-                {{ transaction.categoryName || 'General' }} · {{ new Date(transaction.occurredAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) }}
-              </p>
-            </div>
-            <p class="shrink-0 text-sm font-black text-slate-950">
-              {{ formatCurrency(transaction.amount, transaction.currency) }}
-            </p>
+        <section class="home-section" aria-labelledby="home-tools-title">
+          <h2 id="home-tools-title" class="home-section-title">Money tools</h2>
+          <div class="grp">
+            <RouterLink to="/inbox" class="row">
+              <span class="av home-tool-icon"><AppIcon name="receipt" /></span>
+              <span class="rt">
+                <b>Import spending</b>
+                <span>Receipts, bank statements, and Gmail</span>
+              </span>
+              <span class="home-chevron" aria-hidden="true">›</span>
+            </RouterLink>
+            <RouterLink to="/split-bill" class="row">
+              <span class="av home-tool-icon"><AppIcon name="users" /></span>
+              <span class="rt">
+                <b>Split a bill</b>
+                <span>Share a receipt and track payments</span>
+              </span>
+              <span class="home-chevron" aria-hidden="true">›</span>
+            </RouterLink>
           </div>
-        </div>
-        <p
-          v-else
-          class="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500"
-        >
-          Your first receipt scan will appear here.
-        </p>
-      </section>
-    </template>
+        </section>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.duit-home-page,
+.home-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 28px;
+  min-width: 0;
+}
+
+.home-header,
+.home-header-actions,
+.home-section-heading,
+.home-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-header,
+.home-section-heading {
+  justify-content: space-between;
+}
+
+.home-header h1 {
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.home-header-actions {
+  min-width: 0;
+}
+
+.home-search {
+  display: none;
+}
+
+.home-notifications {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.home-notifications:hover {
+  background: var(--sunken);
+}
+
+.home-notifications span {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--saffron);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.home-notifications svg,
+.home-search svg,
+.home-alert-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 28px;
+}
+
+.home-spend,
+.home-section,
+.home-week {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-spend {
+  gap: 6px;
+}
+
+.home-caption {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.home-spend h2 {
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.home-amount {
+  font-size: clamp(34px, 10vw, 48px);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.home-amount span {
+  margin-inline-end: 4px;
+  color: var(--muted);
+  font-size: 0.58em;
+}
+
+.home-section-title {
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.home-count {
+  align-self: center;
+  background: var(--ink);
+  color: var(--panel);
+  font-size: 11px;
+}
+
+.home-alert-icon {
+  background: #f9e6dc;
+  color: #a3421a;
+}
+
+.home-tool-icon {
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+}
+
+.home-tool-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.home-link {
+  width: fit-content;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+a.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+a.home-link:hover {
+  text-decoration: underline;
+}
+
+a.row:hover .rt b {
+  color: var(--accent);
+}
+
+.home-chevron {
+  color: var(--accent);
+  font-size: 22px;
+}
+
+.home-review-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: #2e7048;
+  font-size: 14px;
+}
+
+.home-review-empty svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.home-week,
+.home-empty-card {
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.home-empty-card {
+  padding: 18px 20px 8px;
+}
+
+.home-week {
+  gap: 8px;
+  padding: 20px 20px 12px;
+}
+
+.home-week h2 {
+  color: var(--caption);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-week-headline {
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.home-week-chart {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.home-week-chart li {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.home-week-track {
+  display: flex;
+  align-items: end;
+  height: 72px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.home-week-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  background: var(--rule-strong);
+}
+
+.home-week-chart li:last-child .home-week-bar {
+  background: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .home-amount {
+    font-size: clamp(32px, 10vw, 40px);
+  }
+}
+
+@media (min-width: 861px) {
+  .duit-home-page,
+  .home-column,
+  .home-grid {
+    gap: 32px;
+  }
+
+  .home-header h1 {
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 700;
+  }
+
+  .home-header-actions {
+    flex: 0 1 380px;
+  }
+
+  .home-search {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+    min-width: 0;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background: var(--sunken);
+    color: var(--muted);
+  }
+
+  .home-search:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .home-search svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+
+  .home-search input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    outline: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .home-search input::placeholder {
+    color: var(--caption);
+  }
+
+  .home-week {
+    padding: 24px 24px 16px;
+  }
+}
+
+@media (min-width: 1080px) {
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

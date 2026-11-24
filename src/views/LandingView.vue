@@ -1,258 +1,655 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { gsap } from 'gsap'
 import { useRouter } from 'vue-router'
-import DuitLogo from '@/components/shared/DuitLogo.vue'
 
 const router = useRouter()
-const hero = ref<HTMLElement | null>(null)
-const preview = ref<HTMLElement | null>(null)
-
-const featureCards = [
-  {
-    title: 'Scan receipts',
-    description: 'Capture a receipt once, then choose whether to save it as an expense or start a bill split.',
-    tone: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-  },
-  {
-    title: 'Split bills',
-    description: 'Turn receipt items into a shareable claim flow, without forcing guests to create accounts.',
-    tone: 'bg-amber-50 border-amber-100 text-amber-700',
-  },
-  {
-    title: 'Review spending',
-    description: 'See transactions, categories, unusual activity, and weekly insights in one readable workspace.',
-    tone: 'bg-sky-50 border-sky-100 text-sky-700',
-  },
-]
-
-const workflow = [
-  'Take or upload a receipt',
-  'Choose expenses or split bill',
-  'Review extracted details',
-  'Save, share, or learn from it',
-]
-
-onMounted(() => {
-  const ctx = gsap.context(() => {
-    gsap.from(hero.value?.children || [], {
-      y: 18,
-      opacity: 0,
-      duration: 0.55,
-      stagger: 0.08,
-      ease: 'power3.out'
-    })
-    gsap.from(preview.value, {
-      y: 24,
-      opacity: 0,
-      scale: 0.985,
-      duration: 0.65,
-      ease: 'power3.out',
-      delay: 0.12
-    })
-  })
-
-  return () => ctx.revert()
-})
-
-function navigateToLogin() {
-  router.push('/login')
-}
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f8faf6] text-slate-950 selection:bg-emerald-200 selection:text-emerald-950">
-    <nav class="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-[#f8faf6]/90 backdrop-blur-2xl">
-      <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
-        <button
-          type="button"
-          class="rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-200"
-          aria-label="Duit home"
-          @click="$router.push('/')"
+  <div class="landing">
+    <!-- Navigation -->
+    <header class="landing-nav">
+      <RouterLink to="/" class="wordmark" aria-label="Duit home">
+        du<span class="wordmark-i" aria-hidden="true">ı</span>t
+      </RouterLink>
+      <nav>
+        <RouterLink to="/login" class="landing-nav-link">Sign in</RouterLink>
+        <RouterLink to="/register" class="landing-nav-primary"
+          >Get started</RouterLink
         >
-          <DuitLogo size="sm" />
-        </button>
-        <button
-          class="min-h-10 rounded-2xl bg-slate-950 px-5 py-2 text-sm font-black text-white transition hover:bg-emerald-700 active:scale-[0.98]"
-          @click="navigateToLogin"
-        >
-          Login
-        </button>
-      </div>
-    </nav>
+      </nav>
+    </header>
 
     <main>
-      <section class="relative px-5 pb-14 pt-28 sm:px-8 lg:px-12">
-        <div
-          ref="hero"
-          class="mx-auto flex min-h-[62vh] max-w-5xl flex-col items-center justify-center text-center"
-        >
-          <DuitLogo
-            class="justify-center"
-            subtitle="personal finance"
-          />
-          <h1 class="mt-8 max-w-4xl text-5xl font-black leading-none text-slate-950 sm:text-7xl lg:text-8xl">
-            Duit
-          </h1>
-          <p class="mt-5 max-w-2xl text-lg font-semibold leading-8 text-slate-600 sm:text-xl">
-            A cleaner way to scan receipts, split shared bills, and understand weekly spending without digging through messy records.
+      <!-- Hero Section -->
+      <section class="landing-hero">
+        <div class="landing-hero-copy">
+          <span class="landing-kicker">Spending, understood.</span>
+          <h1>See where your money goes, without the spreadsheet.</h1>
+          <p class="landing-lead">
+            A friendly AI spending companion for everyday money in Southeast
+            Asia. Snap receipts, spot unusual changes, and split bills without
+            forcing friends to create an account.
           </p>
-          <div class="mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2">
+
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px;
+              align-items: center;
+            "
+          >
             <button
-              class="inline-flex min-h-13 items-center justify-center rounded-2xl bg-emerald-500 px-7 py-4 text-base font-black text-white shadow-xl shadow-emerald-200 transition hover:bg-emerald-600 active:scale-[0.98]"
-              @click="navigateToLogin"
+              type="button"
+              class="landing-hero-btn"
+              @click="router.push('/register')"
             >
-              Open Duit
+              Get started with Duit <span>→</span>
             </button>
-            <a
-              href="#workflow"
-              class="inline-flex min-h-13 items-center justify-center rounded-2xl border border-slate-200 bg-white px-7 py-4 text-base font-black text-slate-800 shadow-sm transition hover:bg-slate-50"
+            <button
+              type="button"
+              class="landing-hero-secondary-btn"
+              @click="router.push('/login')"
             >
-              See workflow
-            </a>
+              Sign in
+            </button>
           </div>
+
+          <small class="landing-note">
+            Built for young Southeast Asians · Gaji-to-gaji pay cycles · No
+            spreadsheets needed.
+          </small>
         </div>
 
-        <div
-          ref="preview"
-          class="mx-auto -mt-6 max-w-5xl"
-        >
-          <div class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-200/70">
-            <div class="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-              <div class="p-5 sm:p-8">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="text-xs font-black uppercase text-emerald-700">
-                      Today
-                    </p>
-                    <h2 class="mt-1 text-2xl font-black text-slate-950">
-                      Spending workspace
-                    </h2>
-                  </div>
-                  <span class="rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">RM 128.40</span>
-                </div>
+        <!-- Realistic App Preview Matching Foundations -->
+        <div class="landing-preview" aria-label="Preview of Duit mobile home">
+          <div class="preview-top">
+            <div>
+              <strong>November</strong>
+              <small>25 Oct – 24 Nov · day 9 of 31</small>
+            </div>
+            <span class="preview-bell" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a2 2 0 0 0 3.4 0"
+                />
+              </svg>
+              <span class="preview-dot" />
+            </span>
+          </div>
 
-                <div class="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div
-                    v-for="card in featureCards"
-                    :key="card.title"
-                    class="rounded-[1.5rem] border p-4"
-                    :class="card.tone"
-                  >
-                    <p class="text-sm font-black text-slate-950">
-                      {{ card.title }}
-                    </p>
-                    <p class="mt-2 text-sm font-semibold leading-5 text-slate-600">
-                      {{ card.description }}
-                    </p>
-                  </div>
-                </div>
+          <div class="preview-hero">
+            <span class="preview-eyebrow">Spent so far</span>
+            <div class="preview-amount num">
+              <span>RM</span> 1,386<small>.40</small>
+            </div>
+            <p class="preview-sub">RM 96 more than this point last cycle</p>
 
+            <!-- Segmented Category Bar -->
+            <div
+              class="preview-bar"
+              role="img"
+              aria-label="Spending breakdown: Food 30%, Shopping 28%, Groceries 16%, Transport 12%, Other 14%"
+            >
+              <div style="flex: 30; background: #c9772e" />
+              <div style="flex: 28; background: #a0566e" />
+              <div style="flex: 16; background: #4c8466" />
+              <div style="flex: 12; background: #3f6c98" />
+              <div style="flex: 14; background: #b5afa4" />
+            </div>
+            <div class="preview-legend num">
+              <span><strong>Food</strong> 30%</span>
+              <span><strong>Shopping</strong> 28%</span>
+              <span><strong>Groceries</strong> 16%</span>
+              <span><strong>Transport</strong> 12%</span>
+            </div>
+          </div>
+
+          <!-- To Review Queue Preview -->
+          <div class="preview-section">
+            <div class="preview-sec-head">
+              <strong>To review</strong>
+              <span class="preview-tag num">2</span>
+            </div>
+            <div class="preview-grp">
+              <div class="preview-row">
                 <div
-                  id="workflow"
-                  class="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
+                  class="preview-av"
+                  style="background: #f9e6dc; color: #a3421a"
                 >
-                  <p class="text-sm font-black text-slate-950">
-                    Receipt flow
-                  </p>
-                  <div class="mt-4 grid gap-3 sm:grid-cols-4">
-                    <div
-                      v-for="(item, index) in workflow"
-                      :key="item"
-                      class="rounded-2xl bg-white p-3 shadow-sm"
-                    >
-                      <span class="grid h-8 w-8 place-items-center rounded-full bg-slate-950 text-xs font-black text-white">
-                        {{ index + 1 }}
-                      </span>
-                      <p class="mt-3 text-sm font-black leading-5 text-slate-800">
-                        {{ item }}
-                      </p>
-                    </div>
-                  </div>
+                  !
                 </div>
+                <div class="preview-rt">
+                  <b>Shopee · RM 389.00</b>
+                  <span>Unusual for you</span>
+                </div>
+                <span class="preview-link">Review</span>
               </div>
-
-              <div class="flex items-end justify-center bg-[#edf8ef] p-6">
-                <div class="w-full max-w-[19rem] rounded-[2.4rem] border-[10px] border-slate-950 bg-[#f8faf6] p-4 shadow-2xl shadow-emerald-200">
-                  <div class="flex items-center justify-between">
-                    <DuitLogo
-                      size="sm"
-                      compact
-                    />
-                    <span class="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">Weekly</span>
-                  </div>
-                  <div class="mt-5 rounded-[1.5rem] bg-white p-4 shadow-sm">
-                    <p class="text-xs font-black uppercase text-slate-500">
-                      This week
-                    </p>
-                    <strong class="mt-2 block text-3xl font-black text-slate-950">RM 426.80</strong>
-                    <p class="mt-2 text-sm font-semibold text-emerald-700">
-                      Dining is down 8% from last week.
-                    </p>
-                  </div>
-                  <div class="mt-4 grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl bg-white p-3 shadow-sm">
-                      <p class="text-xs font-black text-slate-500">
-                        Receipts
-                      </p>
-                      <strong class="mt-2 block text-xl font-black">6</strong>
-                    </div>
-                    <div class="rounded-2xl bg-white p-3 shadow-sm">
-                      <p class="text-xs font-black text-slate-500">
-                        Splits
-                      </p>
-                      <strong class="mt-2 block text-xl font-black">2</strong>
-                    </div>
-                  </div>
-                  <div class="relative mt-5 grid h-16 grid-cols-5 items-center rounded-3xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                    <span class="text-center text-xs font-black text-slate-400">Home</span>
-                    <span class="text-center text-xs font-black text-slate-400">Records</span>
-                    <span class="-mt-7 mx-auto grid h-16 w-16 place-items-center rounded-full border-[6px] border-[#f8faf6] bg-emerald-500 text-white shadow-xl shadow-emerald-200">
-                      <svg
-                        class="h-7 w-7"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.4"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.25l1.1-1.45A1.5 1.5 0 0 1 10.05 4h3.9a1.5 1.5 0 0 1 1.2.55L16.25 6h1.25A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
-                        />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M15 12.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                        />
-                      </svg>
-                    </span>
-                    <span class="text-center text-xs font-black text-slate-400">Insights</span>
-                    <span class="text-center text-xs font-black text-slate-400">Split</span>
-                  </div>
+              <div class="preview-row">
+                <div
+                  class="preview-av"
+                  style="background: #e2eeea; color: #0a4540"
+                >
+                  HK
                 </div>
+                <div class="preview-rt">
+                  <b>Hakka Kitchen split</b>
+                  <span>2 people waiting</span>
+                </div>
+                <span class="preview-link">Open</span>
               </div>
             </div>
           </div>
+
+          <!-- Mobile Nav Preview -->
+          <div class="preview-nav">
+            <span class="active">Home</span>
+            <span>Activity</span>
+            <b class="preview-add-fab">＋</b>
+            <span>Split</span>
+            <span>You</span>
+          </div>
         </div>
       </section>
 
-      <section class="mx-auto grid max-w-7xl gap-4 px-5 pb-20 sm:px-8 md:grid-cols-3 lg:px-12">
-        <div
-          v-for="card in featureCards"
-          :key="card.title"
-          class="rounded-[1.5rem] border bg-white p-6 shadow-sm"
-          :class="card.tone"
-        >
-          <h2 class="text-xl font-black text-slate-950">
-            {{ card.title }}
-          </h2>
-          <p class="mt-3 text-sm font-semibold leading-6 text-slate-600">
-            {{ card.description }}
-          </p>
+      <!-- 3 Value Proposition Steps -->
+      <section class="landing-steps">
+        <div class="landing-steps-inner">
+          <h2>Everyday money, made clearer</h2>
+          <div class="landing-steps-grid">
+            <article>
+              <span>01</span>
+              <h3>Snap & Sort</h3>
+              <p>
+                Snap a receipt or import a bank statement. Duit suggests
+                categories and stores every detail cleanly.
+              </p>
+            </article>
+
+            <article>
+              <span>02</span>
+              <h3>Spot Changes</h3>
+              <p>
+                Online anomaly detection notices when a purchase is unusual for
+                your patterns. You always decide what's right.
+              </p>
+            </article>
+
+            <article>
+              <span>03</span>
+              <h3>Split Fairly</h3>
+              <p>
+                Split a dinner receipt. Friends join directly in their browser
+                without an account and claim their dishes.
+              </p>
+            </article>
+          </div>
         </div>
       </section>
     </main>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <div class="landing-footer-inner">
+        <div class="wordmark" aria-label="Duit">
+          du<span class="wordmark-i" aria-hidden="true">ı</span>t
+        </div>
+        <small
+          >Agentic AI-driven spending intelligence for Southeast Asia.</small
+        >
+      </div>
+    </footer>
   </div>
 </template>
+
+<style scoped>
+.landing {
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1140px;
+  min-height: 80px;
+  margin: auto;
+  padding: 0 24px;
+}
+
+.landing-nav nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.landing-nav-link {
+  color: #0e5a52;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 8px 12px;
+}
+
+.landing-nav-primary {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: #0e5a52;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.landing-nav-primary:hover {
+  background: #0a4540;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  align-items: center;
+  gap: 72px;
+  max-width: 1140px;
+  min-height: 640px;
+  margin: auto;
+  padding: 60px 24px 90px;
+}
+
+.landing-hero-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-kicker {
+  margin: 0 0 16px;
+  color: #0e5a52;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.landing-hero h1 {
+  margin: 0;
+  font-size: clamp(38px, 5vw, 60px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: #1c1b19;
+}
+
+.landing-lead {
+  max-width: 500px;
+  margin: 24px 0 32px;
+  color: #57534c;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.landing-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  background: #0e5a52;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.landing-hero-btn:hover {
+  background: #0a4540;
+}
+
+.landing-hero-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 20px;
+  border: 1px solid #d6d1c6;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1c1b19;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.landing-note {
+  display: block;
+  margin-top: 18px;
+  color: #6e6a62;
+  font-size: 13px;
+}
+
+/* Phone Mockup Preview */
+.landing-preview {
+  position: relative;
+  width: 390px;
+  max-width: 100%;
+  padding: 20px 20px 84px;
+  border: 1px solid #e4e0d7;
+  border-radius: 28px;
+  background: #f7f5f0;
+  box-shadow: 0 20px 60px rgba(28, 27, 25, 0.08);
+  box-sizing: border-box;
+}
+
+.preview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.preview-top strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1c1b19;
+}
+
+.preview-top small {
+  display: block;
+  font-size: 12px;
+  color: #6e6a62;
+}
+
+.preview-bell {
+  position: relative;
+  color: #1c1b19;
+}
+
+.preview-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d9a23a;
+  box-shadow: 0 0 0 2px #f7f5f0;
+}
+
+.preview-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-eyebrow {
+  font-size: 13px;
+  color: #57534c;
+}
+
+.preview-amount {
+  font-size: 38px;
+  line-height: 42px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #1c1b19;
+}
+
+.preview-amount span {
+  font-size: 22px;
+  color: #57534c;
+  margin-right: 4px;
+}
+
+.preview-amount small {
+  font-size: 28px;
+  color: #6e6a62;
+}
+
+.preview-sub {
+  margin: 4px 0 0;
+  color: #57534c;
+  font-size: 12px;
+}
+
+.preview-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  gap: 2px;
+  margin-top: 14px;
+}
+
+.preview-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11px;
+  color: #57534c;
+  margin-top: 6px;
+}
+
+.preview-section {
+  margin-top: 24px;
+}
+
+.preview-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.preview-sec-head strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.preview-tag {
+  background: #1c1b19;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 999px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.preview-grp {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 0 12px;
+  border: 1px solid #e4e0d7;
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #efece5;
+  font-size: 13px;
+}
+
+.preview-row:last-child {
+  border-bottom: 0;
+}
+
+.preview-av {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.preview-rt {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-rt b {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-rt span {
+  font-size: 11px;
+  color: #57534c;
+}
+
+.preview-link {
+  color: #0e5a52;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.preview-nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  border-top: 1px solid #e4e0d7;
+  border-radius: 0 0 28px 28px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #57534c;
+}
+
+.preview-nav .active {
+  color: #0e5a52;
+  font-weight: 600;
+}
+
+.preview-add-fab {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #0e5a52;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+/* Steps Section */
+.landing-steps {
+  padding: 80px 24px;
+  border-top: 1px solid #e4e0d7;
+  background: #ffffff;
+}
+
+.landing-steps-inner {
+  max-width: 1140px;
+  margin: auto;
+}
+
+.landing-steps h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1c1b19;
+  margin-bottom: 40px;
+}
+
+.landing-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+
+.landing-steps-grid article {
+  display: flex;
+  flex-direction: column;
+  padding-top: 20px;
+  border-top: 1px solid #e4e0d7;
+}
+
+.landing-steps-grid article span {
+  color: #0e5a52;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.landing-steps-grid article h3 {
+  margin: 16px 0 8px;
+  font-size: 19px;
+  font-weight: 600;
+  color: #1c1b19;
+}
+
+.landing-steps-grid article p {
+  margin: 0;
+  color: #57534c;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* Footer */
+.landing-footer {
+  border-top: 1px solid #e4e0d7;
+  padding: 36px 24px;
+  background: #f7f5f0;
+}
+
+.landing-footer-inner {
+  max-width: 1140px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.landing-footer-inner small {
+  color: #6e6a62;
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding: 40px 20px 60px;
+  }
+  .landing-preview {
+    margin: auto;
+  }
+  .landing-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+</style>

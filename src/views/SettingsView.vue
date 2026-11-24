@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLogoutMutation } from '@/composables/useAuthMutations'
-import AppIcon from '@/components/shared/AppIcon.vue'
 import PageHeader from '@/components/shared/PageHeader.vue'
 
 const router = useRouter()
@@ -17,135 +16,178 @@ const logoutPending = computed(() => logoutMutation.isPending.value)
 
 async function handleLogout() {
   const result = await logoutMutation.mutateAsync(undefined)
-  await router.replace(result.revoked ? '/login' : { name: 'login', query: { reason: 'logout-local' } })
+  await router.replace(
+    result.revoked
+      ? '/login'
+      : { name: 'login', query: { reason: 'logout-local' } }
+  )
 }
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl space-y-6 pb-28">
+  <div class="you-page">
     <PageHeader
-      eyebrow="Settings"
-      title="Account and profile"
-      description="Profile actions are grouped here so the main navigation stays focused on spending tasks."
+      title="You"
+      description="Manage your account and spending tools."
     />
 
-    <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 items-center gap-4">
-          <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.35rem] bg-amber-50 text-2xl font-black text-amber-700">
-            {{ userInitial }}
-          </div>
-          <div class="min-w-0">
-            <p class="truncate text-2xl font-black text-slate-950">
-              {{ user?.fullName || 'Duit user' }}
-            </p>
-            <p class="mt-1 truncate text-sm font-semibold text-slate-500">
-              {{ user?.email || 'No email available' }}
-            </p>
-          </div>
-        </div>
-
-        <div class="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-          {{ user?.preferredCurrency || 'MYR' }}
-        </div>
+    <!-- User Profile Header -->
+    <section class="you-person" aria-label="Your profile">
+      <span class="you-avatar" aria-hidden="true">{{ userInitial }}</span>
+      <div class="you-person-details">
+        <h2>{{ user?.fullName || 'Duit user' }}</h2>
+        <p>{{ user?.email || 'No email available' }}</p>
       </div>
     </section>
 
-    <section class="grid gap-4 md:grid-cols-2">
-      <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 p-2.5 text-slate-700">
-            <AppIcon name="user" />
-          </span>
-          <div>
-            <h2 class="text-lg font-black text-slate-950">
-              Profile
-            </h2>
-            <p class="text-sm font-semibold text-slate-500">
-              Name, email, and default currency.
-            </p>
-          </div>
+    <div class="you-grid">
+      <section class="you-section">
+        <h2>Money tools</h2>
+        <div class="grp">
+          <RouterLink to="/insights" class="row">
+            <div class="rt">
+              <b>Weekly review & AI insights</b>
+              <span>Evidence-based spending changes</span>
+            </div>
+            <span style="color: #0e5a52; font-size: 20px">›</span>
+          </RouterLink>
+          <RouterLink to="/inbox" class="row">
+            <div class="rt">
+              <b>Import spending</b>
+              <span>Receipts, statements, and Gmail eReceipts</span>
+            </div>
+            <span style="color: #0e5a52; font-size: 20px">›</span>
+          </RouterLink>
+          <RouterLink to="/statements" class="row">
+            <div class="rt">
+              <b>Bank statements</b>
+              <span>Import PDF statements from Maybank, CIMB</span>
+            </div>
+            <span style="color: #0e5a52; font-size: 20px">›</span>
+          </RouterLink>
+          <RouterLink to="/gmail" class="row">
+            <div class="rt">
+              <b>Gmail eReceipts</b>
+              <span>Grab, Shopee, and food delivery extraction</span>
+            </div>
+            <span style="color: #0e5a52; font-size: 20px">›</span>
+          </RouterLink>
         </div>
+      </section>
 
-        <dl class="mt-5 space-y-3 text-sm">
-          <div class="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3">
-            <dt class="font-black text-slate-500">
-              Name
-            </dt>
-            <dd class="truncate font-black text-slate-950">
-              {{ user?.fullName || 'Not set' }}
-            </dd>
+      <section class="you-section">
+        <h2>Account & preferences</h2>
+        <div class="grp">
+          <div class="row" style="cursor: default">
+            <div class="rt">
+              <b>Reporting cycle</b>
+              <span>Spending totals reset each calendar month</span>
+            </div>
+            <strong style="font-size: 14px; font-weight: 600; color: #1c1b19"
+              >1st of month</strong
+            >
           </div>
-          <div class="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3">
-            <dt class="font-black text-slate-500">
-              Currency
-            </dt>
-            <dd class="font-black text-slate-950">
-              {{ user?.preferredCurrency || 'MYR' }}
-            </dd>
+          <div class="row" style="cursor: default">
+            <div class="rt">
+              <b>Default currency</b>
+              <span>Used for overview figures</span>
+            </div>
+            <strong style="font-size: 14px; font-weight: 600; color: #1c1b19">{{
+              user?.preferredCurrency || 'MYR'
+            }}</strong>
           </div>
-        </dl>
-      </div>
-
-      <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 p-2.5 text-slate-700">
-            <AppIcon name="settings" />
-          </span>
-          <div>
-            <h2 class="text-lg font-black text-slate-950">
-              App settings
-            </h2>
-            <p class="text-sm font-semibold text-slate-500">
-              Account-level controls only.
-            </p>
-          </div>
+          <RouterLink to="/settings/privacy" class="row">
+            <div class="rt">
+              <b>Privacy & data</b>
+              <span>Export records or manage stored credentials</span>
+            </div>
+            <span style="color: #0e5a52; font-size: 20px">›</span>
+          </RouterLink>
+          <button
+            type="button"
+            class="row"
+            style="color: #a3421a; cursor: pointer"
+            :disabled="logoutPending"
+            @click="handleLogout"
+          >
+            <div class="rt">
+              <b style="color: #a3421a">{{
+                logoutPending ? 'Signing out…' : 'Sign out'
+              }}</b>
+              <span>Leave this session on this device</span>
+            </div>
+            <span style="color: #a3421a; font-size: 20px">›</span>
+          </button>
         </div>
-
-        <div class="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-          <p class="text-sm font-black text-slate-950">
-            Light mode only
-          </p>
-          <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-            Duit now uses one bright minimalist theme so the interface stays consistent across mobile and desktop.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <RouterLink
-      to="/settings/privacy"
-      class="block rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm transition hover:border-emerald-300 sm:p-6"
-    >
-      <h2 class="text-lg font-black text-slate-950">
-        Privacy and data
-      </h2>
-      <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-        Download your data, manage Gmail retention, or delete your account.
-      </p>
-      <span class="mt-4 inline-flex text-sm font-black text-emerald-800">Open privacy settings →</span>
-    </RouterLink>
-
-    <section class="rounded-[2rem] border border-rose-100 bg-rose-50 p-5 shadow-sm">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 class="text-lg font-black text-slate-950">
-            Session
-          </h2>
-          <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-            Sign out from this browser. Your spending records stay saved on the backend.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-rose-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="logoutPending"
-          @click="handleLogout"
-        >
-          <span class="h-4 w-4"><AppIcon name="logout" /></span>
-          {{ logoutPending ? 'Logging out...' : 'Log out' }}
-        </button>
-      </div>
-    </section>
+      </section>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.you-person {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.you-avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  background: #e2eeea;
+  color: #0e5a52;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.you-person-details {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.you-person h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  color: #1c1b19;
+}
+
+.you-person p {
+  margin: 3px 0 0;
+  color: #57534c;
+  font-size: 13px;
+}
+
+.you-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+}
+
+.you-section {
+  min-width: 0;
+}
+
+.you-section h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1c1b19;
+}
+
+@media (min-width: 1080px) {
+  .you-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+    margin-top: 32px;
+  }
+}
+</style>

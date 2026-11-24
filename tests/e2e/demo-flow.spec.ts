@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('FYP Demo Flow Smoke Tests', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('duit:onboardingCompleted', 'true'));
     let refreshFamilyActive = false;
     const ok = (data: unknown) => ({
       status: 200,
@@ -186,26 +187,26 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
     await page.waitForURL(/.*\/dashboard/);
     
     // Dashboard assertions
-    await expect(page.locator('text=Monthly spend').first()).toBeVisible();
-    await expect(page.locator('text=Category ring').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Spent so far' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Food & Dining 100%' })).toBeVisible();
 
     // 2. Transactions
     await page.goto('/transactions');
     await expect(page).toHaveURL(/.*\/transactions/);
-    await expect(page.locator('text=/RM|S\\$/').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View ZUS Coffee transaction' })).toBeVisible();
 
     // Open Add Transaction modal
-    const addButton = page.locator('button:has-text("Add Transaction"), button:has-text("Add")').first();
-    await addButton.click();
-    await expect(page.locator('input[placeholder*="Amount"], input[name="amount"]').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Add spending' }).click();
+    await page.getByRole('button', { name: /Add manually/ }).click();
+    await expect(page.getByPlaceholder('0.00')).toBeVisible();
     await page.keyboard.press('Escape'); // close modal
 
     // 3. Import center
     await page.goto('/inbox');
     await expect(page).toHaveURL(/.*\/inbox/);
     await expect(page.locator('text=Scan receipt').first()).toBeVisible();
-    await expect(page.locator('text=Split bill').first()).toBeVisible();
-    await expect(page.locator('text=Weekly insights').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Import statement/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Gmail eReceipts/ })).toBeVisible();
 
     // 4. Gmail sync
     await page.goto('/gmail');
@@ -218,20 +219,16 @@ test.describe('FYP Demo Flow Smoke Tests', () => {
     await expect(page).toHaveURL(/.*\/statements/);
     await expect(page.locator('input[type="file"]').first()).toBeAttached();
 
-    // 6. Weekly Insights
+    // 6. Category insights
     await page.goto('/insights');
     await expect(page).toHaveURL(/.*\/insights/);
-    const generateBtn = page.locator('button:has-text("Generate"), button:has-text("Get Insights")').first();
-    if (await generateBtn.isVisible()) {
-      await generateBtn.click();
-    }
-    // Just verifying it doesn't crash
-    await expect(page.locator('text=insight').first()).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(page.getByRole('heading', { name: 'By category' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Generate/ })).toHaveCount(0);
 
     // 7. Anomalies
     await page.goto('/anomalies');
-    await expect(page).toHaveURL(/.*\/anomalies/);
-    await expect(page.locator('text=anomaly').first()).toBeVisible().catch(() => {});
+    await expect(page).toHaveURL(/\/insights#anomalies$/);
+    await expect(page.locator('#anomalies')).toBeVisible();
 
     // 8. Split Bill
     await page.goto('/split-bill');
@@ -436,12 +433,12 @@ test('browser session restores by refresh without persistent access-token storag
   summaryCalls = 0;
   await page.reload();
   await page.waitForURL(/\/dashboard/);
-  await expect(page.locator('text=Monthly spend').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Spent so far' })).toBeVisible();
   await expect.poll(() => summaryCalls).toBeGreaterThanOrEqual(2);
   expect(refreshCalls - refreshesBeforeReload).toBe(2);
 
   await page.goto('/settings');
-  await page.getByRole('button', { name: 'Log out' }).click();
+  await page.getByRole('button', { name: /Sign out/ }).click();
   await page.waitForURL(/\/login|\/$/);
   await page.reload();
   await expect(page).not.toHaveURL(/\/dashboard/);

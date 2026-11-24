@@ -1,12 +1,29 @@
 <script setup lang="ts">
-export type AppIconName = 'home' | 'camera' | 'card' | 'insights' | 'users' | 'receipt' | 'mail' | 'link' | 'check' | 'settings' | 'logout' | 'user'
+export type AppIconName =
+  | 'home'
+  | 'camera'
+  | 'card'
+  | 'list'
+  | 'insights'
+  | 'users'
+  | 'receipt'
+  | 'mail'
+  | 'link'
+  | 'check'
+  | 'settings'
+  | 'logout'
+  | 'user'
+  | 'plus'
 
-withDefaults(defineProps<{
-  name: AppIconName
-  strokeWidth?: number
-}>(), {
-  strokeWidth: 2.25
-})
+withDefaults(
+  defineProps<{
+    name: AppIconName
+    strokeWidth?: number
+  }>(),
+  {
+    strokeWidth: 1.75,
+  }
+)
 </script>
 
 <template>
@@ -37,18 +54,14 @@ withDefaults(defineProps<{
       />
     </g>
     <g v-else-if="name === 'card'">
-      <rect
-        x="3"
-        y="6"
-        width="18"
-        height="12"
-        rx="2.5"
-      />
-      <path
-        stroke-linecap="round"
-        d="M3 10h18M7 15h4"
-      />
+      <rect x="3" y="6" width="18" height="12" rx="2.5" />
+      <path stroke-linecap="round" d="M3 10h18M7 15h4" />
     </g>
+    <path
+      v-else-if="name === 'list'"
+      stroke-linecap="round"
+      d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"
+    />
     <g v-else-if="name === 'insights'">
       <path
         stroke-linecap="round"
@@ -67,11 +80,7 @@ withDefaults(defineProps<{
         stroke-linejoin="round"
         d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"
       />
-      <circle
-        cx="10"
-        cy="7"
-        r="4"
-      />
+      <circle cx="10" cy="7" r="4" />
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -84,19 +93,10 @@ withDefaults(defineProps<{
         stroke-linejoin="round"
         d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2-3-2V4a1 1 0 0 1 1-1Z"
       />
-      <path
-        stroke-linecap="round"
-        d="M8 7h8M8 11h8M8 15h4"
-      />
+      <path stroke-linecap="round" d="M8 7h8M8 11h8M8 15h4" />
     </g>
     <g v-else-if="name === 'mail'">
-      <rect
-        x="3"
-        y="5"
-        width="18"
-        height="14"
-        rx="2.5"
-      />
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -121,12 +121,13 @@ withDefaults(defineProps<{
       stroke-linejoin="round"
       d="m5 12 4.5 4.5L19 7"
     />
+    <path
+      v-else-if="name === 'plus'"
+      stroke-linecap="round"
+      d="M12 5v14M5 12h14"
+    />
     <g v-else-if="name === 'settings'">
-      <circle
-        cx="12"
-        cy="12"
-        r="3"
-      />
+      <circle cx="12" cy="12" r="3" />
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -146,11 +147,7 @@ withDefaults(defineProps<{
       />
     </g>
     <g v-else-if="name === 'user'">
-      <circle
-        cx="12"
-        cy="8"
-        r="4"
-      />
+      <circle cx="12" cy="8" r="4" />
       <path
         stroke-linecap="round"
         stroke-linejoin="round"

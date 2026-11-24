@@ -69,24 +69,25 @@ test('receipt review confirmation adds the generated transaction to the feed', a
 
   await login(page)
   await page.goto('/transactions')
-  await expect(page.getByText('No transactions yet')).toBeVisible()
+  await expect(page.getByText('No activity yet')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Upload receipt' }).click()
+  await page.getByRole('button', { name: 'Add spending' }).filter({ visible: true }).click()
+  await page.getByRole('button', { name: /Scan a receipt/ }).click()
   await page.locator('input[type="file"]').setInputFiles({
     name: 'receipt.jpg',
     mimeType: 'image/jpeg',
     buffer: Buffer.from('receipt image bytes'),
   })
   await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Add to expenses' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: /Add an expense/ }).click()
 
-  await expect(page.getByText('Check the receipt details')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Review receipt details' })).toBeVisible()
   await expect(page.getByPlaceholder('e.g. Kopitiam')).toHaveValue('Receipt Cafe')
   await page.locator('form select').nth(1).selectOption('food')
   await page.getByRole('button', { name: 'Confirm & Save' }).click()
 
-  await expect(page.getByText('Receipt saved')).toBeVisible()
-  await expect(page.getByText('Receipt saved')).toBeHidden({ timeout: 3000 })
+  await expect(page.getByText('Saved to Activity')).toBeVisible()
+  await expect(page.getByText('Saved to Activity')).toBeHidden({ timeout: 3000 })
   await expect(page.getByText('Receipt Cafe').first()).toBeVisible()
   expect(confirmPayload).toMatchObject({
     extractionId: 'receipt-extraction-1',
@@ -97,7 +98,9 @@ test('receipt review confirmation adds the generated transaction to the feed', a
   })
 })
 
-test('bill owner and guest split lifecycle uses guest idempotency and external settlement state', async ({ page }) => {
+for (const width of [360, 390, 1280, 1440, 1920]) {
+test(`bill owner and guest split lifecycle uses guest idempotency and external settlement state at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 })
   let refreshActive = false
   let joined = false
   let selected = false
@@ -161,17 +164,21 @@ test('bill owner and guest split lifecycle uses guest idempotency and external s
   await expect(page).toHaveURL(/\/split-bill\/bill-1/)
   await expect(page.getByText('Dinner Table')).toBeVisible()
   await expect(page.getByText('No guests yet')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('duit-owner-split.png'), fullPage: true })
 
   await page.goto('/guest/bills/share-token-1')
-  await expect(page.getByRole('heading', { name: 'Join this split' })).toBeVisible()
-  await page.getByPlaceholder('Your name').fill('Alex')
-  await page.getByRole('button', { name: 'Join bill' }).click()
-  await expect(page.getByText('Select your items')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Which one is you?' })).toBeVisible()
+  await page.getByLabel('Your name').fill('Alex')
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByRole('heading', { name: 'What did you have?' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('duit-guest-split.png'), fullPage: true })
   expect(joinIdempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
 
   await page.getByRole('button', { name: /Nasi lemak/ }).click()
-  await page.getByRole('button', { name: 'Save items' }).click()
-  await expect(page.getByText('Total owed')).toBeVisible()
+  await page.getByRole('button', { name: 'Confirm my share' }).click()
+  await expect(page.locator('.split-total-main')).toContainText('Your share')
   expect(selectPayload).toMatchObject({
     participantToken: 'participant-token-1',
     itemIds: ['item-1'],
@@ -181,13 +188,14 @@ test('bill owner and guest split lifecycle uses guest idempotency and external s
   await page.goto('/split-bill/bill-1')
   await expect(page.getByText('Alex')).toBeVisible()
   await page.getByRole('button', { name: 'Mark paid' }).click()
-  await expect(page.getByText(/Settled externally at\s+RM\s+12\.00/)).toBeVisible()
+  await expect(page.getByText(/Paid/)).toBeVisible()
   expect(paidPayload).toMatchObject({
     participantId: 'participant-1',
     isPaid: true,
     expectedAllocationVersion: 1,
   })
 })
+}
 
 test('statement import selection imports only supported debit rows', async ({ page }) => {
   let refreshActive = false

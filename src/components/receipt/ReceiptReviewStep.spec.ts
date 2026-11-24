@@ -184,7 +184,7 @@ describe('ReceiptReviewStep', () => {
       confidence: 'HIGH',
     })
     await flushPromises()
-    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use Transport category"]').exists()).toBe(true)
 
     resolveSlow({
       source: 'SYSTEM_MERCHANT',
@@ -193,7 +193,7 @@ describe('ReceiptReviewStep', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
-    expect(wrapper.find('button[aria-label="Use 🍔 Food & Dining category"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Use Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use Food & Dining category"]').exists()).toBe(false)
   })
 })

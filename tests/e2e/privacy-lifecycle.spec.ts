@@ -188,5 +188,5 @@ test('privacy export, Gmail disconnect, account deletion, and guest access lifec
   await expect(page).toHaveURL('http://127.0.0.1:5173/')
   await page.goto('/guest/bills/public-share-token')
   await expect(page.getByText('Guest-safe bill')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Join this split' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Which one is you?' })).toBeVisible()
 })

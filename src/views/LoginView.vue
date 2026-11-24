@@ -2,8 +2,10 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useForm } from 'vee-validate'
-import { useLoginMutation, useRegisterMutation } from '@/composables/useAuthMutations'
-import FriendlyAvatar from '@/components/shared/FriendlyAvatar.vue'
+import {
+  useLoginMutation,
+  useRegisterMutation,
+} from '@/composables/useAuthMutations'
 import ApiErrorAlert from '@/components/shared/ApiErrorAlert.vue'
 import { extractApiFailure, type ApiFailureDetails } from '@/lib/apiError'
 import { useRetryAfterCooldown } from '@/composables/useRetryAfterCooldown'
@@ -26,8 +28,12 @@ const registerMutation = useRegisterMutation()
 const cooldown = useRetryAfterCooldown()
 
 const isLogin = computed(() => mode.value === 'login')
-const isSubmitting = computed(() => loginMutation.isPending.value || registerMutation.isPending.value)
-const submitDisabled = computed(() => isSubmitting.value || cooldown.active.value)
+const isSubmitting = computed(
+  () => loginMutation.isPending.value || registerMutation.isPending.value
+)
+const submitDisabled = computed(
+  () => isSubmitting.value || cooldown.active.value
+)
 // Preserve the previous schema's email acceptance rules.
 const emailPattern = /^(?!\.)(?!.*\.\.)[A-Z0-9_'+.-]*[A-Z0-9_+-]@(?:[A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i
 const validationSchema = computed(() => ({
@@ -38,14 +44,15 @@ const validationSchema = computed(() => ({
     : value.length >= 8 || 'Password must be at least 8 characters.',
 }))
 
-const { defineField, errors, handleSubmit, resetForm } = useForm<AuthFormValues>({
-  validationSchema,
-  initialValues: {
-    fullName: '',
-    email: '',
-    password: '',
-  },
-})
+const { defineField, errors, handleSubmit, resetForm } =
+  useForm<AuthFormValues>({
+    validationSchema,
+    initialValues: {
+      fullName: '',
+      email: '',
+      password: '',
+    },
+  })
 
 const [fullName, fullNameAttrs] = defineField('fullName')
 const [email, emailAttrs] = defineField('email')
@@ -55,7 +62,10 @@ const onSubmit = handleSubmit(async (values) => {
   apiError.value = null
   try {
     if (isLogin.value) {
-      await loginMutation.mutateAsync({ email: values.email, password: values.password })
+      await loginMutation.mutateAsync({
+        email: values.email,
+        password: values.password,
+      })
     } else {
       await registerMutation.mutateAsync({
         email: values.email,
@@ -63,7 +73,9 @@ const onSubmit = handleSubmit(async (values) => {
         fullName: values.fullName,
       })
     }
-    await router.replace(resolveSafeInternalRedirect(route.query.redirect, router) ?? '/dashboard')
+    await router.replace(
+      resolveSafeInternalRedirect(route.query.redirect, router) ?? '/dashboard'
+    )
   } catch (err: unknown) {
     const failure = extractApiFailure(err)
     apiError.value = failure
@@ -76,15 +88,20 @@ function toggleMode() {
   mode.value = nextMode
   apiError.value = null
   cooldown.clear()
-  router.replace({ name: nextMode })
+  void router.replace({ name: nextMode })
 }
 
 function sessionExpiryFailure(): ApiFailureDetails | null {
-  if (route.query.reason !== 'session-expired' && route.query.reason !== 'logout-local') return null
+  if (
+    route.query.reason !== 'session-expired' &&
+    route.query.reason !== 'logout-local'
+  )
+    return null
   return {
-    message: route.query.reason === 'logout-local'
-      ? 'You are signed out locally. Duit could not confirm server revocation, so sign in again only if this device is trusted.'
-      : 'Your session has expired. Please sign in again.',
+    message:
+      route.query.reason === 'logout-local'
+        ? 'You are signed out locally. Duit could not confirm server revocation, so sign in again only if this device is trusted.'
+        : 'Your session has expired. Please sign in again.',
     requestId: null,
     code: null,
     fields: null,
@@ -101,240 +118,376 @@ watch(
     mode.value = name === 'register' ? 'register' : 'login'
     apiError.value = sessionExpiryFailure()
     resetForm()
-  },
+  }
 )
 </script>
 
 <template>
-  <div class="min-h-screen overflow-hidden bg-[#f6f9ff] text-slate-950 selection:bg-blue-500/20 selection:text-blue-900">
-    <div
-      class="absolute inset-0 auth-scene"
-      aria-hidden="true"
-    />
-
-    <nav class="relative z-10 flex h-16 items-center justify-between px-4 sm:px-8">
-      <button
-        type="button"
-        class="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/70 bg-white/80 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
-        @click="router.push('/')"
-      >
-        Back to Duit
-      </button>
-      <button
-        type="button"
-        class="inline-flex min-h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-black text-white shadow-lg shadow-slate-300/60 transition hover:bg-blue-700"
-        @click="toggleMode"
-      >
+  <div class="auth-page">
+    <nav class="auth-nav">
+      <RouterLink to="/" class="wordmark" aria-label="Duit home">
+        du<span class="wordmark-i" aria-hidden="true">ı</span>t
+      </RouterLink>
+      <button type="button" class="auth-switch-btn" @click="toggleMode">
         {{ isLogin ? 'Create account' : 'Sign in' }}
       </button>
     </nav>
 
-    <main class="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-[1fr_0.85fr] lg:px-8">
-      <section class="hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 via-cyan-400 to-emerald-300 p-8 text-white shadow-2xl shadow-blue-200/70 lg:block">
-        <div class="flex items-center gap-4">
-          <FriendlyAvatar
-            tone="blue"
-            size="md"
-          />
-          <div>
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-50">
-              Friendly finance companion
-            </p>
-            <h1 class="mt-2 text-5xl font-black tracking-tight">
-              Duit helps money feel less messy.
-            </h1>
-          </div>
+    <main class="auth-layout">
+      <section class="auth-intro">
+        <span class="auth-kicker">A clearer view of everyday money</span>
+        <h1>Make sense of<br />what you spend.</h1>
+        <p>
+          Keep everyday spending, shared bills, and useful insights together
+          without spreadsheets.
+        </p>
+        <div class="auth-intro-rule" />
+        <div class="auth-proof">
+          <span>01</span>Record what matters with receipts & statements
         </div>
-        <div class="mt-10 grid gap-4">
-          <div class="auth-preview-card">
-            <span>Receipt captured</span>
-            <strong>RM 18.40</strong>
-            <small>Food & Dining suggested</small>
-          </div>
-          <div class="auth-preview-card ml-12">
-            <span>AI insight</span>
-            <strong>Dining up 12%</strong>
-            <small>Recommendation ready</small>
-          </div>
-          <div class="auth-preview-card">
-            <span>Split bill</span>
-            <strong>4 friends joined</strong>
-            <small>Payment tracked manually</small>
-          </div>
+        <div class="auth-proof">
+          <span>02</span>Spot what changed with online anomaly alerts
+        </div>
+        <div class="auth-proof">
+          <span>03</span>Split bills fairly with zero guest friction
         </div>
       </section>
 
-      <section class="mx-auto w-full max-w-md">
-        <div class="mb-6 flex flex-col items-center text-center">
-          <FriendlyAvatar
-            tone="blue"
-            size="md"
-          />
-          <h1 class="mt-5 text-4xl font-black tracking-tight">
-            duit<span class="text-blue-600">.</span>
-          </h1>
-          <p class="mt-2 max-w-xs text-sm font-semibold leading-6 text-slate-600">
-            {{ isLogin ? 'Welcome back. Continue organising your spending with Duit.' : 'Create your Duit account and start tracking with context.' }}
+      <section class="auth-form-panel">
+        <div class="auth-form-heading">
+          <h2>{{ isLogin ? 'Welcome back' : 'Start with Duit' }}</h2>
+          <p>
+            {{
+              isLogin
+                ? 'Sign in to review your spending and activity.'
+                : 'Create an account to keep your spending in view.'
+            }}
           </p>
         </div>
 
-        <div class="rounded-[2rem] border border-white/80 bg-white/88 p-5 shadow-2xl shadow-blue-100/70 backdrop-blur-xl sm:p-7">
-          <ApiErrorAlert
-            v-if="apiError"
-            :message="apiError.message"
-            :reference-id="apiError.supportWorthy ? apiError.requestId : null"
-          />
+        <ApiErrorAlert
+          v-if="apiError"
+          :message="apiError.message"
+          :reference-id="apiError.supportWorthy ? apiError.requestId : null"
+        />
 
-          <form
-            class="space-y-5"
-            @submit.prevent="onSubmit"
-          >
-            <div
-              v-if="!isLogin"
-              class="space-y-2"
-            >
-              <label class="auth-label">Full Name</label>
-              <input
-                v-model="fullName"
-                v-bind="fullNameAttrs"
-                type="text"
-                placeholder="Aina Rahman"
-                class="auth-input"
-                :aria-invalid="!!errors.fullName"
-              >
-              <p
-                v-if="errors.fullName"
-                class="auth-error"
-              >
-                {{ errors.fullName }}
-              </p>
-            </div>
-
-            <div class="space-y-2">
-              <label class="auth-label">Email</label>
-              <input
-                v-model="email"
-                v-bind="emailAttrs"
-                type="email"
-                placeholder="you@example.com"
-                class="auth-input"
-                :aria-invalid="!!errors.email"
-              >
-              <p
-                v-if="errors.email"
-                class="auth-error"
-              >
-                {{ errors.email }}
-              </p>
-            </div>
-
-            <div class="space-y-2">
-              <label class="auth-label">Password</label>
-              <input
-                v-model="password"
-                v-bind="passwordAttrs"
-                type="password"
-                placeholder="Password"
-                class="auth-input"
-                :aria-invalid="!!errors.password"
-              >
-              <p
-                v-if="errors.password"
-                class="auth-error"
-              >
-                {{ errors.password }}
-              </p>
-            </div>
-
-            <button
-              data-testid="auth-submit"
-              type="submit"
-              :disabled="submitDisabled"
-              class="mt-7 flex min-h-13 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-xl shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {{ isSubmitting ? 'Please wait...' : cooldown.active.value ? `Try again in ${cooldown.remainingSeconds.value}s` : isLogin ? 'Sign in to Duit' : 'Create Duit account' }}
-            </button>
-            <p
-              v-if="cooldown.active.value"
-              class="text-center text-sm font-semibold text-amber-700"
-              role="status"
-              aria-live="polite"
-            >
-              {{ cooldown.accessibleMessage.value }}
-            </p>
-          </form>
-
-          <div class="mt-7 border-t border-slate-100 pt-5 text-center">
-            <p class="text-sm font-semibold text-slate-500">
-              {{ isLogin ? "Don't have an account?" : "Already have an account?" }}
-              <button
-                class="font-black text-blue-600 transition hover:text-blue-700"
-                type="button"
-                @click="toggleMode"
-              >
-                {{ isLogin ? 'Sign up' : 'Sign in' }}
-              </button>
+        <form class="auth-form" @submit.prevent="onSubmit">
+          <div v-if="!isLogin">
+            <label for="auth-name">Full name</label>
+            <input
+              id="auth-name"
+              v-model="fullName"
+              v-bind="fullNameAttrs"
+              type="text"
+              autocomplete="name"
+              placeholder="Aina Rahman"
+              :aria-invalid="!!errors.fullName"
+            />
+            <p v-if="errors.fullName" class="auth-error">
+              {{ errors.fullName }}
             </p>
           </div>
-        </div>
+
+          <div>
+            <label for="auth-email">Email</label>
+            <input
+              id="auth-email"
+              v-model="email"
+              v-bind="emailAttrs"
+              type="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              :aria-invalid="!!errors.email"
+            />
+            <p v-if="errors.email" class="auth-error">{{ errors.email }}</p>
+          </div>
+
+          <div>
+            <label for="auth-password">Password</label>
+            <input
+              id="auth-password"
+              v-model="password"
+              v-bind="passwordAttrs"
+              type="password"
+              :autocomplete="isLogin ? 'current-password' : 'new-password'"
+              placeholder="Your password"
+              :aria-invalid="!!errors.password"
+            />
+            <p v-if="errors.password" class="auth-error">
+              {{ errors.password }}
+            </p>
+          </div>
+
+          <button
+            data-testid="auth-submit"
+            type="submit"
+            :disabled="submitDisabled"
+            class="auth-submit"
+          >
+            {{
+              isSubmitting
+                ? 'Please wait…'
+                : cooldown.active.value
+                  ? `Try again in ${cooldown.remainingSeconds.value}s`
+                  : isLogin
+                    ? 'Sign in'
+                    : 'Create account'
+            }}
+          </button>
+
+          <p
+            v-if="cooldown.active.value"
+            role="status"
+            aria-live="polite"
+            class="auth-cooldown"
+          >
+            {{ cooldown.accessibleMessage.value }}
+          </p>
+        </form>
+
+        <p class="auth-switch">
+          {{ isLogin ? 'New to Duit?' : 'Already have an account?' }}
+          <button type="button" @click="toggleMode">
+            {{ isLogin ? 'Create account' : 'Sign in' }}
+          </button>
+        </p>
       </section>
     </main>
   </div>
 </template>
 
 <style scoped>
-.auth-scene {
-  background:
-    radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.18), transparent 28%),
-    radial-gradient(circle at 85% 20%, rgba(45, 212, 191, 0.22), transparent 30%),
-    radial-gradient(circle at 50% 85%, rgba(251, 146, 60, 0.16), transparent 32%),
-    linear-gradient(135deg, #f6f9ff, #eefdf8 48%, #fff7ed);
+.auth-page {
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.auth-preview-card {
-  width: min(26rem, 100%);
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.22);
-  padding: 1.2rem;
-  backdrop-filter: blur(18px);
+.auth-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1140px;
+  min-height: 80px;
+  margin: auto;
+  padding: 0 24px;
 }
 
-.auth-preview-card span,
-.auth-preview-card strong,
-.auth-preview-card small {
+.auth-switch-btn {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #0e5a52;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(340px, 440px);
+  align-items: center;
+  gap: 10%;
+  max-width: 1080px;
+  min-height: calc(100dvh - 80px);
+  margin: auto;
+  padding: 48px 24px 96px;
+}
+
+.auth-intro {
+  align-self: center;
+}
+
+.auth-kicker {
   display: block;
-}
-
-.auth-preview-card span {
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
+  margin-bottom: 16px;
+  color: #0e5a52;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.74);
 }
 
-.auth-preview-card strong {
-  margin-top: 0.45rem;
-  font-size: 1.7rem;
-  font-weight: 900;
-}
-
-.auth-preview-card small {
-  margin-top: 0.25rem;
+.auth-intro h1 {
+  margin: 0;
+  font-size: clamp(38px, 5vw, 56px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
+  color: #1c1b19;
 }
 
-.auth-label {
-  @apply block px-1 text-xs font-black uppercase tracking-wider text-slate-500;
+.auth-intro > p:not(.auth-kicker) {
+  max-width: 420px;
+  margin: 20px 0;
+  color: #57534c;
+  font-size: 16px;
+  line-height: 1.55;
 }
 
-.auth-input {
-  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 font-semibold text-slate-950 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100;
+.auth-intro-rule {
+  width: 40px;
+  height: 3px;
+  margin: 30px 0 20px;
+  background: #d9a23a;
+  border-radius: 2px;
+}
+
+.auth-proof {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  color: #57534c;
+  font-size: 14px;
+}
+
+.auth-proof span {
+  color: #0e5a52;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-form-panel {
+  padding: 36px 32px;
+  border: 1px solid #e4e0d7;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(28, 27, 25, 0.04);
+}
+
+.auth-form-heading {
+  margin-bottom: 24px;
+}
+
+.auth-form-heading h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+  color: #1c1b19;
+}
+
+.auth-form-heading p {
+  margin: 6px 0 0;
+  color: #57534c;
+  font-size: 14px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1b19;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid #d6d1c6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1c1b19;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-form input:focus {
+  border-color: #0e5a52;
+}
+
+.auth-form input::placeholder {
+  color: #8d8880;
+}
+
+.auth-form input[aria-invalid='true'] {
+  border-color: #a3421a;
 }
 
 .auth-error {
-  @apply px-1 text-xs font-bold text-red-600;
+  margin: 5px 0 0;
+  color: #a3421a;
+  font-size: 12px;
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: #0e5a52;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.auth-submit:hover {
+  background: #0a4540;
+}
+
+.auth-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-switch {
+  margin: 24px 0 0;
+  color: #57534c;
+  font-size: 13px;
+  text-align: center;
+}
+
+.auth-switch button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #0e5a52;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.auth-cooldown {
+  color: #8f5b00;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+@media (max-width: 800px) {
+  .auth-nav {
+    min-height: 68px;
+    padding: 0 20px;
+  }
+  .auth-layout {
+    display: block;
+    min-height: auto;
+    padding: 32px 20px 60px;
+  }
+  .auth-intro {
+    margin-bottom: 32px;
+  }
+  .auth-intro h1 {
+    font-size: 36px;
+  }
+  .auth-intro-rule,
+  .auth-proof {
+    display: none;
+  }
+  .auth-form-panel {
+    padding: 24px 20px;
+  }
 }
 </style>

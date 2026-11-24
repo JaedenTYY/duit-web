@@ -64,7 +64,7 @@ describe('CategorySuggestion', () => {
     expect(wrapper.text()).toBe('')
   })
 
-  it('displays the real finite semantic similarity and confidence', () => {
+  it('describes a semantic category without exposing technical scoring', () => {
     const wrapper = mount(CategorySuggestion, {
       props: {
         categories,
@@ -81,9 +81,10 @@ describe('CategorySuggestion', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('Suggested from similar merchants')
-    expect(wrapper.text()).toContain('HIGH')
-    expect(wrapper.text()).toContain('Score: 87.3%')
+    expect(wrapper.text()).toContain('Suggested category')
+    expect(wrapper.text()).toContain('similar to other merchants')
+    expect(wrapper.text()).not.toContain('Score:')
+    expect(wrapper.text()).not.toContain('HIGH')
     expect(wrapper.find('button[aria-label="Forget saved category for this merchant"]').exists()).toBe(false)
   })
 
@@ -128,7 +129,7 @@ describe('CategorySuggestion', () => {
       },
     })
 
-    const button = wrapper.get('button[aria-label="Use 🍔 Food & Dining category"]')
+    const button = wrapper.get('button[aria-label="Use Food & Dining category"]')
     await button.trigger('keydown.enter')
     await button.trigger('click')
 

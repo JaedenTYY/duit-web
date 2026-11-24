@@ -42,7 +42,7 @@ describe('AddTransactionModal', () => {
   it('defaults the remember checkbox to false and sends its value in a create payload', async () => {
     const wrapper = mount(AddTransactionModal)
     await wrapper.get('input[placeholder="0.00"]').setValue('12.50')
-    await wrapper.get('input[placeholder="e.g. Starbucks..."]').setValue('Coffee House')
+    await wrapper.get('input[placeholder="e.g. Village Grocer"]').setValue('Coffee House')
     await wrapper.get('select').setValue('MYR')
     await wrapper.findAll('select')[1].setValue('food')
 
@@ -137,8 +137,8 @@ describe('AddTransactionModal', () => {
     })
 
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false)
-    expect(wrapper.find('input[placeholder="e.g. Starbucks..."]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Merchant name is fixed')
+    expect(wrapper.find('input[placeholder="e.g. Village Grocer"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Merchant cannot be changed')
     await wrapper.findAll('select')[1].setValue('transport')
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
     await wrapper.get('form').trigger('submit')
@@ -161,9 +161,9 @@ describe('AddTransactionModal', () => {
     }))
     const wrapper = mount(AddTransactionModal)
 
-    await wrapper.get('input[placeholder="e.g. Starbucks..."]').setValue('Slow Merchant')
+    await wrapper.get('input[placeholder="e.g. Village Grocer"]').setValue('Slow Merchant')
     await vi.advanceTimersByTimeAsync(500)
-    await wrapper.get('input[placeholder="e.g. Starbucks..."]').setValue('Fast Merchant')
+    await wrapper.get('input[placeholder="e.g. Village Grocer"]').setValue('Fast Merchant')
     await vi.advanceTimersByTimeAsync(500)
 
     resolveFast({
@@ -172,7 +172,7 @@ describe('AddTransactionModal', () => {
       confidence: 'HIGH',
     })
     await flushPromises()
-    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use Transport category"]').exists()).toBe(true)
 
     resolveSlow({
       source: 'SYSTEM_MERCHANT',
@@ -181,8 +181,8 @@ describe('AddTransactionModal', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('button[aria-label="Use 🚗 Transport category"]').exists()).toBe(true)
-    expect(wrapper.find('button[aria-label="Use 🍔 Food & Dining category"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Use Transport category"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Use Food & Dining category"]').exists()).toBe(false)
   })
 
   it('provides dialog semantics, closes on Escape when idle, and restores trigger focus on unmount', async () => {
