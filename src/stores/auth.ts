@@ -64,6 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     clearExpiryTimer()
+    expiryRefresh = null
     token.value = newToken
     user.value = newUser
     lastAuthenticatedUserId = newUser.id
@@ -90,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSession(reason: SessionClearReason = 'manual'): void {
     const resetReason = userScopedResetReason(reason)
     clearExpiryTimer()
+    expiryRefresh = null
     token.value = null
     user.value = null
     expiresAt.value = null
@@ -121,13 +123,15 @@ export const useAuthStore = defineStore('auth', () => {
       if (!refreshHandler) finishAnonymous('expired')
       return
     }
-    expiryRefresh = refreshHandler()
+    const version = sessionVersion.value
+    const pending = refreshHandler()
       .catch(() => {
-        finishAnonymous('expired')
+        if (sessionVersion.value === version) finishAnonymous('expired')
       })
       .finally(() => {
-        expiryRefresh = null
+        if (expiryRefresh === pending) expiryRefresh = null
       })
+    expiryRefresh = pending
   }
 
   function clearExpiryTimer(): void {

@@ -14,30 +14,36 @@ const transport = axios.create({
   },
 })
 
-let csrfToken: string | null = null
-let csrfHeaderName = 'X-XSRF-TOKEN'
+let csrf: { token: string; headerName: string } | null = null
+let csrfVersion = 0
 
-export async function ensureCsrfToken(force = false): Promise<string> {
-  if (csrfToken && !force) return csrfToken
+async function loadCsrf(assertCurrent?: () => void) {
+  if (csrf) return csrf
+  const version = csrfVersion
   const response = await transport.get<ApiResponseCsrfBootstrapResponse>('/auth/csrf')
   const token = response.data?.data?.token
   const headerName = response.data?.data?.headerName
   if (!token?.trim() || !headerName?.trim()) {
     throw new Error('CSRF bootstrap response is invalid')
   }
-  csrfToken = token
-  csrfHeaderName = headerName
-  return token
+  assertCurrent?.()
+  const headers = { token, headerName }
+  if (version === csrfVersion) csrf = headers
+  return headers
 }
 
-export async function refreshAccessToken(requestId: string): Promise<AuthResponse> {
-  const token = await ensureCsrfToken()
+export async function refreshAccessToken(
+  requestId: string,
+  assertCurrent?: () => void,
+): Promise<AuthResponse> {
+  const { token, headerName } = await loadCsrf(assertCurrent)
+  assertCurrent?.()
   const response = await transport.post<ApiResponseAuthResponse>(
     '/auth/refresh',
     undefined,
     {
       headers: {
-        [csrfHeaderName]: token,
+        [headerName]: token,
         'X-Refresh-Request-ID': requestId,
       },
     }
@@ -45,22 +51,22 @@ export async function refreshAccessToken(requestId: string): Promise<AuthRespons
   return response.data.data
 }
 
-export async function revokeRefreshSession(): Promise<void> {
-  const token = await ensureCsrfToken()
+export async function revokeRefreshSession(assertCurrent?: () => void): Promise<void> {
+  const { token, headerName } = await loadCsrf(assertCurrent)
+  assertCurrent?.()
   await transport.post(
     '/auth/logout',
     undefined,
-    { headers: { [csrfHeaderName]: token } }
+    { headers: { [headerName]: token } }
   )
-  clearCsrfToken()
 }
 
 export async function csrfRequestHeaders(): Promise<Record<string, string>> {
-  const token = await ensureCsrfToken()
-  return { [csrfHeaderName]: token }
+  const { token, headerName } = await loadCsrf()
+  return { [headerName]: token }
 }
 
 export function clearCsrfToken(): void {
-  csrfToken = null
-  csrfHeaderName = 'X-XSRF-TOKEN'
+  csrf = null
+  csrfVersion += 1
 }

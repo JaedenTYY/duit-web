@@ -129,6 +129,22 @@ describe('memory-only authentication state', () => {
     expect(captureUserScopeEpoch()).toBe(epochBeforeRefresh)
   })
 
+  it('ignores a failed expiry refresh after a new login', async () => {
+    const store = useAuthStore()
+    let failRefresh!: (error: Error) => void
+    store.configureRefresh(() => new Promise((_resolve, reject) => { failRefresh = reject }))
+    store.setSession('old-access', USER, new Date(NOW.getTime() + 60_000).toISOString())
+    await vi.advanceTimersByTimeAsync(60_000 - SESSION_EXPIRY_SAFETY_SKEW_MS)
+    store.setSession('new-access', OTHER_USER, new Date(NOW.getTime() + 120_000).toISOString())
+
+    failRefresh(new Error('old refresh rejected'))
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(store.token).toBe('new-access')
+    expect(store.user?.id).toBe(OTHER_USER.id)
+    expect(store.isAuthenticated).toBe(true)
+  })
+
   it('setting a new session replaces the old expiry timer', async () => {
     const store = useAuthStore()
     const refresh = vi.fn(async () => undefined)

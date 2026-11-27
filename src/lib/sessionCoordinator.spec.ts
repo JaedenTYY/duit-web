@@ -95,6 +95,162 @@ describe('session refresh coordination', () => {
     expect(transportMock.refreshAccessToken).toHaveBeenCalledTimes(1)
   })
 
+  it('invalidates pending refresh at the start of logout', async () => {
+    const refreshResponse = deferred<AuthResponse>()
+    const revocation = deferred<void>()
+    transportMock.refreshAccessToken.mockReturnValue(refreshResponse.promise)
+    transportMock.revokeRefreshSession.mockReturnValue(revocation.promise)
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    coordinator.establishSession(SESSION)
+
+    const refresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+    const logout = coordinator.logoutSession()
+    refreshResponse.resolve({ ...SESSION, token: 'obsolete-token' })
+    await refresh
+    const tokenWhileRevocationPending = useAuthStore().token
+    revocation.resolve()
+    await logout
+
+    expect(tokenWhileRevocationPending).toBeNull()
+  })
+
+  it('does not restore a locally revoked session', async () => {
+    const response = deferred<AuthResponse>()
+    transportMock.refreshAccessToken.mockReturnValue(response.promise)
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const refresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+
+    coordinator.propagateRevocation()
+    response.resolve(SESSION)
+    await refresh
+
+    expect(useAuthStore().token).toBeNull()
+  })
+
+  it.each(['resolved', 'rejected'] as const)(
+    'does not clear the new login when an old refresh is %s',
+    async (outcome) => {
+      const response = deferred<AuthResponse>()
+      transportMock.refreshAccessToken.mockReturnValue(response.promise)
+      const coordinator = await import('./sessionCoordinator')
+      const { useAuthStore } = await import('@/stores/auth')
+      const refresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+      coordinator.establishSession({ ...SESSION, token: 'new-login-token' })
+      transportMock.clearCsrfToken.mockClear()
+      FakeBroadcastChannel.messages.length = 0
+
+      if (outcome === 'resolved') response.resolve(SESSION)
+      else response.reject(new Error('refresh rejected'))
+      await refresh
+
+      expect(useAuthStore().token).toBe('new-login-token')
+      expect(transportMock.clearCsrfToken).not.toHaveBeenCalled()
+      expect(FakeBroadcastChannel.messages).toEqual([])
+      expect(routerMock.replace).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each(['Web Lock', 'election'] as const)('does not start refresh after revocation while waiting for %s', async (mode) => {
+    const release = deferred<void>()
+    vi.stubGlobal('navigator', mode === 'Web Lock' ? {
+      locks: {
+        request: async (_name: string, callback: () => Promise<AuthResponse>) => {
+          await release.promise
+          return callback()
+        },
+      },
+    } : {})
+    const coordinator = await import('./sessionCoordinator')
+    const refresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+    coordinator.propagateRevocation()
+
+    release.resolve()
+    await vi.advanceTimersByTimeAsync(50)
+    await refresh
+
+    expect(transportMock.refreshAccessToken).not.toHaveBeenCalled()
+  })
+
+  it('keeps a remote refresh waiter through the preceding operation timeout', async () => {
+    vi.stubGlobal('navigator', {})
+    const coordinator = await import('./sessionCoordinator')
+    remoteStart('peer-1')
+    const first = coordinator.refreshSessionSingleFlight()
+    remoteResult('peer-1')
+    await first
+
+    await vi.advanceTimersByTimeAsync(6_000)
+    remoteStart('peer-2')
+    const second = coordinator.refreshSessionSingleFlight().catch(() => null)
+    await vi.advanceTimersByTimeAsync(6_000)
+    remoteResult('peer-2')
+    await vi.advanceTimersByTimeAsync(6_000)
+
+    await expect(second).resolves.toEqual(SESSION)
+  })
+
+  it('ignores delayed refresh and session messages from before cross-tab logout', async () => {
+    const response = deferred<AuthResponse>()
+    transportMock.refreshAccessToken.mockReturnValue(response.promise)
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const refresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+
+    remoteStart('other-tab')
+    terminalMessage('logout')
+    remoteResult('other-tab')
+    response.resolve(SESSION)
+    await refresh
+
+    expect(useAuthStore().token).toBeNull()
+  })
+
+  it('accepts a new cross-tab login and ignores delayed messages from the preceding lifecycle', async () => {
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+    remoteStart('refresh-peer')
+    terminalMessage('logout')
+
+    const next = { ...SESSION, token: 'new-peer-login' }
+    localStorage.setItem('duit-auth-lifecycle', 'login:next')
+    FakeBroadcastChannel.emitExternal({
+      type: 'login', tabId: 'login-peer', lifecycle: 'login:next', session: next,
+    })
+    FakeBroadcastChannel.emitExternal({
+      type: 'anonymous', tabId: 'terminal-tab', lifecycle: 'logout:remote-transition', reason: 'logout',
+    })
+    remoteResult('refresh-peer')
+    remoteResult('uncorrelated-peer', 'login:next')
+
+    expect(store.token).toBe(next.token)
+    expect(coordinator.getSessionLifecycle()).toBe('login:next')
+    expect(routerMock.replace).not.toHaveBeenCalled()
+  })
+
+  it('does not let an obsolete promise detach a newer single-flight refresh', async () => {
+    const oldResponse = deferred<AuthResponse>()
+    const newResponse = deferred<AuthResponse>()
+    transportMock.refreshAccessToken
+      .mockReturnValueOnce(oldResponse.promise)
+      .mockReturnValueOnce(newResponse.promise)
+    const coordinator = await import('./sessionCoordinator')
+    const oldRefresh = coordinator.refreshSessionSingleFlight().catch(() => null)
+    coordinator.establishSession({ ...SESSION, token: 'new-login' })
+    const newRefresh = coordinator.refreshSessionSingleFlight()
+
+    oldResponse.resolve(SESSION)
+    await oldRefresh
+    const concurrent = coordinator.refreshSessionSingleFlight()
+    newResponse.resolve({ ...SESSION, token: 'new-refresh' })
+
+    expect(concurrent).toBe(newRefresh)
+    await expect(concurrent).resolves.toMatchObject({ token: 'new-refresh' })
+    expect(transportMock.refreshAccessToken).toHaveBeenCalledTimes(2)
+  })
+
   it('clears session state when refresh fails without looping', async () => {
     transportMock.refreshAccessToken.mockRejectedValue(new Error('unavailable'))
     const coordinator = await import('./sessionCoordinator')
@@ -115,6 +271,25 @@ describe('session refresh coordination', () => {
         },
       })
     })
+  })
+
+  it('clears a peer session only for the matching refresh failure and leaves the login marker intact', async () => {
+    const coordinator = await import('./sessionCoordinator')
+    const { useAuthStore } = await import('@/stores/auth')
+    coordinator.establishSession(SESSION)
+    const lifecycle = coordinator.getSessionLifecycle()
+    remoteStart('refresh-peer', lifecycle)
+
+    FakeBroadcastChannel.emitExternal({
+      type: 'refresh-failed', tabId: 'older-peer', lifecycle, operationId: 'older-peer',
+    })
+    expect(useAuthStore().token).toBe(SESSION.token)
+    FakeBroadcastChannel.emitExternal({
+      type: 'refresh-failed', tabId: 'refresh-peer', lifecycle, operationId: 'refresh-peer',
+    })
+
+    expect(useAuthStore().token).toBeNull()
+    expect(localStorage.getItem('duit-auth-lifecycle')).toBe(lifecycle)
   })
 
   it('propagates logout without persisting either token', async () => {
@@ -158,11 +333,8 @@ describe('session refresh coordination', () => {
     await import('./sessionCoordinator')
     const { useAuthStore } = await import('@/stores/auth')
 
-    FakeBroadcastChannel.emitExternal({
-      type: 'session',
-      tabId: 'other-tab',
-      session: SESSION,
-    })
+    remoteStart('other-tab')
+    remoteResult('other-tab')
 
     expect(useAuthStore().token).toBe(SESSION.token)
     expect(useAuthStore().isAuthenticated).toBe(true)
@@ -176,11 +348,7 @@ describe('session refresh coordination', () => {
     const store = useAuthStore()
     store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
 
-    FakeBroadcastChannel.emitExternal({
-      type: 'anonymous',
-      tabId: 'other-tab',
-      reason: 'revoked',
-    })
+    terminalMessage('revoked')
 
     expect(store.token).toBeNull()
     expect(store.sessionExpired).toBe(true)
@@ -212,16 +380,9 @@ describe('session refresh coordination', () => {
     const store = useAuthStore()
     store.setSession(SESSION.token, SESSION.user, SESSION.expiresAt)
 
-    FakeBroadcastChannel.emitExternal({
-      type: 'anonymous',
-      tabId: 'deleting-tab',
-      reason: 'deleted',
-    })
-    FakeBroadcastChannel.emitExternal({
-      type: 'session',
-      tabId: 'stale-refresh-tab',
-      session: SESSION,
-    })
+    terminalMessage('deleted')
+    remoteStart('stale-refresh-tab')
+    remoteResult('stale-refresh-tab')
 
     expect(store.token).toBeNull()
     expect(transportMock.clearCsrfToken).toHaveBeenCalled()
@@ -239,17 +400,29 @@ describe('session refresh coordination', () => {
     const { useAuthStore } = await import('@/stores/auth')
     const refresh = coordinator.refreshSessionSingleFlight()
 
-    FakeBroadcastChannel.emitExternal({
-      type: 'anonymous',
-      tabId: 'deleting-tab',
-      reason: 'deleted',
-    })
+    terminalMessage('deleted')
     resolveRefresh(SESSION)
 
     await expect(refresh).rejects.toThrow('Session changed while refresh was in progress')
     expect(useAuthStore().token).toBeNull()
   })
 })
+
+function terminalMessage(reason: 'logout' | 'revoked' | 'deleted') {
+  const lifecycle = reason + ':remote-transition'
+  localStorage.setItem('duit-auth-lifecycle', lifecycle)
+  FakeBroadcastChannel.emitExternal({ type: 'anonymous', tabId: 'terminal-tab', lifecycle, reason })
+}
+
+function remoteStart(tabId: string, lifecycle: string | null = null) {
+  FakeBroadcastChannel.emitExternal({ type: 'refresh-start', tabId, lifecycle, operationId: tabId })
+}
+
+function remoteResult(tabId: string, lifecycle: string | null = null) {
+  FakeBroadcastChannel.emitExternal({
+    type: 'refresh-result', tabId, lifecycle, operationId: tabId, session: SESSION,
+  })
+}
 
 class FakeBroadcastChannel {
   static messages: unknown[] = []
@@ -305,4 +478,14 @@ function createMemoryStorage(): Storage {
       values.set(key, value)
     },
   }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: Error) => void
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve
+    reject = onReject
+  })
+  return { promise, resolve, reject }
 }

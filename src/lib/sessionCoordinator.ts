@@ -6,68 +6,109 @@ import {
   revokeRefreshSession,
 } from '@/lib/authTransport'
 
+type AnonymousReason = 'logout' | 'revoked' | 'deleted'
+type Lifecycle = string | null
+type RefreshOperation = { tabId: string; lifecycle: Lifecycle; operationId: string }
 type SessionMessage =
-  | { type: 'refresh-intent'; tabId: string }
-  | { type: 'refresh-start'; tabId: string }
-  | { type: 'session'; tabId: string; session: AuthResponse }
-  | { type: 'anonymous'; tabId: string; reason: 'logout' | 'revoked' | 'refresh-failed' | 'deleted' }
+  | (RefreshOperation & { type: 'refresh-intent' | 'refresh-start' | 'refresh-failed' })
+  | (RefreshOperation & { type: 'refresh-result'; session: AuthResponse })
+  | { type: 'login'; tabId: string; lifecycle: string; session: AuthResponse }
+  | { type: 'anonymous'; tabId: string; lifecycle: string; reason: AnonymousReason }
 
 const CHANNEL_NAME = 'duit-auth-session'
 const REFRESH_LOCK_NAME = 'duit-auth-refresh'
+const LIFECYCLE_KEY = 'duit-auth-lifecycle'
 const ELECTION_WINDOW_MS = 50
 const REMOTE_REFRESH_TIMEOUT_MS = 12_000
 const tabId = crypto.randomUUID()
 const channel = typeof BroadcastChannel === 'undefined'
   ? null
   : new BroadcastChannel(CHANNEL_NAME)
-const candidates = new Set<string>()
 
+let lifecycle: Lifecycle = localStorage.getItem(LIFECYCLE_KEY)
 let refreshPromise: Promise<AuthResponse> | null = null
 let bootstrapPromise: Promise<void> | null = null
-let sessionLifecycleVersion = 0
-let accountDeletionObserved = false
-let terminalNavigationInFlight = false
+let election: Map<string, RefreshOperation> | null = null
+let networkRefresh: RefreshOperation | null = null
 let remoteRefresh: {
+  operation: RefreshOperation
   promise: Promise<AuthResponse>
-  resolve: (session: AuthResponse) => void
-  reject: (error: Error) => void
+  finish: (result: AuthResponse | Error) => void
 } | null = null
+
+class ObsoleteRefresh extends Error {
+  constructor() {
+    super('Session changed while refresh was in progress')
+  }
+}
 
 channel?.addEventListener('message', (event: MessageEvent<SessionMessage>) => {
   const message = event.data
-  if (!message || message.tabId === tabId) return
-  const store = useAuthStore()
-  if (message.type === 'refresh-intent') {
-    candidates.add(message.tabId)
-  } else if (message.type === 'refresh-start') {
-    ensureRemoteRefresh()
-  } else if (message.type === 'session') {
-    if (accountDeletionObserved) return
-    store.setSession(message.session.token, message.session.user, message.session.expiresAt)
-    remoteRefresh?.resolve(message.session)
-    remoteRefresh = null
-  } else if (message.type === 'anonymous') {
-    const accountDeleted = message.reason === 'deleted'
-    if (accountDeleted) {
-      accountDeletionObserved = true
-      sessionLifecycleVersion += 1
-    }
-    clearCsrfToken()
-    store.finishAnonymous(message.reason === 'logout' ? 'manual' : message.reason === 'deleted' ? 'deleted' : 'revoked')
-    remoteRefresh?.reject(new Error('Refresh session is unavailable'))
-    remoteRefresh = null
-    if (accountDeleted) redirectToPublicEntry()
+  if (!message || message.tabId === tabId ||
+      message.lifecycle !== localStorage.getItem(LIFECYCLE_KEY)) return
+
+  if (message.type === 'login') {
+    if (typeof message.lifecycle !== 'string' || !message.lifecycle.startsWith('login:')) return
+    if (lifecycle === message.lifecycle && useAuthStore().isAuthenticated) return
+    changeLifecycle(message.lifecycle)
+    applySession(message.session)
+    return
+  }
+
+  if (message.type === 'anonymous') {
+    if (typeof message.lifecycle !== 'string' || lifecycle === message.lifecycle ||
+        !message.lifecycle.startsWith(message.reason + ':')) return
+    changeLifecycle(message.lifecycle)
+    finishAnonymous(message.reason)
+    if (message.reason === 'deleted') redirectToPublicEntry()
     else void redirectToLoginIfProtected(message.reason === 'logout' ? 'logout' : 'session-expired')
+    return
+  }
+
+  if (!isCurrentSessionLifecycle(message.lifecycle) || isTerminalLifecycle() || !message.operationId) return
+  if (message.type === 'refresh-intent') {
+    if (networkRefresh) post({ ...networkRefresh, type: 'refresh-start' })
+    if (election && !election.has(message.tabId)) {
+      election.set(message.tabId, message)
+      post({ ...election.get(tabId)!, type: 'refresh-intent' })
+    }
+  } else if (message.type === 'refresh-start') {
+    waitForRemoteRefresh(message)
+  } else if (remoteRefresh && matchesOperation(remoteRefresh.operation, message)) {
+    const pending = remoteRefresh
+    if (message.type === 'refresh-result') {
+      try {
+        applySession(message.session)
+        pending.finish(message.session)
+      } catch (error) {
+        pending.finish(error instanceof Error ? error : new Error('Invalid remote session'))
+      }
+    } else if (message.type === 'refresh-failed') {
+      pending.finish(new Error('Refresh session is unavailable'))
+      if (!refreshPromise) {
+        clearCsrfToken()
+        finishAnonymous('revoked')
+        void redirectToLoginIfProtected('session-expired')
+      }
+    }
   }
 })
+
+export function getSessionLifecycle(): Lifecycle {
+  return lifecycle
+}
+
+export function isCurrentSessionLifecycle(expected: Lifecycle): boolean {
+  // The origin-wide marker orders transitions even when BroadcastChannel delivery is delayed.
+  return expected === lifecycle && expected === localStorage.getItem(LIFECYCLE_KEY)
+}
 
 export function configureSessionLifecycle(): void {
   useAuthStore().configureRefresh(async () => {
     try {
       await refreshSessionSingleFlight()
     } catch (error) {
-      void redirectToLoginIfProtected('session-expired')
-      throw error
+      if (!(error instanceof ObsoleteRefresh)) throw error
     }
   })
 }
@@ -79,7 +120,7 @@ export function initializeSession(): Promise<void> {
   bootstrapPromise = refreshSessionSingleFlight()
     .then(() => undefined)
     .catch(() => {
-      store.finishAnonymous('invalid')
+      if (store.bootstrapStatus === 'loading') store.finishAnonymous('invalid')
     })
   return bootstrapPromise
 }
@@ -90,48 +131,69 @@ export async function ensureSessionBootstrapped(): Promise<void> {
 }
 
 export function establishSession(session: AuthResponse): void {
-  accountDeletionObserved = false
-  sessionLifecycleVersion += 1
-  applySession(session, true)
+  const next = startLifecycle('login')
+  applySession(session)
+  post({ type: 'login', tabId, lifecycle: next, session })
 }
 
 export function refreshSessionSingleFlight(): Promise<AuthResponse> {
+  if (!isCurrentSessionLifecycle(lifecycle) || isTerminalLifecycle()) {
+    return Promise.reject(new ObsoleteRefresh())
+  }
   if (refreshPromise) return refreshPromise
-  refreshPromise = coordinateRefresh()
-    .finally(() => {
-      refreshPromise = null
+
+  const operation = { tabId, lifecycle, operationId: crypto.randomUUID() }
+  const store = useAuthStore()
+  const hadSession = Boolean(store.token || store.user)
+  const promise = coordinateRefresh(operation)
+    .then((session) => {
+      assertCurrentRefresh(operation)
+      return session
     })
-  return refreshPromise
+    .catch((error: unknown) => {
+      assertCurrentRefresh(operation)
+      if (!(error instanceof ObsoleteRefresh)) {
+        clearCsrfToken()
+        store.finishAnonymous('invalid')
+        if (hadSession) void redirectToLoginIfProtected('session-expired')
+      }
+      throw error
+    })
+    .finally(() => {
+      if (refreshPromise === promise) refreshPromise = null
+    })
+  refreshPromise = promise
+  return promise
 }
 
 export async function logoutSession(): Promise<{ revoked: boolean }> {
+  // Capture the current CSRF headers before clearing the cache for the next session.
+  const next = publishLifecycle('logout')
+  const revocation = revokeRefreshSession(() => {
+    if (!isCurrentSessionLifecycle(next)) throw new ObsoleteRefresh()
+  })
+  changeLifecycle(next)
+  finishAnonymous('logout')
+  post({ type: 'anonymous', tabId, lifecycle: next, reason: 'logout' })
+
   let revoked = true
   try {
-    await revokeRefreshSession()
+    await revocation
   } catch {
     revoked = false
-  } finally {
-    const store = useAuthStore()
-    store.finishAnonymous('manual')
-    channel?.postMessage({ type: 'anonymous', tabId, reason: 'logout' } satisfies SessionMessage)
-    void redirectToLoginIfProtected(revoked ? 'logout' : 'logout-local')
   }
+  void redirectToLoginIfProtected(revoked ? 'logout' : 'logout-local', next)
   return { revoked }
 }
 
 export function propagateRevocation(): void {
-  clearCsrfToken()
-  useAuthStore().finishAnonymous('revoked')
-  channel?.postMessage({ type: 'anonymous', tabId, reason: 'revoked' } satisfies SessionMessage)
+  if (!isCurrentSessionLifecycle(lifecycle) || isTerminalLifecycle()) return
+  endSession('revoked')
   void redirectToLoginIfProtected('session-expired')
 }
 
 export function propagateAccountDeletion(): void {
-  accountDeletionObserved = true
-  sessionLifecycleVersion += 1
-  clearCsrfToken()
-  useAuthStore().finishAnonymous('deleted')
-  channel?.postMessage({ type: 'anonymous', tabId, reason: 'deleted' } satisfies SessionMessage)
+  endSession('deleted')
 }
 
 export function completeAccountDeletion(): void {
@@ -147,71 +209,105 @@ if (import.meta.hot) {
   import.meta.hot.dispose(closeSessionCoordination)
 }
 
-async function coordinateRefresh(): Promise<AuthResponse> {
+function endSession(reason: AnonymousReason): void {
+  const next = startLifecycle(reason)
+  finishAnonymous(reason)
+  post({ type: 'anonymous', tabId, lifecycle: next, reason })
+}
+
+function startLifecycle(kind: 'login' | AnonymousReason): string {
+  const next = publishLifecycle(kind)
+  changeLifecycle(next)
+  return next
+}
+
+function publishLifecycle(kind: 'login' | AnonymousReason): string {
+  const next = kind + ':' + crypto.randomUUID()
+  localStorage.setItem(LIFECYCLE_KEY, next)
+  return next
+}
+
+function changeLifecycle(next: string): void {
+  lifecycle = next
+  refreshPromise = null
+  election = null
+  networkRefresh = null
+  remoteRefresh?.finish(new ObsoleteRefresh())
+  clearCsrfToken()
+}
+
+function isTerminalLifecycle(): boolean {
+  return lifecycle !== null && !lifecycle.startsWith('login:')
+}
+
+function finishAnonymous(reason: AnonymousReason): void {
+  useAuthStore().finishAnonymous(reason === 'logout' ? 'manual' : reason)
+}
+
+async function coordinateRefresh(operation: RefreshOperation): Promise<AuthResponse> {
+  const store = useAuthStore()
+  const versionBeforeWait = store.sessionVersion
   const locks = navigator.locks
   if (locks?.request) {
-    const versionBeforeWait = useAuthStore().sessionVersion
     return locks.request(REFRESH_LOCK_NAME, async () => {
-      const store = useAuthStore()
+      assertCurrentRefresh(operation)
       if (store.sessionVersion !== versionBeforeWait && store.isAuthenticated) {
         return currentSession()
       }
-      return performRefresh()
+      return remoteRefresh?.promise ?? performRefresh(operation)
     })
   }
-  return electAndRefresh()
+
+  const pending = remoteRefresh?.promise
+  if (pending) return pending
+  const candidates = new Map([[tabId, operation]])
+  election = candidates
+  post({ ...operation, type: 'refresh-intent' })
+  await new Promise((resolve) => setTimeout(resolve, ELECTION_WINDOW_MS))
+  assertCurrentRefresh(operation)
+  if (election === candidates) election = null
+  if (store.sessionVersion !== versionBeforeWait && store.isAuthenticated) {
+    return currentSession()
+  }
+  if (remoteRefresh) return remoteRefresh.promise
+  const leader = [...candidates.keys()].sort()[0]
+  return leader === tabId
+    ? performRefresh(operation)
+    : waitForRemoteRefresh(candidates.get(leader)!)
 }
 
-async function electAndRefresh(): Promise<AuthResponse> {
-  if (remoteRefresh) return withTimeout(remoteRefresh.promise)
-  const versionBeforeElection = useAuthStore().sessionVersion
-  candidates.clear()
-  candidates.add(tabId)
-  channel?.postMessage({ type: 'refresh-intent', tabId } satisfies SessionMessage)
-  await delay(ELECTION_WINDOW_MS)
-  const leader = [...candidates].sort()[0]
-  if (leader !== tabId) {
-    const store = useAuthStore()
-    if (store.sessionVersion !== versionBeforeElection && store.isAuthenticated) {
-      return currentSession()
-    }
-    return withTimeout(ensureRemoteRefresh().promise)
-  }
-  return performRefresh()
-}
-
-async function performRefresh(): Promise<AuthResponse> {
-  if (accountDeletionObserved) {
-    throw new Error('Account deletion was observed')
-  }
-  const lifecycleVersion = sessionLifecycleVersion
-  const hadSession = Boolean(useAuthStore().token || useAuthStore().user)
-  channel?.postMessage({ type: 'refresh-start', tabId } satisfies SessionMessage)
+async function performRefresh(operation: RefreshOperation): Promise<AuthResponse> {
+  assertCurrentRefresh(operation)
+  networkRefresh = operation
+  post({ ...operation, type: 'refresh-start' })
   try {
-    const session = await refreshAccessToken(crypto.randomUUID())
-    if (accountDeletionObserved || lifecycleVersion !== sessionLifecycleVersion) {
-      throw new Error('Session changed while refresh was in progress')
-    }
-    applySession(session, true)
+    const session = await refreshAccessToken(operation.operationId, () => assertCurrentRefresh(operation))
+    assertCurrentRefresh(operation)
+    applySession(session)
+    post({ ...operation, type: 'refresh-result', session })
     return session
   } catch (error) {
-    clearCsrfToken()
-    useAuthStore().finishAnonymous('invalid')
-    channel?.postMessage({
-      type: 'anonymous',
-      tabId,
-      reason: 'refresh-failed',
-    } satisfies SessionMessage)
-    if (hadSession) void redirectToLoginIfProtected('session-expired')
+    assertCurrentRefresh(operation)
+    // Report failure to peers waiting for this operation without replacing the shared login marker.
+    post({ ...operation, type: 'refresh-failed' })
     throw error
+  } finally {
+    if (networkRefresh === operation) networkRefresh = null
   }
 }
 
-function applySession(session: AuthResponse, broadcast: boolean): void {
-  useAuthStore().setSession(session.token, session.user, session.expiresAt)
-  if (broadcast) {
-    channel?.postMessage({ type: 'session', tabId, session } satisfies SessionMessage)
+function assertCurrentRefresh(operation: RefreshOperation): void {
+  if (!isCurrentSessionLifecycle(operation.lifecycle) || isTerminalLifecycle()) {
+    throw new ObsoleteRefresh()
   }
+}
+
+function post(message: SessionMessage): void {
+  channel?.postMessage(message)
+}
+
+function applySession(session: AuthResponse): void {
+  useAuthStore().setSession(session.token, session.user, session.expiresAt)
 }
 
 function currentSession(): AuthResponse {
@@ -219,66 +315,66 @@ function currentSession(): AuthResponse {
   if (!store.token || !store.user || !store.expiresAt) {
     throw new Error('Authenticated session is unavailable')
   }
-  return {
-    token: store.token,
-    user: store.user,
-    expiresAt: store.expiresAt,
-  }
+  return { token: store.token, user: store.user, expiresAt: store.expiresAt }
 }
 
-function ensureRemoteRefresh() {
-  if (remoteRefresh) return remoteRefresh
+function matchesOperation(left: RefreshOperation | undefined, right: RefreshOperation): boolean {
+  return left?.lifecycle === right.lifecycle &&
+    left?.tabId === right.tabId && left?.operationId === right.operationId
+}
+
+function waitForRemoteRefresh(operation: RefreshOperation): Promise<AuthResponse> {
+  if (remoteRefresh && matchesOperation(remoteRefresh.operation, operation)) return remoteRefresh.promise
+  remoteRefresh?.finish(new ObsoleteRefresh())
+
   let resolve!: (session: AuthResponse) => void
   let reject!: (error: Error) => void
-  const promise = new Promise<AuthResponse>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
+  const promise = new Promise<AuthResponse>((onResolve, onReject) => {
+    resolve = onResolve
+    reject = onReject
   })
-  remoteRefresh = { promise, resolve, reject }
-  return remoteRefresh
-}
-
-async function withTimeout(promise: Promise<AuthResponse>): Promise<AuthResponse> {
-  return Promise.race([
+  // A passive tab may receive a start without a caller waiting for the result.
+  void promise.catch(() => undefined)
+  const pending = {
+    operation,
     promise,
-    delay(REMOTE_REFRESH_TIMEOUT_MS).then(() => {
-      remoteRefresh = null
-      throw new Error('Cross-tab refresh leader timed out')
-    }),
-  ])
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+    finish(result: AuthResponse | Error): void {
+      clearTimeout(timeout)
+      if (remoteRefresh === pending) remoteRefresh = null
+      if (result instanceof Error) reject(result)
+      else resolve(result)
+    },
+  }
+  const timeout = setTimeout(
+    () => pending.finish(new Error('Cross-tab refresh leader timed out')),
+    REMOTE_REFRESH_TIMEOUT_MS,
+  )
+  remoteRefresh = pending
+  return promise
 }
 
 function redirectToPublicEntry(): void {
   location.replace('/')
 }
 
-export async function redirectToLoginIfProtected(reason: 'logout' | 'logout-local' | 'session-expired'): Promise<void> {
-  if (terminalNavigationInFlight) return
-  terminalNavigationInFlight = true
-  try {
-    const { default: router } = await import('@/router')
-    const currentRoute = router.currentRoute.value
-    const isPublicRoute = Boolean(currentRoute.meta.hideNav) ||
-      currentRoute.name === 'landing' ||
-      currentRoute.name === 'login' ||
-      currentRoute.name === 'register' ||
-      currentRoute.name === 'guest-bill-split' ||
-      currentRoute.name === 'not-found'
+export async function redirectToLoginIfProtected(
+  reason: 'logout' | 'logout-local' | 'session-expired',
+  expected = lifecycle,
+): Promise<void> {
+  const { default: router } = await import('@/router')
+  if (!isCurrentSessionLifecycle(expected) || useAuthStore().isAuthenticated) return
+  const currentRoute = router.currentRoute.value
+  const isPublicRoute = !currentRoute.name || Boolean(currentRoute.meta.hideNav) ||
+    currentRoute.name === 'landing' ||
+    currentRoute.name === 'login' ||
+    currentRoute.name === 'register' ||
+    currentRoute.name === 'guest-bill-split' ||
+    currentRoute.name === 'not-found'
 
-    if (isPublicRoute) return
+  if (isPublicRoute) return
 
-    const query = reason === 'logout'
-      ? undefined
-      : {
-          reason,
-          redirect: currentRoute.fullPath,
-        }
-    await router.replace({ name: 'login', query })
-  } finally {
-    terminalNavigationInFlight = false
-  }
+  const query = reason === 'logout'
+    ? undefined
+    : { reason, redirect: currentRoute.fullPath }
+  await router.replace({ name: 'login', query })
 }
