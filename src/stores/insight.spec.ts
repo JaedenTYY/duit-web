@@ -5,7 +5,7 @@ import {
   generate,
   list,
 } from '@/api/generated/insight-controller/insight-controller'
-import type { Insight } from '@/api/generated/model'
+import { ErrorDetailCode, type Insight } from '@/api/generated/model'
 import { resetUserScopedFrontendState } from '@/stores/resetUserScopedState'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types'
@@ -62,17 +62,20 @@ describe('insight store generated contract behavior', () => {
     expect(store.insights).toEqual([refreshed])
   })
 
-  it('records API errors without replacing the last good insights', async () => {
+  it('records a provider outage without replacing the last good insights', async () => {
     const existing = generatedInsight()
     vi.mocked(list).mockResolvedValue({ data: [existing], meta: meta() })
-    vi.mocked(generate).mockRejectedValue(apiError('ERR_PROVIDER_503', 'Insight generation unavailable', 503))
+    const message = 'External service temporarily unavailable. Please try again later.'
+    vi.mocked(generate).mockRejectedValue(
+      apiError(ErrorDetailCode.ERR_SERVICE_UNAVAILABLE_503, message, 503),
+    )
     const store = useInsightStore()
     await store.fetchInsights()
 
     await store.generateWeeklyInsight()
 
     expect(store.insights).toEqual([existing])
-    expect(store.error).toBe('Insight generation unavailable')
+    expect(store.error).toBe(message)
     expect(store.generating).toBe(false)
   })
 

@@ -1,6 +1,6 @@
 {
-  "backendCommit": "e9735571264d3296068ae85f5921ec54fcb85f63",
-  "openApiSha256": "13c0cc7eac9165f7628cfb3893730813700072090ce156f7d1c1d4e36f9a963a",
+  "backendCommit": "bb651eec012cf32f3f86f1b5ecf1db5cb5f37f8e",
+  "openApiSha256": "73d0e9d87a562d25b8f8746fbf1c3abc5cb190f0c7030f69547c256a153bd1bc",
   "generator": "orval",
   "generatorVersion": "8.23.0"
 }
