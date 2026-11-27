@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLogoutMutation } from '@/composables/useAuthMutations'
 import PageHeader from '@/components/shared/PageHeader.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const logoutMutation = useLogoutMutation()
 
@@ -15,12 +13,7 @@ const userInitial = computed(() => firstName.value.charAt(0).toUpperCase())
 const logoutPending = computed(() => logoutMutation.isPending.value)
 
 async function handleLogout() {
-  const result = await logoutMutation.mutateAsync(undefined)
-  await router.replace(
-    result.revoked
-      ? '/login'
-      : { name: 'login', query: { reason: 'logout-local' } }
-  )
+  await logoutMutation.mutateAsync(undefined)
 }
 </script>
 

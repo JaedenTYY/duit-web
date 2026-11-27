@@ -117,10 +117,10 @@ export const authenticationGuard: NavigationGuard = async (to, from, next) => {
   if (!authenticated && authStore.bootstrapStatus === 'authenticated') {
     try {
       await refreshSessionSingleFlight()
-      authenticated = authStore.ensureValidSession()
     } catch {
-      authenticated = false
+      // A concurrent login may already have installed a valid session.
     }
+    authenticated = authStore.ensureValidSession()
   }
 
   if (!to.meta.hideNav && !authenticated) {

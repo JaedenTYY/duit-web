@@ -7,6 +7,8 @@ import { logger } from '@/utils/logger'
 import { CONFIG } from '@/config'
 import { extractApiFailure } from '@/lib/apiError'
 import {
+  getSessionLifecycle,
+  isCurrentSessionLifecycle,
   propagateRevocation,
   refreshSessionSingleFlight,
 } from '@/lib/sessionCoordinator'
@@ -14,6 +16,7 @@ import {
 interface DuitRequestConfig extends InternalAxiosRequestConfig {
   _duitAuthRetried?: boolean
   _duitReplayable?: boolean
+  _duitSessionLifecycle?: ReturnType<typeof getSessionLifecycle>
 }
 
 const api = axios.create({
@@ -31,8 +34,13 @@ api.interceptors.request.use(
     }
     config.withCredentials = true
     const duitConfig = config as DuitRequestConfig
-    duitConfig._duitReplayable ??= hasReusableBody(duitConfig)
     const token = useAuthStore().token
+    if (duitConfig._duitAuthRetried &&
+        (!token || !isCurrentSessionLifecycle(duitConfig._duitSessionLifecycle ?? null))) {
+      return Promise.reject(new Error('Session changed before the request could be retried'))
+    }
+    duitConfig._duitSessionLifecycle = getSessionLifecycle()
+    duitConfig._duitReplayable ??= hasReusableBody(duitConfig)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -60,16 +68,17 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const failure = extractApiFailure(error)
     const request = error.config as DuitRequestConfig | undefined
+    if (request && failure.status === 401 &&
+        !isCurrentSessionLifecycle(request._duitSessionLifecycle ?? null)) {
+      return Promise.reject(error)
+    }
     if (shouldRefresh(request, failure.status, failure.code)) {
       request!._duitAuthRetried = true
       try {
-        const session = await refreshSessionSingleFlight()
-        if (isSafelyReplayable(request!)) {
-          request!.headers.Authorization = `Bearer ${session.token}`
-          return api.request(request!)
-        }
+        await refreshSessionSingleFlight()
+        if (isSafelyReplayable(request!)) return api.request(request!)
       } catch {
-        processApiFailure(error)
+        // The coordinator owns refresh failure and stale refresh has no auth side effects.
       }
     } else {
       processApiFailure(error)

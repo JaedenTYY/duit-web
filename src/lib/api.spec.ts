@@ -6,6 +6,8 @@ import { logger } from '@/utils/logger'
 import api, { processApiFailure } from './api'
 
 const coordinatorMock = vi.hoisted(() => ({
+  getSessionLifecycle: vi.fn((): string | null => null),
+  isCurrentSessionLifecycle: vi.fn((_expected: string | null) => true),
   propagateRevocation: vi.fn(),
   refreshSessionSingleFlight: vi.fn(),
 }))
@@ -46,6 +48,8 @@ describe('API authentication failure handling', () => {
     vi.clearAllMocks()
     coordinatorMock.refreshSessionSingleFlight.mockReset()
     coordinatorMock.propagateRevocation.mockReset()
+    coordinatorMock.getSessionLifecycle.mockReturnValue(null)
+    coordinatorMock.isCurrentSessionLifecycle.mockReturnValue(true)
     vi.stubGlobal('localStorage', createMemoryStorage())
     localStorage.clear()
     setActivePinia(createPinia())
@@ -154,6 +158,55 @@ describe('API authentication failure handling', () => {
       'Bearer expired-access',
       'Bearer successor-access',
     ])
+  })
+
+  it('does not refresh or revoke for a late 401 from a previous login', async () => {
+    coordinatorMock.getSessionLifecycle.mockReturnValue('old-login')
+    const store = useAuthStore()
+    store.setSession('old-access', USER, '2026-07-27T01:00:00.000Z')
+
+    await expect(api.get('/transactions', {
+      adapter: async (config) => {
+        store.setSession('new-access', USER, '2026-07-27T02:00:00.000Z')
+        coordinatorMock.isCurrentSessionLifecycle.mockImplementation((value) => value === 'new-login')
+        throw controlledUnauthorized(config)
+      },
+    })).rejects.toBeTruthy()
+
+    expect(store.token).toBe('new-access')
+    expect(coordinatorMock.refreshSessionSingleFlight).not.toHaveBeenCalled()
+    expect(coordinatorMock.propagateRevocation).not.toHaveBeenCalled()
+  })
+
+  it('does not propagate a second revocation when refresh rejects', async () => {
+    coordinatorMock.refreshSessionSingleFlight.mockRejectedValue(new Error('obsolete operation'))
+    const store = useAuthStore()
+    store.setSession('new-access', USER, '2026-07-27T01:00:00.000Z')
+
+    await expect(api.get('/transactions', {
+      adapter: async (config) => { throw controlledUnauthorized(config) },
+    })).rejects.toBeTruthy()
+
+    expect(store.token).toBe('new-access')
+    expect(coordinatorMock.refreshSessionSingleFlight).toHaveBeenCalledTimes(1)
+    expect(coordinatorMock.propagateRevocation).not.toHaveBeenCalled()
+  })
+
+  it('refuses to replay a pending request once logout has cleared its token', async () => {
+    const store = useAuthStore()
+    const refreshed = { token: 'refreshed-access', user: USER, expiresAt: '2026-07-27T02:00:00.000Z' }
+    store.setSession('old-access', USER, refreshed.expiresAt)
+    coordinatorMock.refreshSessionSingleFlight.mockImplementation(async () => {
+      store.finishAnonymous('manual')
+      return refreshed
+    })
+    const adapter = vi.fn(async (config) => { throw controlledUnauthorized(config) })
+
+    await expect(api.get('/transactions', { adapter })).rejects.toThrow(
+      'Session changed before the request could be retried',
+    )
+    expect(adapter).toHaveBeenCalledTimes(1)
+    expect(store.token).toBeNull()
   })
 
   it('never automatically replays a multipart body after refreshing', async () => {
