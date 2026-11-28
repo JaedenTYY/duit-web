@@ -335,7 +335,7 @@ async function handleReceiptClose() {
             <dt>Date and time</dt>
             <dd>
               {{
-                new Date(selectedTransaction.occurredAt).toLocaleDateString(
+                new Date(selectedTransaction.occurredAt).toLocaleString(
                   'en-MY',
                   {
                     dateStyle: 'long',
